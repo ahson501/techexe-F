@@ -1,0 +1,15 @@
+/* TechExe/staticfiles/css/styles.css */
+
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    color: #da0d0d;
+    text-align: center;
+    margin-top: 20px;
+}

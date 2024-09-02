@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: tech_data
+    environment:
+      POSTGRES_USER: node-1
+      POSTGRES_PASSWORD: 12345678
+      POSTGRES_DB: tech_db
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: techexe.net@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  web:
+    build: .
+    container_name: tech_web
+    command: gunicorn --bind 0.0.0.0:8000 techexeapp.wsgi:application
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgres://node-1:12345678@db:5432/tech_db
+    volumes:
+      - .:/app
+      - /app/venv
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+volumes:
+  postgres_data:
+  pgadmin_data:
+  static_volume:
+  media_volume:
+
