@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Portfolio List</title>
+</head>
+<body>
+    <h1>Portfolio List</h1>
+    <a href="{% url 'portfolio_create' %}">Add New Portfolio Item</a>
+    <ul>
+        {% for portfolio in object_list %}
+            <li>
+                <a href="{% url 'portfolio_detail' portfolio.pk %}">{{ portfolio.title }}</a>
+            </li>
+        {% empty %}
+            <li>No portfolio items available.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

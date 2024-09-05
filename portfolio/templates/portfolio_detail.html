@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ portfolio.title }}</title>
+</head>
+<body>
+    <h1>{{ portfolio.title }}</h1>
+    <img src="{{ portfolio.image.url }}" alt="{{ portfolio.title }}">
+    <p><strong>Description:</strong> {{ portfolio.description }}</p>
+    <p><strong>Technologies Used:</strong> {{ portfolio.technology }}</p>
+    <p><strong>Publication Date:</strong> {{ portfolio.date_pub }}</p>
+    <a href="{% url 'portfolio_update' portfolio.pk %}">Edit</a>
+    <a href="{% url 'portfolio_delete' portfolio.pk %}">Delete</a>
+    <a href="{% url 'portfolio_list' %}">Back to List</a>
+</body>
+</html>

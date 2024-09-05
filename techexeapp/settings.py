@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'TechExe',
     'home',
     'blog',
-    'portfolio'
+    'portfolio',
+    'taggit'
 ]
 
 MIDDLEWARE = [

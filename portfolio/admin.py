@@ -1,7 +1,6 @@
 from django.contrib import admin
-from .models import Project
+from .models import Portfolio
+# Register your models here.
 
-@admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description', 'technologies', 'demo_link', 'image')
-    search_fields = ('title', 'description', 'technologies')
+
+admin.site.register(Portfolio)

@@ -8,6 +8,7 @@ django-admin-interface
 django-allauth
 pytest
 pytest-django
+django-taggit
 django-debug-toolbar
 whitenoise
 django-storages

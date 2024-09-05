@@ -1,9 +1,9 @@
 from django.urls import path
-from . import views
-
-app_name = 'blog'  # Define the namespace for this app
+from .views import CourseList, CourseDetail, ChapterDetail, VideosDetail
 
 urlpatterns = [
-    path('', views.index, name='index'),  # Map the root URL to the index view
+    path('', CourseList.as_view(), name='course-list'),
+    path('course/<int:pk>/', CourseDetail.as_view(), name='course-detail'),
+    path('chapter/<int:pk>/', ChapterDetail.as_view(), name='chapter-detail'),
+    path('videos/<int:pk>/', VideosDetail.as_view(), name='videos-detail'),
 ]
-
