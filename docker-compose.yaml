@@ -40,9 +40,19 @@ services:
       - /app/venv
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
 volumes:
   postgres_data:
   pgadmin_data:
   static_volume:
   media_volume:
-
+  jenkins_home:

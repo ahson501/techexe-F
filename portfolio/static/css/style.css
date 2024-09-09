@@ -1,0 +1,65 @@
+/* Styles for Portfolio List */
+.portfolio-list-section {
+    margin: 20px;
+}
+
+.portfolio-list-section ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.portfolio-list-section ul li {
+    margin-bottom: 10px;
+}
+
+/* Styles for About Me/Contact Me section */
+.about {
+    background-color: #333;
+    padding: 20px;
+    color: white;
+    border-radius: 5px;
+}
+
+.about h2 {
+    font-size: 24px;
+}
+
+.about p {
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+.contact {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+}
+
+.contact h2 {
+    font-size: 24px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.send-message {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.send-message i {
+    margin-left: 10px;
+}
+
+.social i {
+    font-size: 20px;
+    margin-right: 10px;
+}

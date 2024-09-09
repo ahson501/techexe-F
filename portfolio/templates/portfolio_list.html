@@ -1,20 +1,63 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Portfolio List</title>
+    <title>Portfolio List and About Me</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">  <!-- Link to your CSS -->
 </head>
 <body>
-    <h1>Portfolio List</h1>
-    <a href="{% url 'portfolio_create' %}">Add New Portfolio Item</a>
-    <ul>
-        {% for portfolio in object_list %}
-            <li>
-                <a href="{% url 'portfolio_detail' portfolio.pk %}">{{ portfolio.title }}</a>
-            </li>
-        {% empty %}
-            <li>No portfolio items available.</li>
-        {% endfor %}
-    </ul>
+
+    <!-- Portfolio List Section -->
+    <div class="portfolio-list-section">
+        <h1>Portfolio List</h1>
+        <a href="{% url 'portfolio_create' %}">Add New Portfolio Item</a>
+        <!-- Hyperlinks for About Me and Contact Me -->
+    <nav>
+        <a href="{% url 'about_me' %}">About Me</a> |
+        <a href="{% url 'contact_me' %}">Contact Me</a> |
+        <a href="#message-me">Interested to work together? Let's talk</a>
+    </nav>
+        <ul>
+            {% for portfolio in object_list %}
+                <li>
+                    <a href="{% url 'portfolio_detail' portfolio.pk %}">{{ portfolio.title }}</a>
+                </li>
+            {% empty %}
+                <li>No portfolio items available.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+
+        <div class="col-lg-6 pl-lg-4 mt-lg-0 mt-6 contact" id="message-me">
+            <h2>Interested to work together? <span>Let's talk</span></h2>
+            <form class="form" id="form">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <input name="name" id="form-name" type="text" placeholder="Your Name" class="form-control input" autocomplete="off"/>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <input name="email" id="form-email" type="email" placeholder="Your E-Mail" class="form-control input" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <textarea name="message" id="form-message" class="form-control input" rows="7" placeholder="Your Message here ..."></textarea>
+                </div>
+                <a id="form-submit">
+                    <div class="send-message">Send <i class="ni ni-send"></i></div>
+                </a>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
+
+
+
