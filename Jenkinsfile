@@ -10,7 +10,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Checkout code from your version control system (GitHub, GitLab, etc.)
-                git branch: 'main', url: 'https://github.com/ahson501/techexe-F.git'
+                git branch: 'master', url: 'https://github.com/ahson501/techexe-F.git'
             }
         }
 
