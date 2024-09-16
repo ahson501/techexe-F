@@ -4,6 +4,7 @@ gunicorn
 psycopg2-binary
 django-environ
 python-decouple
+pyinstaller
 django-admin-interface
 django-allauth
 pytest

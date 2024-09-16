@@ -1,23 +1,26 @@
 {% load static %}
+
 <!DOCTYPE html>
+<html lang="en">
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Portfolio List and About Me</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">  <!-- Link to your CSS -->
+    
+    <title>Portfolio List</title>
+    
+    <!-- Portfolio-specific CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-H_22KUPm.css' %}">
 </head>
 <body>
-
     <!-- Portfolio List Section -->
     <div class="portfolio-list-section">
         <h1>Portfolio List</h1>
-        <a href="{% url 'portfolio_create' %}">Add New Portfolio Item</a>
-        <!-- Hyperlinks for About Me and Contact Me -->
-    <nav>
-        <a href="{% url 'about_me' %}">About Me</a> |
-        <a href="{% url 'contact_me' %}">Contact Me</a> |
-        <a href="#message-me">Interested to work together? Let's talk</a>
-    </nav>
+        <nav>
+            <a href="{% url 'about_me' %}">About Me</a> |
+            <a href="{% url 'contact_me' %}">Contact Me</a> |
+            <a href="#message-me">Interested to work together? Let's talk</a>
+        </nav>
         <ul>
             {% for portfolio in object_list %}
                 <li>
@@ -58,6 +61,3 @@
 
 </body>
 </html>
-
-
-

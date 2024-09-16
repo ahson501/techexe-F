@@ -1,0 +1,18 @@
+/* frontend/src/css/portfolio.css */
+.portfolio-list-section {
+    padding: 20px;
+    background-color: #6c4fd4;
+}
+
+.portfolio-list-section h1 {
+    font-size: 2em;
+    color: #333;
+}
+
+.portfolio-list-section ul {
+    list-style-type: none;
+}
+
+.portfolio-list-section ul li {
+    margin: 10px 0;
+}

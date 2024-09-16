@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "techexeapp"  // Replace with your Docker image name
-        DOCKER_COMPOSE_FILE = "docker-compose.yml"  // Docker Compose file path
+        DOCKER_COMPOSE_FILE = "docker-compose.yaml"  // Docker Compose file path
     }
 
     stages {

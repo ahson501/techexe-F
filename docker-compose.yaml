@@ -32,6 +32,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - vite
     environment:
       - DEBUG=True
       - DATABASE_URL=postgres://node-1:12345678@db:5432/tech_db
@@ -40,6 +41,7 @@ services:
       - /app/venv
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - ./frontend/static:/app/frontend/static
 
   jenkins:
     image: jenkins/jenkins:lts
@@ -50,9 +52,25 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
 
+  vite:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"  # Ensure the correct port is mapped
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
   pgadmin_data:
   static_volume:
   media_volume:
   jenkins_home:
+
+networks:
+  app-network:
+    driver: bridge
