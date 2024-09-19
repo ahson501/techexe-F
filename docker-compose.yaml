@@ -51,19 +51,18 @@ services:
       - app-network
 
   jenkins:
-    image: jenkins/jenkins:lts
+    image: techexe-jenkins
     container_name: jenkins
-    user: root
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - jenkins_home:/var/jenkins_home
-      - ./init-jenkins.sh:/usr/local/bin/init-jenkins.sh
-    environment:
-      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     ports:
       - "8090:8080"
       - "50000:50000"
-    entrypoint: ["/usr/local/bin/init-jenkins.sh"]
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    networks:
+      - app-network
 
   vite:
     build:
@@ -84,7 +83,7 @@ volumes:
   static_volume:
   media_volume:
   jenkins_home:
-  jenkins_data:
+  
   
 
 networks:
