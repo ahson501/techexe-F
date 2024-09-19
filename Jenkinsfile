@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "techexeapp"  // Replace with your Docker image name
         DOCKER_COMPOSE_FILE = "docker-compose.yaml"  // Docker Compose file path
+
     }
 
     stages {
@@ -17,7 +18,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image
+                    // Build the Docker image using docker-compose
                     sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} build'
                 }
             }
@@ -26,7 +27,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    // Run the Django tests within the Docker container
+                    // Run Django tests within the Docker container
                     sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} run web python manage.py test'
                 }
             }
@@ -44,7 +45,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    echo 'Deployment step (optional)'
+                    // Deploy the application
+                    sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} up -d'
                 }
             }
         }
@@ -53,7 +55,8 @@ pipeline {
     post {
         always {
             script {
-                sh 'docker-compose down --volumes'
+                // Clean up containers and volumes after build
+                sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} down --volumes'
             }
         }
 
