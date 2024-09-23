@@ -26,6 +26,7 @@ services:
       - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+      - pgadmin-postfix-config:/etc/postfix
     networks:
       - app-network
 
@@ -66,8 +67,11 @@ volumes:
   postgres_data:
   postgres_backups:
   pgadmin_data:
+  pgadmin-postfix-config:
   static_volume:
   media_volume:
+  
+
   
   
 

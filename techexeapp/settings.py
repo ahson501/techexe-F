@@ -140,6 +140,13 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'frontend/static')]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'techexe.net@gmail.com'  # Your Gmail address
+EMAIL_HOST_PASSWORD = 'bqmc fqsq zlhz fjvm'  # Your Gmail password or app password
+DEFAULT_FROM_EMAIL = 'techexe.net@gmail.com'  # Adjust accordingly
 
 
 # Default primary key field type
