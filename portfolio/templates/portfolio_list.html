@@ -3,22 +3,21 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<html lang="en">
 <head>
     <meta charset="UTF-8">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio List</title>
-    
+
     <!-- Portfolio-specific CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-0Yt4J077.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-B71yQYSE.css' %}">
 </head>
 <body>
+
     <!-- Portfolio List Section -->
     <div class="portfolio-list-section">
         <h1>Portfolio List</h1>
         <nav>
             <a href="{% url 'about_me' %}">About Me</a> |
-            <a href="{% url 'contact_me' %}">Contact Me</a> |
             <a href="#message-me">Interested to work together? Let's talk</a>
         </nav>
         <ul>
@@ -32,6 +31,7 @@
         </ul>
     </div>
 
+    <!-- Contact Section -->
     <div class="col-lg-6 pl-lg-4 mt-lg-0 mt-6 contact" id="message-me">
         <h2>Interested to work together? <span>Let's talk</span></h2>
         <form class="form" id="form" method="POST" action="{% url 'send_email' %}">
@@ -55,5 +55,43 @@
         </form>
     </div>
 
+    <!-- Footer Section -->
+    
+    <footer class="footer">
+        <div class="container">
+            <div class="row justify-content-between"> <!-- Added justify-content-between for spacing -->
+                <div class="col-md-6 col-lg-4"> <!-- Adjusted column sizes -->
+                    <h5>Quick Links</h5>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'about_me' %}">About Me</a></li>
+                        <li><a href="#message-me">Contact</a></li>
+                        <li><a href="{% url 'portfolio_list' %}">Portfolio</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6 col-lg-4"> <!-- Adjusted column sizes -->
+                    <h5>Follow Me</h5>
+                    <ul class="footer-socials">
+                        <li><a href="https://github.com/ahson501/AI-ICCBS.git" target="_blank">GitHub</a></li>
+                        <li><a href="https://www.linkedin.com/in/ahsan-latif-8b9b60288/" target="_blank">LinkedIn</a></li>
+                        <li><a href="https://hub.docker.com/u/ahsonlatif" target="_blank">Dockerhub</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+                <div class="col-lg-4">
+                    <h5>Get In Touch</h5>
+                    <p>Email: <a href="mailto:your-email@example.com">techexe.net@gmail.com</a></p>
+                    <p>Phone: +92 333 3367516</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ current_year }} TechExe. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    
 </body>
 </html>

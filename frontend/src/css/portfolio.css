@@ -164,4 +164,35 @@ nav a:hover {
         font-size: 1em;
         padding: 10px 20px;
     }
+
+    /* footer-bottom */
+
+.footer {
+        padding: 20px 0;
+        background-color: #6c4fd4; /* Example background color */
+    }
+    
+.footer h5 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+.footer-links, .footer-socials {
+        list-style: none;
+        padding-left: 0;
+    }
+    
+.footer-links li, .footer-socials li {
+        margin-bottom: 10px;
+    }
+    
+.footer-links a, .footer-socials a {
+        text-decoration: none;
+        color: #007bff; /* Link color */
+    }
+    
+.footer-links a:hover, .footer-socials a:hover {
+        text-decoration: underline;
+    }
+
 }

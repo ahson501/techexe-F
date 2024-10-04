@@ -8,9 +8,10 @@
     <h1>Add New Portfolio Item</h1>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        {{ form.hidden_tag() }}
         {{ form.as_p }}
-        <button type="submit">Save</button>
-    </form>
+        <button type="submit">Submit</button>
+    </form>    
     <a href="{% url 'portfolio_list' %}">Back to List</a>
 </body>
 </html>
