@@ -16,4 +16,5 @@ djangorestframework
 django-webpack-loader
 celery
 redis
+requests
 loguru

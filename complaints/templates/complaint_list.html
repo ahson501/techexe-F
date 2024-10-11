@@ -1,0 +1,29 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaints</title>
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/complaints-aifZND9c.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h2>Complaints</h2>
+        <a href="{% url 'complaint-create' %}" class="btn">Submit a Complaint</a>
+        
+        <!-- Single link to the centralized Grafana dashboard -->
+        <a href="{% url 'grafana-dashboard' %}">View Dashboard</a>
+        
+        <ul class="complaint-list">
+            {% for complaint in complaints %}
+                <li class="complaint-item">
+                    <strong>{{ complaint.title }}</strong> - {{ complaint.status }}
+                    <a href="{% url 'complaint-update' complaint.id %}" class="btn-update">Update Status</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

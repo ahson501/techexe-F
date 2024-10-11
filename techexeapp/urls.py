@@ -27,6 +27,8 @@ urlpatterns = [
     path('blog/', include('blog.urls')),
     path('', include('home.urls', namespace='home')),  # Register the 'home' namespace here
     path('portfolio/', include('portfolio.urls')),
+    path('complaints/', include('complaints.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),  # For login/logout
 ] 
 
 if settings.DEBUG:

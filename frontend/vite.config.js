@@ -9,6 +9,7 @@ export default defineConfig({
         main: '/src/main.js',  // Entry point for JavaScript
         portfolio: '/src/css/portfolio.css',  // Entry point for CSS
         blog: '/src/css/blog.css',
+        complaints: '/src/css/complaints.css',
       },
     },
   },
