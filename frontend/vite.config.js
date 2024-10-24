@@ -6,10 +6,11 @@ export default defineConfig({
     assetsDir: 'assets',  // Directory for bundled assets
     rollupOptions: {
       input: {
-        main: '/src/main.js',  // Entry point for JavaScript
-        portfolio: '/src/css/portfolio.css',  // Entry point for CSS
-        blog: '/src/css/blog.css',
-        complaints: '/src/css/complaints.css',
+        main: './src/main.js',  // Entry point for JavaScript
+        portfolio: './src/css/portfolio.css',  // Entry point for CSS
+        blog: './src/css/blog.css',
+        complaints: './src/css/complaints.css',
+        home: './src/css/home.css',
       },
     },
   },

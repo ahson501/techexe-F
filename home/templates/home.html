@@ -1,0 +1,33 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
+  
+      <!-- Home-specific CSS -->
+      <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-Bj5qr5PE.css' %}">
+  </head>
+  <div class="home-content">
+    {% for content in home_content %}
+    <h2>{{ content.title }}</h2>
+    <h3>{{ content.subtitle }}</h3>
+    <p>{{ content.description }}</p>
+    {% if content.image %}
+        <img src="{{ content.image.url }}" alt="{{ content.title }}">
+    {% endif %}
+    {% endfor %}
+</div>
+
+  <body>
+    {% block content %}
+          <h1>Empowering Industries with Next-Gen AI Solutions</h1>
+          <p>Discover how AI is transforming industries such as eCommerce, HealthTech, FinTech, and beyond. Our solutions leverage cutting-edge technology to drive innovation and deliver value.</p>
+          <button class="cta-button" onclick="window.location.href='/services/'">Get Started</button>
+
+      </div>
+    {% endblock %}
+  </body>
+</html>

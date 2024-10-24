@@ -1,0 +1,47 @@
+{% extends "home.html" %}  <!-- Extending from base template -->
+{% block title %}Services - TechExe{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="logo">
+        <a href="/">TechExe</a>
+    </div>
+    <ul class="nav-links">
+        <li><a href="/technology/">Technology</a></li>
+        <li><a href="/docker-login/">Login System for Docker Containers</a></li>
+        <li><a href="/ai-tutor/">AI Tutor App</a></li>
+        <li><a href="/about/">About Us</a></li>
+    </ul>
+</nav>
+
+<!-- Hero Section for Services Page -->
+<section class="hero-services">
+    <h1>Our Expert Services</h1>
+    <p>Empowering industries with AI-driven solutions and state-of-the-art technology.</p>
+    <a href="/portfolio/" class="cta-button">View Our Portfolio</a>  <!-- Link to Portfolio Page -->
+</section>
+
+<!-- Services Section -->
+<section class="services">
+    <div class="service-box">
+        <h3>eCommerce Solutions</h3>
+        <p>Enhance your business with AI-driven customer insights and personalized recommendations.</p>
+    </div>
+    <div class="service-box">
+        <h3>HealthTech Innovation</h3>
+        <p>Revolutionize healthcare with AI diagnostics and predictive analytics.</p>
+    </div>
+    <div class="service-box">
+        <h3>FinTech AI</h3>
+        <p>Harness the power of AI to optimize financial operations and decision-making processes.</p>
+    </div>
+</section>
+
+<!-- Additional Content or Call to Action -->
+<section class="cta-section">
+    <h2>Ready to Transform Your Business with AI?</h2>
+    <a href="/contact/" class="cta-button">Contact Us Today</a>
+</section>
+{% endblock %}
+

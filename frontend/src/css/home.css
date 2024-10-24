@@ -1,0 +1,98 @@
+/* Navbar styling */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background-color: #2c3e50;
+  color: white;
+}
+
+.nav-links {
+  list-style-type: none;
+  display: flex;
+}
+
+.nav-links li {
+  margin-left: 2rem;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+/* Hero Section */
+.hero-services {
+  background-color: #ecf0f1;
+  padding: 5rem;
+  text-align: center;
+}
+
+.hero-services h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.hero-services p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.cta-button {
+  background-color: #2980b9;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.cta-button:hover {
+  background-color: #3498db;
+}
+
+/* Services Section */
+.services {
+  display: flex;
+  justify-content: space-around;
+  padding: 4rem;
+  background-color: #f4f4f4;
+}
+
+.service-box {
+  width: 30%;
+  padding: 2rem;
+  background-color: white;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.service-box h3 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+/* Call to Action Section */
+.cta-section {
+  background-color: #34495e;
+  padding: 3rem;
+  text-align: center;
+  color: white;
+}
+
+.cta-section h2 {
+  margin-bottom: 1rem;
+}
+
+.cta-section .cta-button {
+  background-color: #27ae60;
+}
+
+.cta-section .cta-button:hover {
+  background-color: #2ecc71;
+}
