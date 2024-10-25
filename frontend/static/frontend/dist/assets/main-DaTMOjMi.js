@@ -1,0 +1,1 @@
+/* empty css             *//* empty css                  *//* empty css             *//* empty css                   */console.log("home site loaded with Vite!");console.log("Portfolio site loaded with Vite!");console.log("blog site loaded with Vite!");console.log("complaints site loaded with Vite!");
