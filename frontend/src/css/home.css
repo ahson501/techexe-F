@@ -1,5 +1,60 @@
-/* Hide nav links initially on mobile */
+/* carousel */
+.carousel {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
 
+.carousel-item {
+  min-width: 100%;
+  height: 100px;  /* Fixed height for consistency */
+  position: relative;
+  display: flex;   /* Flexbox for centering */
+  justify-content: center; /* Center the image horizontally */
+  align-items: center;     /* Center the image vertically */
+  background-color: #f9f9f9; /* Light background color */
+  border: 1px solid #ddd;    /* Optional border */
+}
+
+.carousel-image {
+  max-width: 100%;  /* Prevent stretching */
+  max-height: 100px; /* Set a max height */
+  height: auto;      /* Maintain aspect ratio */
+  margin: auto;      /* Center the image */
+  display: block;    /* Ensure it's a block element */
+}
+
+.carousel-text-overlay,
+.carousel-text-bubble {
+  position: absolute;
+  z-index: 1; /* Ensure it overlays on the image */
+}
+
+.carousel-text-overlay {
+  bottom: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  width: 80%;
+}
+
+.carousel-text-bubble {
+  bottom: 15%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  color: #333;
+  border-radius: 5px;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* Navbar */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -35,7 +90,6 @@
   transition: 0.4s;
 }
 
-/* Show mobile menu icon on smaller screens */
 @media (max-width: 768px) {
   .menu-toggle {
       display: flex;
@@ -62,63 +116,140 @@
   }
 }
 
-
-/* Hero Section */
-.hero-services {
-  background-color: #ecf0f1;
-  padding: 2rem; /* Adjust padding for smaller screens */
+/* Home Content */
+.home-content {
+  padding: 2rem;
+  background-color: #f9f9f9;
   text-align: center;
 }
 
-.hero-services h1 {
-  font-size: 2rem; /* Adjust font size for smaller screens */
+.home-content h2 {
+  color: #34495e;
+  margin-bottom: 0.5rem;
+}
+
+.home-content h3 {
+  color: #2c3e50;
   margin-bottom: 1rem;
 }
 
+.home-content p {
+  color: #7f8c8d;
+  margin-bottom: 1.5rem;
+}
+
+.home-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+
+/* Hero Section */
+.hero-services {
+  background: linear-gradient(135deg, #2c3e50, #34495e); /* Gradient background for a modern look */
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+}
+
+.hero-services h1 {
+  font-size: 3rem; /* Make it larger for emphasis */
+  font-weight: bold;
+  line-height: 1.2;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+  text-align: center;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3); /* Add shadow for a 3D effect */
+}
+
 .hero-services p {
-  font-size: 1rem;
-  margin-bottom: 2rem;
+  font-size: 1.2rem;
+  color: #f0f0f0;
+  max-width: 800px; /* Restrict width for better readability */
+  justify-content: center;
+  text-align: center;
+  margin: 0 auto 2rem auto; /* Center the text with auto margins */
 }
 
 .cta-button {
-  background-color: #2980b9;
+  background-color: #27ae60; /* Bright green CTA button */
   color: white;
-  padding: 0.8rem 1.5rem;
+  padding: 0.8rem 2rem;
   text-transform: uppercase;
-  text-decoration: none;
   font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px; /* Rounded corners */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
 }
 
 .cta-button:hover {
-  background-color: #3498db;
+  background-color: #2ecc71;
+  transform: scale(1.05); /* Slight zoom on hover */
+}
+/* Services Section */
+#skills-services {
+  padding: 2rem;
+  background-color: #f4f4f4;
 }
 
-/* Services Section */
+#skills-services h2 {
+  text-align: center;
+  color: #34495e;
+  margin-bottom: 1rem;
+}
+
 .services {
   display: flex;
-  flex-wrap: wrap; /* Allow elements to wrap to the next line on smaller screens */
+  flex-wrap: wrap;
   justify-content: space-around;
-  padding: 2rem; /* Adjust padding for smaller screens */
+  padding: 2rem;
   background-color: #f4f4f4;
 }
 
 .service-box {
-  width: 20%; /* Adjust width for smaller screens */
+  width: 30%;
   padding: 1rem;
   background-color: white;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
   text-align: center;
+  margin-bottom: 1.5rem;
 }
 
 .service-box h3 {
+  color: #2c3e50;
   margin-bottom: 1rem;
-  font-size: 1.3rem; /* Adjust font size for smaller screens */
+  font-size: 1.3rem;
+}
+
+/* About Section */
+#about {
+  background-color: #ecf0f1;
+  padding: 2rem;
+  text-align: center;
+}
+
+#about h2 {
+  color: #34495e;
+  margin-bottom: 1rem;
+}
+
+#about p {
+  color: #7f8c8d;
+  font-size: 1rem;
 }
 
 /* Call to Action Section */
 .cta-section {
   background-color: #34495e;
-  padding: 2rem; /* Adjust padding for smaller screens */
+  padding: 2rem;
   text-align: center;
   color: white;
 }
@@ -135,7 +266,24 @@
   background-color: #2ecc71;
 }
 
-@media (max-width: 576px) {
+/* Footer */
+footer {
+  background-color: #34495e;
+  padding: 1.5rem;
+  color: white;
+  text-align: center;
+}
+
+footer h2 {
+  margin-bottom: 0.5rem;
+}
+
+footer p {
+  margin: 0;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
   .hero-services {
       padding: 1rem;
   }
