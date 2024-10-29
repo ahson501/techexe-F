@@ -7,56 +7,25 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
   
-      <!-- Home-specific CSS -->
-      <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-RAUwzioi.css' %}">
-  </head>
-  <div class="home-content">
-    <div class="home-content carousel">
-        <!-- Slide 1: Hero Image with text overlay -->
-        <div class="carousel-item">
-            <img src="{% static 'frontend/dist/images/homeimages/17.png' %}" alt="Unlocking the Power of AI" class="carousel-image">
-            <div class="carousel-text-overlay">
-                <h2>Unlocking the Power of AI for the Future of Web Development</h2>
-            </div>
-        </div>
-    
-        <!-- Slide 2: Project Highlights with text bubble -->
-        <div class="carousel-item">
-            <img src="{% static 'frontend/dist/images/homeimages/17.png' %}" alt="Project Highlights" class="carousel-image">
-            <div class="carousel-text-bubble">
-                <p>Turning Ideas into Reality. See how we helped clients thrive with AI.</p>
-            </div>
-        </div>
-    
-        <!-- Slide 3: Infographic -->
-        <div class="carousel-item">
-            <img src="{% static 'frontend/public/images/homeimages/17.png' %}" alt="Boost Efficiency with Techexe" class="carousel-image">
-            <div class="carousel-text-overlay">
-                <h2>Boost Efficiency, Enhance User Experience, Drive Results with Techexe</h2>
-            </div>
-        </div>
-    
-        <!-- Slide 4: Team Photo with text overlay -->
-        <div class="carousel-item">
-            <img src="{% static 'frontend/dist/images/homeimages/17.png' %}" alt="The Techexe Team" class="carousel-image">
-            <div class="carousel-text-overlay">
-                <h2>The Techexe Team: Experts Passionate About AI and Web Development</h2>
-            </div>
-        </div>
-    </div>
-    
-</div>
+      <!-- Font for the entire page -->
+      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
-  <body>
+      <!-- Home-specific CSS -->
+      <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-Cdd-ClXL.css' %}">
+  </head>
+  <div class="section-intro">
+  <body style="font-family: 'Poppins', sans-serif;">
     {% block content %}
           <h1 style="text-align: center; font-size: 36px; font-weight: bold;">Empowering Industries with Next-Gen AI Solutions</h1>
-          <p style="text-align: center; font-size: 16px;">Discover how AI is transforming industries such as eCommerce, HealthTech, FinTech, and beyond. Our solutions leverage cutting-edge technology to drive innovation and deliver value.</p>
-          <section id="about">
-            <h2>Since 2000, we've been delivering top-tier solutions in the tech industry.</h2>
-            <p>From crafting Django web apps to developing innovative AI applications, we have established ourselves as industry leaders. Our focus on integrating technologies like Vite for front-end efficiency and Docker for app deployment has positioned us at the forefront of web development and AI projects.</p>
-            <div style="text-align: center;">
-                <button class="cta-button" onclick="window.location.href='/services/'">Get Started</button>
-            </div>
+          <p style="text-align: match-parent; font-size: 16px;">Discover how our cutting-edge AI and web development solutions are transforming industries—from eCommerce and HealthTech to FinTech and more—with secure Docker portals for GPU access, interactive dashboards, and AI-powered tutoring tools.</p>
+  </div>    
+
+        <section id="about">
+            <h2>Since 2020, we've been delivering top-tier solutions in the tech industry.</h2>
+            <p style="text-align: justify";>From crafting Django web apps to developing innovative AI applications, we have established ourselves as industry leaders. Our focus on integrating technologies like Vite for front-end efficiency and Docker for app deployment has positioned us at the forefront of web development and AI projects.</p>
+        <div style="text-align: center;">
+            <button class="cta-button" onclick="window.location.href='/services/'">Get Started</button>
+        </div>
         </section>
     
         <section id="skills-services">
@@ -77,8 +46,6 @@
          <li>Dashboard Creation</li>
         </ul>
         </section>
-
-        
           
         <footer>
             <h2>Get In Touch: Let's Build Something Great Together</h2>

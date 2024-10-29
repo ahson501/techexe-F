@@ -1,57 +1,80 @@
-/* carousel */
-.carousel {
-  display: flex;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
+/*Section Styling */
 
-.carousel-item {
-  min-width: 100%;
-  height: 100px;  /* Fixed height for consistency */
-  position: relative;
-  display: flex;   /* Flexbox for centering */
-  justify-content: center; /* Center the image horizontally */
-  align-items: center;     /* Center the image vertically */
-  background-color: #f9f9f9; /* Light background color */
-  border: 1px solid #ddd;    /* Optional border */
-}
-
-.carousel-image {
-  max-width: 100%;  /* Prevent stretching */
-  max-height: 100px; /* Set a max height */
-  height: auto;      /* Maintain aspect ratio */
-  margin: auto;      /* Center the image */
-  display: block;    /* Ensure it's a block element */
-}
-
-.carousel-text-overlay,
-.carousel-text-bubble {
-  position: absolute;
-  z-index: 1; /* Ensure it overlays on the image */
-}
-
-.carousel-text-overlay {
-  bottom: 20%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
+.section-intro {
+  background-color: #9baec1;
   text-align: center;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 20px;
-  width: 80%;
+  border-radius: 8px;
+  margin: 0 auto;
 }
 
-.carousel-text-bubble {
-  bottom: 15%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(255, 255, 255, 0.8);
-  padding: 15px;
-  color: #333;
-  border-radius: 5px;
-  max-width: 70%;
+
+.section-intro h1 {
+  font-size: 36px;
+  font-weight: bold;
+  color: #2c3e50; /* Jet black or dark color for contrast */
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+  transition: color .3s ease, transform .3s ease;
+  margin-bottom: 1rem;
+}
+
+.section-intro p {
+  font-size: 16px;
+  color: #0A0A0A; /* Jet Black for readability */
+  margin: 0 auto;
+  max-width: 800px; /* Limit width for better readability */
+}
+
+/* Gradient and shadow effect for h1 */
+.gradient-header {
+  font-size: 3rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #3498db, #8e44ad);
+  background-clip: text;            /* Standard property */
+  -webkit-background-clip: text;     /* Webkit-specific */
+  -webkit-text-fill-color: transparent;
   text-align: center;
+  text-shadow: 2px 4px 10px rgba(0, 0, 0, 0.2);
+  margin: 1.5rem 0;
+}
+
+/* H1 Style */
+h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #000000; /* Jet black color */
+  text-align: center;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow effect */
+  transition: color 0.3s ease, transform 0.3s ease;
+  margin: 0.5rem 0;
+}
+
+/* H1 Hover Effect */
+h1:hover {
+  color: #333333; /* Dark gray for slight contrast on hover */
+  transform: scale(1.05); /* Slight zoom effect on hover */
+  text-shadow: 3px 3px 12px rgba(0, 0, 0, 0.4); /* Increase shadow for a 3D effect */
+}
+
+/* Center-aligned paragraph text */
+.center-text {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Font styling for about section */
+#about h2, #skills-services h2, footer h2 {
+  color: #27ae60;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+#about p, #skills-services ul li {
+  font-size: 1rem;
+  color: #0A0A0A;
+  line-height: 1.6;
 }
 
 /* Navbar */
@@ -60,8 +83,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background-color: #34495e; /* Dark gray background */
-  color: #fff; /* White text */
+  background-color: #9baec1; /*  gray background */
 }
 
 .nav-links {
@@ -72,7 +94,6 @@
 
 .nav-links a {
   text-decoration: none;
-  color: #fff;
 }
 
 /* Mobile menu */
@@ -116,33 +137,7 @@
   }
 }
 
-/* Home Content */
-.home-content {
-  padding: 2rem;
-  background-color: #f9f9f9;
-  text-align: center;
-}
 
-.home-content h2 {
-  color: #34495e;
-  margin-bottom: 0.5rem;
-}
-
-.home-content h3 {
-  color: #2c3e50;
-  margin-bottom: 1rem;
-}
-
-.home-content p {
-  color: #7f8c8d;
-  margin-bottom: 1.5rem;
-}
-
-.home-content img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 5px;
-}
 
 /* Hero Section */
 .hero-services {
@@ -292,3 +287,5 @@ footer p {
       width: 100%;
   }
 }
+
+
