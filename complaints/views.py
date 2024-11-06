@@ -41,7 +41,4 @@ class ComplaintUpdateView(LoginRequiredMixin, UpdateView):
         if not request.user.is_staff:
             return redirect('complaint-list')
         return super().dispatch(request, *args, **kwargs)
-
-class GrafanaDashboardView(TemplateView):
-    template_name = 'grafana_dashboard.html'
     

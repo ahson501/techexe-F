@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['' , '172.16.2.35' , '111.68.111.222' , 'techexe.net' , 'www.techexe.net']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://techexe.net',
+    'https://www.techexe.net'
+]
 
 # Application definition
 
@@ -43,6 +47,9 @@ INSTALLED_APPS = [
     'portfolio',
     'taggit',
     'complaints',
+    'ckeditor',
+    'ckeditor_uploader',
+    
 ]
 
 MIDDLEWARE = [
@@ -152,6 +159,14 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 300,
+        'width': '100%',
+    },
+}
 
 
 

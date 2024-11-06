@@ -1,0 +1,81 @@
+<!-- blog/templates/blog/blogpost_list.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blog Posts</title>
+        <link rel="stylesheet" href="{% static 'frontend/dist/assets/blog-PveOfLnk.css' %}">
+
+        <nav class="navbar">
+        
+            <!-- Mobile menu icon -->
+            <div class="menu-toggle" id="mobile-menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        
+            <ul class="nav-links" id="nav-links">
+                <li><a href="/AI/">Intelligent Systems</a></li>
+                <li><a href="Chemistry">Science of Matter</a></li>
+                <li><a href="/articles/">latest developments</a></li>
+                <li><a href="/about author/">Author Bio</a></li>
+            </ul>
+        </nav>
+</head>
+<body>
+    <h1>All Blog Posts</h1>
+    <!-- Insert the image here -->
+    <img src="{% static 'frontend/dist/images/homeimages/GRAFANA_ICCBS.jpg' %}" alt="Home Image">
+
+    <ul>
+        {% for post in blogposts %}
+            <li>
+                <a href="{% url 'blogpost-detail' post.pk %}">{{ post.title }}</a>
+            </li>
+        {% empty %}
+            <li>No blog posts available.</li>
+        {% endfor %}
+    </ul>
+    <section class="hero-services">
+        <h1>TECH KNOWLEDGE</h1>
+        <p>Empowering people to adopt latest solutions and state-of-the-art technology.</p>
+         
+    </section>
+    
+      <div class="services">
+        <div class="service-box">
+          <h3>VLAN_VDOM-Fortigate Firewall</h3>
+          <p>Fortinet firewall VDOM and VLAN to split Physical domains</p>
+          <a href="https://techexe.net/blog/post/2/">Intelligent Firewalling</a>
+        </div>
+        <div class="service-box">
+          <h3>eCommerce Solutions</h3>
+          <p>Enhance your business with AI-driven customer insights and personalized recommendations.</p>
+        </div>
+        <div class="service-box">
+          <h3>Website Development</h3>
+          <p>Crafting dynamic, lightning-fast web applications with Django's robust backend and Vite's modern blazing-speed frontend.
+        </div>
+        <div class="service-box">
+          <h3>HealthTech Innovation</h3>
+          <p>Revolutionize healthcare with AI diagnostics and predictive analytics.</p>
+        </div>
+        <div class="service-box">
+          <h3>FinTech AI</h3>
+          <p>Harness the power of AI to optimize financial operations and decision-making processes.</p>
+        </div>
+      </div>
+    
+    <!-- JavaScript for the menu toggle functionality -->
+    <script>
+        const mobileMenu = document.getElementById('mobile-menu');
+        const navLinks = document.getElementById('nav-links');
+    
+        mobileMenu.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    </script>
+</body>
+</html>

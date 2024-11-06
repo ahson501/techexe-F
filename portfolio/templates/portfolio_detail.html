@@ -7,6 +7,11 @@
 <body>
     <h1>{{ portfolio.title }}</h1>
     <img src="{{ portfolio.image.url }}" alt="{{ portfolio.title }}">
+    
+    <p style="font-size: 1.5em; font-weight: bold; color: #1e90ff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+        🌟 Interested in exploring these dashboards in action? Click on '<a href="{{ portfolio.url }}" target="_blank">Visit Project</a>' to dive deeper into the live configurations and learn more about how they work. 🌟
+    </p>
+    
     <p><strong>Description:</strong> {{ portfolio.description }}</p>
     <p><strong>Technologies Used:</strong> {{ portfolio.technology }}</p>
     <p><strong>Publication Date:</strong> {{ portfolio.date_pub }}</p>

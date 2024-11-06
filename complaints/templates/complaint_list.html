@@ -13,9 +13,6 @@
         <h2>Complaints</h2>
         <a href="{% url 'complaint-create' %}" class="btn">Submit a Complaint</a>
         
-        <!-- Single link to the centralized Grafana dashboard -->
-        <a href="{% url 'grafana-dashboard' %}">View Dashboard</a>
-        
         <ul class="complaint-list">
             {% for complaint in complaints %}
                 <li class="complaint-item">

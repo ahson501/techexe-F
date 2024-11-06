@@ -9,6 +9,7 @@ django-allauth
 pytest
 pytest-django
 django-taggit
+django-ckeditor
 django-debug-toolbar
 whitenoise
 django-storages
