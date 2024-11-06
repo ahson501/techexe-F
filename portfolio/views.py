@@ -60,15 +60,15 @@ class ConfirmView(FormView):
             send_mail(
                 subject,
                 full_message,
-                'techexe.net@gmail.com',
-                ['techexe.net@gmail.com'],
+                'aitechexe.net@gmail.com',
+                ['aitechexe.net@gmail.com'],
                 fail_silently=False,
             )
 
             send_mail(
                 "Thank you for your message!",
                 "Hi Dear,\n\nThank you for reaching out! We will get back to you soon.\n\nBest regards,\nTechExe",
-                'techexe.net@gmail.com',
+                'aitechexe.net@gmail.com',
                 [sender_email],
                 fail_silently=False,
             )
