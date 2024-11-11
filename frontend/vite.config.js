@@ -1,17 +1,25 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  plugins: [react()],
   build: {
-    outDir: 'static/frontend/dist',  // Adjust the outDir to be within the project root
-    assetsDir: 'assets',  // Directory for bundled assets
+    outDir: 'static/frontend/dist',
+    assetsDir: 'assets',
     rollupOptions: {
       input: {
-        main: './src/main.js',  // Entry point for JavaScript
-        portfolio: './src/css/portfolio.css',  // Entry point for CSS
-        blog: './src/css/blog.css',
-        complaints: './src/css/complaints.css',
-        home: './src/css/home.css',
+        main: './src/main.jsx', // Main JavaScript entry
+        portfolio: './src/css/portfolio.css',  // CSS entry for Portfolio app
+        blog: './src/css/blog.css',            // CSS entry for Blog app
+        complaints: './src/css/complaints.css', // CSS entry for Complaints app
+        home: './src/css/home.css',            // CSS entry for Home app
       },
+    },
+  },
+  server: {
+    open: true,
+    watch: {
+      usePolling: true,
     },
   },
 });

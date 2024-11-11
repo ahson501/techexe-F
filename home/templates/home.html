@@ -1,57 +1,74 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
-  
-      <!-- Font for the entire page -->
-      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
 
-      <!-- Home-specific CSS -->
-      <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-Cdd-ClXL.css' %}">
-  </head>
-  <div class="section-intro">
-  <body style="font-family: 'Poppins', sans-serif;">
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-B_BFT4N6.css' %}">
+</head>
+<body>
     {% block content %}
-          <h1 style="text-align: center; font-size: 36px; font-weight: bold;">Empowering Industries with Next-Gen AI Solutions</h1>
-          <p style="text-align: match-parent; font-size: 16px;">Discover how our cutting-edge AI and web development solutions are transforming industries—from eCommerce and HealthTech to FinTech and more—with secure Docker portals for GPU access, interactive dashboards, and AI-powered tutoring tools.</p>
-  </div>    
 
-        <section id="about">
-            <h2>Since 2020, we've been delivering top-tier solutions in the tech industry.</h2>
-            <p style="text-align: justify";>From crafting Django web apps to developing innovative AI applications, we have established ourselves as industry leaders. Our focus on integrating technologies like Vite for front-end efficiency and Docker for app deployment has positioned us at the forefront of web development and AI projects.</p>
-        <div style="text-align: center;">
-            <button class="cta-button" onclick="window.location.href='/services/'">Get Started</button>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="glass">
+            <h1>Welcome to TechExe</h1>
+            <p>Innovating the future with cutting-edge AI and Web Development solutions.</p>
         </div>
-        </section>
-    
-        <section id="skills-services">
-            <h2 style="text-align: left; font-size: 16px; font-weight: bold;">Skills We Bring to the Table</h2>
-        <ul>
-         <li>Python: For building scalable applications.</li>
-         <li>Django: Our go-to framework for robust and efficient web development.</li>
-         <li>Grafana: To visualize and monitor your project’s data efficiently</li>
-         <li>Docker: For seamless containerization of applications</li> 
-         <li>Kubernetes: For orchestrating containerized applications at scale</li>
-         <li>Vite: To ensure fast and optimized front-end development.</li>
-        </ul>
-    
-            <h2 style="text-align: left; font-size: 16px; font-weight: bold;">Services We Offer</h2>
-        <ul>
-         <li>Website Development</li>
-         <li>AI-Based Application Development</li>
-         <li>Dashboard Creation</li>
-        </ul>
-        </section>
-          
-        <footer>
-            <h2>Get In Touch: Let's Build Something Great Together</h2>
-            <p>Contact Us: +34 663 45 53 54</p>
-        </footer>
-      </div>
+    </section>
+
+    <!-- Intro Section -->
+    <div class="section-intro">
+        <h1>Empowering Industries with Next-Gen AI Solutions</h1>
+        <p>Discover how our cutting-edge AI and web development solutions are transforming industries.</p>
+        <button class="cta-button" onclick="window.location.href='/services/'">Get Started</button>
+    </div>
+
+    <!-- Skills and Services Section -->
+    <section id="skills-services">
+      <h2 style="text-align: center;">Skills We Bring to the Table</h2>
+        <div class="services-container">
+            <div class="service-box">
+                <i class="fa fa-cogs"></i>
+                <h3>Web Development</h3>
+            </div>
+            <div class="service-box">
+                <i class="fa fa-robot"></i>
+                <h3>AI-Based Applications</h3>
+            </div>
+            <div class="service-box">
+                <i class="fa fa-tachometer-alt"></i>
+                <h3>Dashboard Creation</h3>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer>
+      <h2>Contact Us</h2>
+      <p>
+          <i class="fab fa-whatsapp"></i> 
+          <a href="https://wa.me/34663455354" target="_blank" style="text-decoration: none; color: inherit;">
+              +34 663 45 53 54
+          </a>
+          <br>
+          <i class="fab fa-whatsapp"></i> 
+          <a href="https://wa.me/923082454008" target="_blank" style="text-decoration: none; color: inherit;">
+              +92 308 245 4008
+          </a>
+      </p>
+  </footer>
+
     {% endblock %}
-  </body>
+
+    <!-- Vite Scripts -->
+    <script type="module" src="{% static 'frontend/dist/assets/main-B6-vJn4E.js' %}"></script>
+</body>
 </html>
