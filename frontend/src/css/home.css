@@ -5,7 +5,7 @@
   --text-color: #333;
   --background-color: #f4f4f4;
 }
-/* Navbar Styles */
+/* General styles for navbar */
 .navbar {
   background-color: #263238;
   padding: 10px 20px;
@@ -26,10 +26,9 @@
 .navbar ul {
   display: flex;
   gap: 15px;
-}
-
-.navbar ul li {
-  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .navbar ul li a {
@@ -37,11 +36,51 @@
   padding: 8px 16px;
   border-radius: 4px;
   transition: background-color 0.3s;
+  text-decoration: none;
 }
 
 .navbar ul li a:hover {
   background-color: #37474f;
 }
+
+/* Hide menu for mobile by default */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.menu-toggle .bar {
+  height: 4px;
+  width: 25px;
+  background-color: #ffab00;
+  margin: 3px 0;
+  transition: all 0.3s ease;
+}
+
+/* Mobile menu styles */
+@media screen and (max-width: 768px) {
+  .navbar ul {
+      display: none; /* Hide menu */
+      flex-direction: column;
+      gap: 0;
+      background-color: #263238;
+      position: absolute;
+      top: 60px; /* Position below navbar */
+      right: 0;
+      width: 100%;
+      padding: 10px 0;
+  }
+
+  .navbar ul.active {
+      display: flex; /* Show menu when active */
+  }
+
+  .menu-toggle {
+      display: flex; /* Show hamburger icon */
+  }
+}
+
 
 /* General Styles */
 body {
@@ -54,6 +93,7 @@ body {
 
 h1, h2 {
   font-weight: 600;
+  color: #0A0A0A
 }
 
 /* Hero Section */
@@ -141,7 +181,62 @@ h1, h2 {
   background-color: #9b59b6;
 }
 
+
 /* Services Section */
+
+.services-header {
+  background: linear-gradient(135deg, #3498db, #9b59b6);
+  padding: 40px 20px;
+  color: #fff;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.services-header h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.services-list {
+  list-style-type: disc; /* Standard bullet points */
+  list-style-position: inside; /* Bullets aligned with text */
+  padding: 0;
+  margin: 20px auto; /* Center the list */
+  max-width: 600px; /* Keeps the list from spreading too wide */
+}
+
+.services-list li {
+  margin: 10px 0;
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: left; /* Align text for better readability */
+}
+
+.services-list li strong {
+  color: #34db86; /* Highlight technology names */
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .services-header {
+      padding: 20px 10px;
+  }
+
+  .services-header h1 {
+      font-size: 24px;
+  }
+
+  .services-list li {
+      font-size: 16px;
+  }
+}
+
+
+
 .services-container {
   display: flex;
   flex-wrap: wrap;
@@ -153,10 +248,9 @@ h1, h2 {
 .service-box {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px #000000(0, 0, 0, 0.2);
   padding: 20px;
   text-align: center;
-  flex: 1;
   max-width: 300px;
   transition: transform 0.3s, box-shadow 0.3s;
 }

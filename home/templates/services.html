@@ -24,8 +24,17 @@
 </nav>
 
 <section class="hero-services">
-    <h1 style="text-align: center;">Our Expert Services</h1>
-    <p style="text-align: center;">Empowering industries with AI-driven solutions and state-of-the-art technology.</p>
+  <header class="services-header">
+    <h1>Our Expert Services</h1>
+    <ul class="services-list">
+        <li><strong>Python:</strong> For building scalable applications.</li>
+        <li><strong>Django:</strong> Our go-to framework for robust and efficient web development.</li>
+        <li><strong>Grafana:</strong> To visualize and monitor your project’s data efficiently.</li>
+        <li><strong>Docker:</strong> For seamless containerization of applications.</li>
+        <li><strong>Kubernetes:</strong> For orchestrating containerized applications at scale.</li>
+        <li><strong>Vite:</strong> To ensure fast and optimized front-end development.</li>
+    </ul>
+</header>
 <section class="cta-section">
       <a href="/portfolio/" class="cta-button">View Our Portfolio</a>
   </section>    
@@ -40,12 +49,36 @@
         <p>Empower your data with Grafana's dynamic dashboards, transforming complex metrics into actionable insights.</p>
       </div>
       <div class="service-box">
-        <h3>eCommerce Solutions</h3>
-        <p>Enhance your business with AI-driven customer insights and personalized recommendations.</p>
+        <h3>Portal-based login system</h3>
+        <p>A Docker-based login system tailored for data science research fellows, providing secure access to GPU-enabled Jupyter Notebooks, PyTorch, and other advanced tools for streamlined research and development.</p>
       </div>
       <div class="service-box">
         <h3>Website Development</h3>
         <p>Crafting dynamic, lightning-fast web applications with Django's robust backend and Vite's modern blazing-speed frontend.</p>
+      </div>
+      <div class="service-box">
+        <h3>Remote Services</h3>
+        <p>management of Ubuntu-based Docker containers, Hyper-V virtual machines, and Kubernetes clusters for seamless operations and scalability.</p>
+      </div>
+      <div class="service-box">
+        <h3>SNMP-Based Cisco Switch Monitoring App</h3>
+        <p>Collect data from SNMP-enabled devices such as Cisco switches for performance monitoring.</p>
+      </div>
+      <div class="service-box">
+        <h3>Data Science Dashboard App</h3>
+        <p>Simplify data analysis with a tool to load datasets, visualize, and apply machine learning models</p>
+      </div>
+      <div class="service-box">
+        <h3>Ticket Management App</h3>
+        <p>Help businesses manage support tickets efficiently, including login system and email notifications for ticket progress.</p>
+      </div>
+      <div class="service-box">
+        <h3>Online Exam App</h3>
+        <p>Conduct exams remotely with features like timer, randomization, and result calculation.</p>
+      </div>
+      <div class="service-box">
+        <h3>Inventory Management App</h3>
+        <p>Track and manage inventory levels, orders, and suppliers.</p>
       </div>
       <div class="service-box">
         <h3>HealthTech Innovation</h3>
@@ -55,16 +88,21 @@
         <h3>FinTech AI</h3>
         <p>Harness the power of AI to optimize financial operations and decision-making processes.</p>
       </div>
+      
+      
   </div>
   </section>
 
 <!-- JavaScript for the menu toggle functionality -->
 <script>
-    const mobileMenu = document.getElementById('mobile-menu');
-    const navLinks = document.getElementById('nav-links');
+  document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu');
+      const navMenu = document.querySelector('.navbar ul');
 
-    mobileMenu.addEventListener('click', () => {
-        navLinks.classList.toggle('active');
-    });
+      menuToggle.addEventListener('click', () => {
+          navMenu.classList.toggle('active');
+      });
+  });
 </script>
+
 {% endblock %}

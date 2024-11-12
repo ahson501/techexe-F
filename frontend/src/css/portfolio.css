@@ -1,5 +1,50 @@
 /* frontend/src/css/portfolio.css */
 
+.centered-title {
+    text-align: center;
+    font-family: 'Roboto', sans-serif;  /* Google Font for a modern look */
+    font-size: 2.5rem;  /* Adjust the font size as needed */
+    font-weight: bold;  /* Make the title bold */
+    color: #333;  /* Adjust the color as needed */
+}
+
+/* Style for the description section */
+.description-container {
+    background-color: #f9f9f9;  /* Light background for elegance */
+    padding: 30px;
+    border-radius: 10px;  /* Rounded corners */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
+    margin-top: 20px;
+    font-family: 'Arial', sans-serif;  /* Clean and modern font */
+    color: #333;  /* Dark text for readability */
+}
+
+/* Style for the strong tag in the description */
+.description-container strong {
+    font-size: 1.5em;  /* Make the "Description:" part stand out */
+    color: #3498db;  /* Blue color to match a modern theme */
+    font-weight: bold;
+}
+
+/* Style for links within the description */
+.description-container a {
+    color: #9b59b6;  /* Purple color for links */
+    text-decoration: none;  /* Remove underline */
+    transition: color 0.3s ease;  /* Smooth transition for color change */
+}
+
+.description-container a:hover {
+    color: #f39c12;  /* Change color when hovered */
+    text-decoration: underline;  /* Add underline on hover for emphasis */
+}
+
+/* Add a nice font size to the paragraph */
+.description-container p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    text-align: justify;  /* Justify text for better alignment */
+}
+
 .portfolio-list-section {
     padding: 40px;
     background: linear-gradient(135deg, #6c4fd4 0%, #3498db 100%);

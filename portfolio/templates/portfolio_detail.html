@@ -1,20 +1,21 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>{{ portfolio.title }}</title>
+    <!-- Portfolio-specific CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-D2l2VSud.css' %}">
+    
 </head>
 <body>
-    <h1>{{ portfolio.title }}</h1>
+    <h1 class="centered-title">{{ portfolio.title }}</h1>
+    <div class="description-container">
+        <p><strong></strong> {{ portfolio.description|safe }}</p>
+    </div>
     <img src="{{ portfolio.image.url }}" alt="{{ portfolio.title }}">
-    
-    <p style="font-size: 1.5em; font-weight: bold; color: #1e90ff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
-        🌟 Interested in exploring these dashboards in action? Click on '<a href="{{ portfolio.url }}" target="_blank">Visit Project</a>' to dive deeper into the live configurations and learn more about how they work. 🌟
-    </p>
-    
-    <p><strong>Description:</strong> {{ portfolio.description }}</p>
     <p><strong>Technologies Used:</strong> {{ portfolio.technology }}</p>
-    <p><strong>Publication Date:</strong> {{ portfolio.date_pub }}</p>
+    <p>{{ portfolio.date_pub }}</p>
     
     <a href="{% url 'portfolio_list' %}">Back to List</a>
 </body>
