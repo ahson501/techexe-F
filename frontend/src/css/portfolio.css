@@ -1,50 +1,58 @@
 /* frontend/src/css/portfolio.css */
 
+/* Centered Title Styling */
 .centered-title {
     text-align: center;
-    font-family: 'Roboto', sans-serif;  /* Google Font for a modern look */
-    font-size: 2.5rem;  /* Adjust the font size as needed */
-    font-weight: bold;  /* Make the title bold */
-    color: #333;  /* Adjust the color as needed */
+    font-family: 'Roboto', sans-serif;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
 }
 
-/* Style for the description section */
+/* Description Section Styling */
 .description-container {
-    background-color: #f9f9f9;  /* Light background for elegance */
+    background-color: #f9f9f9;
     padding: 30px;
-    border-radius: 10px;  /* Rounded corners */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     margin-top: 20px;
-    font-family: 'Arial', sans-serif;  /* Clean and modern font */
-    color: #333;  /* Dark text for readability */
+    font-family: 'Arial', sans-serif;
+    color: #333;
 }
 
-/* Style for the strong tag in the description */
 .description-container strong {
-    font-size: 1.5em;  /* Make the "Description:" part stand out */
-    color: #3498db;  /* Blue color to match a modern theme */
+    font-size: 1.5em;
+    color: #3498db;
     font-weight: bold;
 }
 
-/* Style for links within the description */
 .description-container a {
-    color: #9b59b6;  /* Purple color for links */
-    text-decoration: none;  /* Remove underline */
-    transition: color 0.3s ease;  /* Smooth transition for color change */
+    color: #9b59b6;
+    text-decoration: none;
+    transition: color 0.3s ease;
 }
 
 .description-container a:hover {
-    color: #f39c12;  /* Change color when hovered */
-    text-decoration: underline;  /* Add underline on hover for emphasis */
+    color: #f39c12;
+    text-decoration: underline;
 }
 
-/* Add a nice font size to the paragraph */
 .description-container p {
     font-size: 1.1em;
     line-height: 1.6;
-    text-align: justify;  /* Justify text for better alignment */
+    text-align: justify;
 }
 
+/* Image Styling for Responsiveness */
+img {
+    display: block;
+    max-width: 90%;
+    margin: 20px auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Portfolio List Section Styling */
 .portfolio-list-section {
     padding: 40px;
     background: linear-gradient(135deg, #6c4fd4 0%, #3498db 100%);
@@ -97,6 +105,7 @@
     color: #ffcc00;
 }
 
+/* Navigation Styling */
 nav {
     margin-bottom: 20px;
 }
@@ -115,8 +124,7 @@ nav a:hover {
     color: #ffcc00;
 }
 
-/* frontend/src/css/contact-form.css */
-
+/* Contact Form Styling */
 #message-me {
     padding: 40px;
     background-color: #f7f7f9;
@@ -192,6 +200,7 @@ nav a:hover {
     transform: translateX(5px);
 }
 
+/* Responsive Adjustments */
 @media screen and (max-width: 768px) {
     #message-me {
         padding: 30px 20px;
@@ -209,35 +218,33 @@ nav a:hover {
         font-size: 1em;
         padding: 10px 20px;
     }
+}
 
-    /* footer-bottom */
-
+/* Footer Styling */
 .footer {
-        padding: 20px 0;
-        background-color: #6c4fd4; /* Example background color */
-    }
-    
-.footer h5 {
-        font-size: 18px;
-        margin-bottom: 15px;
-    }
-    
-.footer-links, .footer-socials {
-        list-style: none;
-        padding-left: 0;
-    }
-    
-.footer-links li, .footer-socials li {
-        margin-bottom: 10px;
-    }
-    
-.footer-links a, .footer-socials a {
-        text-decoration: none;
-        color: #007bff; /* Link color */
-    }
-    
-.footer-links a:hover, .footer-socials a:hover {
-        text-decoration: underline;
-    }
+    padding: 20px 0;
+    background-color: #6c4fd4;
+}
 
+.footer h5 {
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.footer-links, .footer-socials {
+    list-style: none;
+    padding-left: 0;
+}
+
+.footer-links li, .footer-socials li {
+    margin-bottom: 10px;
+}
+
+.footer-links a, .footer-socials a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.footer-links a:hover, .footer-socials a:hover {
+    text-decoration: underline;
 }
