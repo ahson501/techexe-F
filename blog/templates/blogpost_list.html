@@ -2,9 +2,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CTLHDZ4G7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8CTLHDZ4G7');
+</script>
     <meta charset="UTF-8">
     <title>Blog Posts</title>
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/blog-B5pzFNtX.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/blog-CliQJSRu.css' %}">
 </head>
 <body>
     <!-- Navbar -->
@@ -18,17 +27,27 @@
     </nav>
 
     <!-- Image -->
-    <img src="{% static 'frontend/dist/assets/1892751-D2wjLmSE.jpg' %}" alt="TechExe Image">
-
+    <div class="image-container">
+        <img src="{% static 'frontend/dist/assets/TechExe-B3_dBQWa.jpg' %}" alt="TechExe Image">
+    </div>
     <!-- Hero Section -->
     <section class="hero-services">
         <h1>Tech Knowledge</h1>
         <p>Empowering people to adopt latest solutions and state-of-the-art technology.</p>
     </section>
 
+    <div class="blog-content">
+        <p>{{ blog.content|safe }}</p>
+    </div>
     
     <!-- Services Section -->
     <section class="services-container">
+        <div class="service-box">
+            <img src="{% static 'frontend/dist/assets/TechExe-B3_dBQWa.jpg' %}" alt="TechExe Image">
+            <h3>Grafana Dashboards for Efficient Monitoring</h3>
+            <p>Dashboards designed for efficient real-time monitoring of interconnected systems </p>
+            <a href="https://techexe.net/blog/post/4/">Read More</a>
+        </div>
         <div class="service-box">
             <h3>VLAN & VDOM Firewall</h3>
             <p>Fortinet firewall VDOM and VLAN to split Physical domains</p>

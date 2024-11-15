@@ -3,13 +3,14 @@ import "../css/home.css";
 import "../css/portfolio.css";
 import "../css/blog.css";
 import "../css/complaints.css";
-import heroImage from "../images/1892751.jpg";
+import heroImage from "../images/TechExe.jpg";
 import { useEffect } from 'react';
 
 
 const sectionStyle = {
   backgroundImage: `url(${heroImage})`,
-  height: "100vh",
+  height: "30vh",
+  width: "100vw",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",

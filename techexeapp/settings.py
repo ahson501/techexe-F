@@ -163,8 +163,8 @@ CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
     'default': {
         'toolbar': 'full',
-        'height': 300,
-        'width': '100%',
+        'allowedContent': True,  # Allow inline styles
+        'extraAllowedContent': 'p[style]',  # Allow style attributes on <p> tags
     },
 }
 

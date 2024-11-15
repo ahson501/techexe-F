@@ -44,13 +44,22 @@
 }
 
 /* Image Styling for Responsiveness */
-img {
-    display: block;
-    max-width: 90%;
-    margin: 20px auto;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.image-container {
+    display: flex;
+    justify-content: center; /* Centers the image horizontally */
+    align-items: center; /* Centers the image vertically */
+    height: 100vh; /* Full viewport height */
+    width: 100%; /* Full viewport width */
+    overflow: hidden; /* Ensures no overflow from the container */
 }
+
+img {
+    max-width: 100%; /* Image scales to fit the container's width */
+    max-height: 100%; /* Image scales to fit the container's height */
+    object-fit: cover; /* Ensures the image fills the container proportionally */
+    object-position: center; /* Centers the image content if cropped */
+}
+
 
 /* Portfolio List Section Styling */
 .portfolio-list-section {
