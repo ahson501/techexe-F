@@ -1,4 +1,3 @@
-<!-- blog/templates/blog/blogpost_detail.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +8,15 @@
 </head>
 <body>
     <h1>{{ blogpost.title }}</h1>
-    <div>{{ blogpost.content|safe }}</div>
-    <p><a href="{% url 'Technology' %}">Technology</a></p>
+    
+    <div class="description-container">
+        <p><strong></strong> {{ blogpost.content|safe }}</p>
+    </div>
+    
+    {% if blogpost.category %}
+        <p>Category: <a href="{% url 'category_blogpost_list' category_slug=blogpost.category.slug %}">{{ blogpost.category.name }}</a></p>
+    {% else %}
+        <p>No category assigned.</p>
+    {% endif %}
 </body>
 </html>

@@ -1,0 +1,44 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A&A Plants - Botany</title>
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/blog-CliQJSRu.css' %}">
+</head>
+<body>
+    {% block content %}
+    <div class="hero-services">
+        <h1>Botany Articles</h1>
+        <ul>
+            {% for post in posts %}
+                <li><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></li>
+            {% endfor %}
+        </ul>
+        <p>Explore our curated collection of botany-related articles below!</p>
+    </div>
+    
+    <div class="blog-content">
+        <ul>
+            <li>
+                <a href="https://techexe.net/blog/A-A-ZZplant/" target="_blank">Fascinating Facts About Zamioculcas</a>
+            </li>
+            <li>
+                <a href="https://techexe.net/blog/10/" target="_blank">Understanding Indoor Plant Categories</a>
+            </li>
+            <li>
+                <a href="https://techexe.net/blog/15/" target="_blank">The Art of Botany: A Beginner’s Guide</a>
+            </li>
+        </ul>
+    </div>
+    {% endblock %}
+    
+
+<footer>
+    &copy; 2024 A&A Plants. All rights reserved.
+</footer>
+
+</body>
+</html>

@@ -18,14 +18,26 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar">
-        <ul>
+        <div class="logo">
+          <a href="/" class="logo-text">TechExe</a>
+        </div>
+    
+        <!-- Mobile menu icon -->
+        <div class="menu-toggle" id="mobile-menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </div>
+    
+        <ul class="nav-links" id="nav-links">
             <li><a href="/AI/">Intelligent Systems</a></li>
             <li><a href="/Chemistry/">Science of Matter</a></li>
             <li><a href="/articles/">Latest Developments</a></li>
             <li><a href="/about-author/">Author Bio</a></li>
+            <li><a href="/botany/">Botany</a></li>
         </ul>
     </nav>
-
+    
     <!-- Image -->
     <div class="image-container">
         <img src="{% static 'frontend/dist/assets/TechExe-B3_dBQWa.jpg' %}" alt="TechExe Image">
@@ -46,13 +58,13 @@
             <img src="{% static 'images/services/GPU_Dashboard.png' %}" alt="GPU_Dashboard Image">
             <h3>Grafana Dashboards for Efficient Monitoring</h3>
             <p>Dashboards designed for efficient real-time monitoring of interconnected systems </p>
-            <a href="https://techexe.net/blog/post/4/">Read More</a>
+            <a href="https://techexe.net/blog/GRAFANA/">Read More</a>
         </div>
         <div class="service-box">
             <img src="{% static 'images/services/firewall.jpg' %}" alt="firewall Image">
             <h3>VLAN & VDOM Firewall</h3>
             <p>Fortinet firewall VDOM and VLAN to split Physical domains</p>
-            <a href="https://techexe.net/blog/post/2/">Read More</a>
+            <a href="https://techexe.net/blog/Fortigate_VDOM/">Read More</a>
         </div>
         <div class="service-box">
             <h3>eCommerce Solutions</h3>
@@ -70,6 +82,12 @@
         <div class="service-box">
             <h3>FinTech AI</h3>
             <p>Harness the power of AI to optimize financial operations and decision-making processes.</p>
+        </div>
+        <div class="service-box">
+            <img src="{% static 'images/services/Zamioculcas zamiifolia.jpeg' %}" alt="firewall Image">
+            <h3>Botany of Zamioculcas zamiifolia</h3>
+            <p>Dive deeper to explore how this resilient plant is beneficial in home remedies.</p>
+            <a href="https://techexe.net/blog/A-A-ZZplant/">Read More</a>
         </div>
     </section>
 </body>

@@ -7,6 +7,7 @@ pyinstaller
 django-admin-interface
 django-allauth
 pytest
+Pillow
 pytest-django
 django-taggit
 django-ckeditor

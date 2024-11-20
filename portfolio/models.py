@@ -16,7 +16,7 @@ class Portfolio(models.Model):
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     image = models.ImageField(upload_to='images/')
     url = models.URLField(max_length=200, blank=True, null=True)
-    description = models.TextField(blank=True)
+    description = RichTextField(blank=True)
     technology = models.CharField(max_length=30, choices=TECHNOLOGY_CHOICES)
     date_pub = models.DateTimeField(default=datetime.now, blank=True)
     content = RichTextField(default="Default content here.")
