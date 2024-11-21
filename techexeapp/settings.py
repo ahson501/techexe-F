@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'complaints',
     'ckeditor',
     'ckeditor_uploader',
+    'a_a_plants',
     
 ]
 

@@ -1,0 +1,509 @@
+/* Variables */
+/* General header styling */
+header {
+    background-color:#ffff; /* Fresh white tone */
+    color: #d8b4d7;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Header Title */
+header h1 {
+    font-size: 2.5em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+}
+.logo {
+    display: flex;
+    align-items: center; /* Vertically align the image and text */
+    gap: 10px; /* Space between the image and text */
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* Remove underline from the link */
+    color: inherit; /* Inherit text color */
+}
+
+.logo-image {
+    width: 50px; /* Adjust size as needed */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 8px; /* Optional rounded corners */
+    transition: transform 0.3s ease; /* Smooth hover animation */
+}
+
+.logo-text {
+    font-size: 1.5em; /* Adjust text size */
+    font-weight: bold;
+    color: #4CAF50; /* Green color matching the theme */
+    text-transform: uppercase; /* Uppercase text for branding */
+    letter-spacing: 1px;
+}
+
+.logo-link:hover .logo-image {
+    transform: scale(1.1); /* Slight zoom on hover */
+}
+
+.logo-link:hover .logo-text {
+    color: #81C784; /* Lighter green on hover */
+}
+
+/* Main section styling for 'Fresh Selections' */
+main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    background: linear-gradient(135deg, #f1f1f1, #a8e063); /* Soft gradient background */
+}
+
+.image-box {
+
+    /* Here's the trick */
+    box-shadow: inset 0 0 0 100vw rgba(160, 26, 2, 0.02);;
+  
+    /* Basic background styles */
+    background: var(--image-url) center center no-repeat;
+    background-size: cover;
+  
+    /* Here's the same styles we applied to our content-div earlier */
+    color: white;
+    min-height: 50vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+
+  h1 {
+    position: relative; /* For pseudo-elements positioning */
+    font-size: 2.5em; /* Large text size */
+    font-weight: 700; /* Bold text */
+    text-transform: uppercase; /* Uppercase text */
+    letter-spacing: 2px; /* Elegant spacing */
+    margin: 0;
+    padding: 10px 0;
+    color: #4CAF50;
+    text-align: center; /* Centers text */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+    background: linear-gradient(90deg, #A8D5BA, #4CAF50);
+    -webkit-background-clip: text; /* Clips gradient to text */
+    -webkit-text-fill-color: transparent;
+    transition: transform 0.3s ease, color 0.3s ease;
+    animation: fadeIn 1s ease-in-out; /* Fade-in animation */
+}
+
+h1::before, h1::after {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 5px;
+    background: #3af74a;
+    bottom: -10px;
+    transition: width 0.3s ease-in-out;
+}
+
+h1::before {
+    left: 50%; /* Centered */
+    transform: translateX(-100%);
+}
+
+h1::after {
+    right: 50%;
+    transform: translateX(100%);
+}
+
+h1:hover::before, h1:hover::after {
+    width: 80px; /* Expand lines */
+}
+
+h1:hover {
+    transform: scale(1.1); /* Zoom effect */
+    color: #81C784;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Background Animation */
+h1::after {
+    animation: glow 3s infinite; /* Repeated glowing effect */
+}
+
+/* Background for Animated Images */
+h1-container {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    width: 100%;
+}
+
+h1-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('/static/images/services/flowers.jpg');
+    opacity: 0.5;
+    background-size: cover;
+    animation: slideBg 10s linear infinite;
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 10px #3af74a; }
+    50% { box-shadow: 0 0 20px #4CAF50; }
+}
+
+@keyframes slideBg {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+
+/* Fade-in animation */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+  /* General styles for navbar */
+  .navbar {
+    background-color: #d5f3b2;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .navbar .logo {
+    color: #ffab00;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  .navbar ul {
+    display: flex;
+    gap: 15px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .navbar ul li a {
+    color: #ff0000;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    text-decoration: none;
+  }
+  
+  .navbar ul li a:hover {
+    background-color: #37474f;
+  }
+  
+  /* Hide menu for mobile by default */
+  .menu-toggle {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+  }
+  
+  .menu-toggle .bar {
+    height: 4px;
+    width: 25px;
+    background-color: #ffab00;
+    margin: 3px 0;
+    transition: all 0.3s ease;
+  }
+  
+  /* Mobile menu styles */
+  @media screen and (max-width: 768px) {
+    .navbar ul {
+        display: none; /* Hide menu */
+        flex-direction: column;
+        gap: 0;
+        background-color: #263238;
+        position: absolute;
+        top: 60px; /* Position below navbar */
+        right: 0;
+        width: 100%;
+        padding: 10px 0;
+    }
+  
+    .navbar ul.active {
+        display: flex; /* Show menu when active */
+    }
+  
+    .menu-toggle {
+        display: flex; /* Show hamburger icon */
+    }
+  }
+  
+  
+  /* General Styles */
+  /* General Reset */
+body, h1, h2, ul, li, a {
+    margin: 0;
+    padding: 0;
+    text-decoration: none;
+    list-style: none;
+    box-sizing: border-box;
+}
+
+/* Overall Body Styling */
+body {
+    font-family: 'Arial', sans-serif;
+    color: #2E5933; /* A natural green color */
+    background-color: #F7F9F3; /* Light natural tone */
+    margin: 0;
+    padding: 0;
+}
+  
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #3498db, #9b59b6);
+    padding: 10px;
+    text-align: center;
+    color: #fff;
+  }
+  
+  
+  /* Glass Effect */
+  .glass {
+      background: #03db6433;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      transition: transform 0.3s ease-in-out; /* Smooth scaling effect */
+    }
+  .hero:hover {
+      background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+    }
+  .hero:hover .glass {
+      transform: scale(1.05); /* Slightly enlarge the glass on hover */
+    }
+    
+  /* Section Intro */
+  .section-intro {
+    background: linear-gradient(to bottom right, var(--primary-color), var(--secondary-color));
+    color: white;
+    text-align: center;
+    padding: 60px 20px;
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+  }
+  
+  .section-intro h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    animation: fade-in 2s ease-out forwards;
+  }
+  
+  .section-intro p {
+    font-size: 1.2rem;
+    margin: 0 auto;
+    max-width: 800px;
+    animation: slide-up 2s ease-out forwards;
+  }
+  
+  
+  /* Services Section */
+  
+  .services-header {
+    background: linear-gradient(135deg, #3498db, #9b59b6);
+    padding: 40px 20px;
+    color: #fff;
+    text-align: center;
+    font-family: 'Arial', sans-serif;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .services-header h1 {
+    font-size: 32px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  
+  .services-list {
+    list-style-type: disc; /* Standard bullet points */
+    list-style-position: inside; /* Bullets aligned with text */
+    padding: 0;
+    margin: 20px auto; /* Center the list */
+    max-width: 600px; /* Keeps the list from spreading too wide */
+  }
+  
+  .services-list li {
+    margin: 10px 0;
+    font-size: 18px;
+    line-height: 1.6;
+    text-align: left; /* Align text for better readability */
+  }
+  
+  .services-list li strong {
+    color: #34db86; /* Highlight technology names */
+    font-weight: bold;
+  }
+  
+  @media (max-width: 768px) {
+    .services-header {
+        padding: 20px 10px;
+    }
+  
+    .services-header h1 {
+        font-size: 24px;
+    }
+  
+    .services-list li {
+        font-size: 16px;
+    }
+  }
+  
+  
+  
+  .services-container {
+    padding: 20px;
+    background-color: #f9f9f9; /* Light background for contrast */
+}
+
+.services-row {
+    display: flex;
+    flex-wrap: wrap; /* Allows wrapping if content overflows */
+    justify-content: space-between; /* Adds spacing between boxes */
+    gap: 20px; /* Adds consistent spacing between items */
+}
+
+.service-box {
+    flex: 1 1 calc(33.33% - 20px); /* Three items per row with gap considered */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    border-radius: 10px; /* Rounded corners */
+    padding: 20px;
+    background: white; /* White background for the card */
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.service-box:hover {
+    transform: translateY(-5px); /* Slight lift on hover */
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+}
+
+.plant-info, .plant-description {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.plant-image img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover; /* Ensures the image maintains aspect ratio */
+    border-radius: 10px; /* Matches the box styling */
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: #4CAF50; /* Matches the plant theme */
+    margin-bottom: 10px;
+}
+
+a {
+    color: #af4c4c;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    color: #81C784; /* Lighter shade of green on hover */
+}
+
+@media (max-width: 768px) {
+    .service-box {
+        flex: 1 1 calc(50% - 20px); /* Two items per row for smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .service-box {
+        flex: 1 1 100%; /* Single column for mobile devices */
+    }
+}
+
+
+  /* Footer */
+  footer {
+    background: #50b442;
+    color: rgb(160, 26, 2);
+    padding: 20px;
+    text-align: center;
+  }
+  
+  /* Animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Media Queries */
+  @media (max-width: 768px) { 
+    .section-intro h1 {
+      font-size: 2rem;
+    .hero-services {
+        padding: 1rem;
+    }
+  
+    .service-box {
+        width: 100%;
+    }
+    }
+    .services-container {
+      flex-direction: column;
+      gap: 20px;
+    }
+  
+    
+  }

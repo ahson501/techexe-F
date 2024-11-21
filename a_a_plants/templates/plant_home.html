@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Store - Plant List</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/a_a_plants-DeLjBJkd.css'  %}">
+</head>
+<body>
+    <header>
+        <h1>Welcome to A&A Plants</h1>
+    </header>
+    <nav class="navbar">
+        <div class="logo">
+            <a href="/" class="logo-link">
+                <img src="{% static 'images/services/logo.jpg' %}" alt="A&A Plants Logo" class="logo-image">
+                <span class="logo-text"></span>
+            </a>
+        </div>
+        <!-- Mobile menu icon -->
+        <div class="menu-toggle" id="mobile-menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </div>
+    
+        <ul class="nav-links" id="nav-links">
+            <li><a href="/plant_detail/" target="_blank">Details</a></li>
+            <li><a href="/Botany/">Botany</a></li>
+            <li><a href="/about/">About Us</a></li>
+        </ul>
+    </nav>
+    <div class="image-box" style="--image-url: url(/static/images/services/flowers.jpg)">
+        <h1>Fresh Collections</h1>
+      </div>
+    
+      <section class="services-container">
+        <div class="services-row">
+            {% for plant in plants %}
+                <div class="service-box">
+                    <!-- Plant Name -->
+                    <h3>{{ plant.name }}</h3>
+    
+                    <!-- Category, Price, Availability -->
+                    <div class="plant-info">
+                        <p>Category: {{ plant.category }}</p>
+                        <p>Price: ${{ plant.price }}</p>
+                        <p>Available: {% if plant.available %}Yes{% else %}No{% endif %}</p>
+                    </div>
+    
+                    <!-- Plant Image -->
+                    <div class="plant-image">
+                        {% if plant.image %}
+                            <img src="{{ plant.image.url }}" alt="{{ plant.name }}">
+                        {% else %}
+                            <p>No image available</p>
+                        {% endif %}
+                    </div>
+    
+                    <!-- Description and More Info -->
+                    <div class="plant-description">
+                        <p>{{ plant.description|truncatewords:20|safe }}</p>
+                        {% if plant.url %}
+                            <p><a href="{{ plant.url }}" target="_blank">More Info</a></p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    
+        
+    </main>
+
+    <footer>
+        <nav>
+            <ul>
+                <li><a href="{% url 'plant_list' %}">View Plants @A&A Plants</a></li>
+            </ul>
+        </nav>
+            &copy; 2024 A&A Plants. All rights reserved.
+    </footer>
+</body>
+</html>
