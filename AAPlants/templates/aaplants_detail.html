@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ plant.name }} - AAPlants</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-XE_gcTOq.css' %}">
+</head>
+<body>
+    <header>
+        <h1>{{ plant.name }}</h1>
+    </header>
+    <section>
+        <img src="{{ plant.image.url }}" alt="{{ plant.name }}">
+        <p><strong>Scientific Name:</strong> {{ plant.scientific_name }}</p>
+        <p><strong>Description:</strong> {{ plant.description }}</p>
+        <p><strong>Care Instructions:</strong> {{ plant.care_instructions }}</p>
+    </section>
+</body>
+</html>

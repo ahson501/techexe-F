@@ -31,6 +31,7 @@ urlpatterns = [
     path('complaints/', include('complaints.urls')),
     path('accounts/', include('django.contrib.auth.urls')),  # For login/logout
     path('a_a_plants', include('a_a_plants.urls')),  # Include app-level URLs
+    path('AAPlants/', include('AAPlants.urls')),  # Include the aaplants app's URLs
 ] 
 
 if settings.DEBUG:
