@@ -2,29 +2,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - AAPlants</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-XE_gcTOq.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-BCGnjiCX.css' %}">
 </head>
 <body>
-    <header>
-        <h1>Welcome to AAPlants</h1>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="brand-title">AAPlants</div>
+        <button class="navbar-toggle" id="navbarToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav class="nav">
+            <ul id="menu">
+                <li><a href="{% url 'AAPlants:aaplantscatalog' %}">Catalog</a></li>
+                <li><a href="{% url 'AAPlants:aaplantsabout' %}">About</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscontact' %}">Contact Us</a></li>
+            </ul>
+        </nav>
     </header>
-<nav>
-    <ul>
-        <li><a href="{% url 'AAPlants:aaplantscatalog' %}">Catalog</a></li>
-        <li><a href="{% url 'AAPlants:aaplantsabout' %}">About</a></li>
-        <li><a href="{% url 'AAPlants:aaplantscontact' %}">Contact Us</a></li>       
-    </ul>
-</nav>
-    <section>
-        <h2>Featured Plants</h2>
-        <ul>
-            <!-- Example list of plants; replace with dynamic content later -->
-            <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=1 %}">Beautiful Orchid</a></li>
-            <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=2 %}">Majestic Fern</a></li>
-            <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=3 %}">Elegant Rose</a></li>
-        </ul>
-    </section>
+
+    <!-- Layout Section -->
+    <div class="layout">
+        <!-- Sidebar Section -->
+        <aside class="sidebar">
+            <h3>Categories</h3>
+            <ul>
+                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='indoor' %}">Indoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='outdoor' %}">Outdoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='succulents' %}">Succulents</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Section -->
+        <main class="content">
+            <section class="plant-grid">
+                <h2>Featured Plants</h2>
+                <ul>
+                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=1 %}">Zamioculcas zamiifolia</a></li>
+                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=2 %}">Philodendron</a></li>
+                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=3 %}">Homalomena</a></li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <p>&copy; 2024 AAPlants. All rights reserved.</p>
+        <p>
+            Yes
+        </p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        const navbarToggle = document.getElementById("navbarToggle");
+        const menu = document.getElementById("menu");
+
+        navbarToggle.addEventListener("click", () => {
+            navbarToggle.classList.toggle("active");
+            menu.classList.toggle("active");
+        });
+    </script>
 </body>
 </html>

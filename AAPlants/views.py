@@ -9,6 +9,10 @@ def home(request):
 def catalog(request):
     return render(request, 'aaplantscatalog.html')
 
+def category_view(request, category_slug):
+    # Your logic to handle category view
+    return render(request, 'aaplantscategory.html', {'category_slug': category_slug})
+
 # View for individual plant details
 def plant_detail(request, plant_id):
     # Fetch plant details using `plant_id`
