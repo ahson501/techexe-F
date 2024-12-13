@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search</title>
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DdqWQrM1.css' %}">
+</head>
+<body>
+    <form method="get" action="{% url 'AAPlants:aaplants_search' %}" class="search-form">
+        <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search..." required>
+        <button type="submit">Search</button>
+    </form>
+
+    {% if results %}
+    <h2>Search Results:</h2>
+    <ul>
+        {% for result in results %}
+            <li>
+                <h3>{{ result.fields.name|default:result.fields.title|default:"Unnamed Item" }}</h3>
+                <p>
+                    {% for field, value in result.fields.items %}
+                        <strong>{{ field|capfirst }}:</strong> {{ value }}<br>
+                    {% endfor %}
+                </p>
+                <p>{{ result.model }} Model</p>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No results found for your query.</p>
+{% endif %}
+
+</body>
+</html>

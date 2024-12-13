@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Categories</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DdqWQrM1.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Plant Categories</h1>
+    </header>
+
+    <main>
+        {% if categories %}
+            <ul>
+                {% for category in categories %}
+                    <li>
+                        <a href="{% url 'AAPlants:aaplantscategory' category.slug %}">
+                            <h2>{{ category.name }}</h2>
+                        </a>
+                        <p>{{ category.description }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No categories found.</p>
+        {% endif %}
+    </main>
+
+    <footer>
+        <p>&copy; 2024 AAPlants</p>
+    </footer>
+</body>
+</html>

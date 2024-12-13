@@ -5,25 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - AAPlants</title>
+    
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-BCGnjiCX.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DdqWQrM1.css' %}">
 </head>
 <body>
     <!-- Header Section -->
     <header class="header">
         <div class="brand-title">AAPlants</div>
-        <button class="navbar-toggle" id="navbarToggle">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <nav class="nav">
-            <ul id="menu">
-                <li><a href="{% url 'AAPlants:aaplantscatalog' %}">Catalog</a></li>
-                <li><a href="{% url 'AAPlants:aaplantsabout' %}">About</a></li>
-                <li><a href="{% url 'AAPlants:aaplantscontact' %}">Contact Us</a></li>
-            </ul>
-        </nav>
+        {% include 'aaplants_navbar.html' %}
     </header>
 
     <!-- Layout Section -->
@@ -32,9 +22,9 @@
         <aside class="sidebar">
             <h3>Categories</h3>
             <ul>
-                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='indoor' %}">Indoor Plants</a></li>
-                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='outdoor' %}">Outdoor Plants</a></li>
-                <li><a href="{% url 'AAPlants:aaplantscategory' category_slug='succulents' %}">Succulents</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='indoor' %}">Indoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='outdoor' %}">Outdoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='succulents' %}">Succulents</a></li>
             </ul>
         </aside>
 
@@ -61,12 +51,16 @@
 
     <!-- JavaScript -->
     <script>
-        const navbarToggle = document.getElementById("navbarToggle");
-        const menu = document.getElementById("menu");
-
-        navbarToggle.addEventListener("click", () => {
-            navbarToggle.classList.toggle("active");
-            menu.classList.toggle("active");
+        document.addEventListener("DOMContentLoaded", () => {
+            const navbarToggle = document.getElementById("navbarToggle");
+            const menu = document.getElementById("menu");
+    
+            if (navbarToggle && menu) {
+                navbarToggle.addEventListener("click", () => {
+                    navbarToggle.classList.toggle("active");
+                    menu.classList.toggle("active");
+                });
+            }
         });
     </script>
 </body>
