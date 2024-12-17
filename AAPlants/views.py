@@ -34,41 +34,24 @@ def contact(request):
     return render(request, 'aaplantscontact.html')
 
 def aaplants_search(request):
-    query = request.GET.get('q', '')  # Get the search query from the request
+    query = request.GET.get('q', '')  # Get the search query
     results = []  # Initialize an empty list for storing search results
 
     if query:
-        # Perform search across the Plant model
-        plant_results = Plant.objects.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
-        results.extend([{'object': plant, 'model': 'Plant'} for plant in plant_results])
+        models_to_search = [Plant, About, Category, Testimonial, Item]  # Add all your models here
 
-        # Perform search across the About model
-        about_results = About.objects.filter(
-            Q(title__icontains=query) | Q(content__icontains=query)
-        )
-        results.extend([{'object': about, 'model': 'About'} for about in about_results])
+        for model in models_to_search:
+            fields = [field.name for field in model._meta.fields if field.get_internal_type() in ['CharField', 'TextField']]
+            queries = Q()
 
-        # Perform search across the Category model
-        category_results = Category.objects.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
-        results.extend([{'object': category, 'model': 'Category'} for category in category_results])
+            # Dynamically search across all CharField and TextField fields
+            for field in fields:
+                queries |= Q(**{f"{field}__icontains": query})
 
-        # Perform search across the Testimonial model
-        testimonial_results = Testimonial.objects.filter(
-            Q(name__icontains=query) | Q(content__icontains=query)
-        )
-        results.extend([{'object': testimonial, 'model': 'Testimonial'} for testimonial in testimonial_results])
+            # Fetch results for the current model
+            model_results = model.objects.filter(queries)
+            results.extend([{'object': obj, 'model': model.__name__} for obj in model_results])
 
-        # Perform search across the Item model
-        item_results = Item.objects.filter(
-            Q(title__icontains=query) | Q(description__icontains=query)
-        )
-        results.extend([{'object': item, 'model': 'Item'} for item in item_results])
-
-    # Render the template with the query and search results
     return render(request, 'aaplants_search.html', {
         'query': query,
         'results': results,

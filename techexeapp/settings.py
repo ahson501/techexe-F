@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'ckeditor_uploader',
     'a_a_plants',
     'AAPlants',
+    'django_elasticsearch_dsl',
     
 ]
 
@@ -170,7 +171,11 @@ CKEDITOR_CONFIGS = {
     },
 }
 
-
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': os.getenv('ELASTICSEARCH_DSL_HOST', 'http://elasticsearch:9200'),
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
