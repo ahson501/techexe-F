@@ -22,9 +22,9 @@
         <aside class="sidebar">
             <h3>Categories</h3>
             <ul>
-                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='indoor' %}">Indoor Plants</a></li>
-                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='outdoor' %}">Outdoor Plants</a></li>
-                <li><a href="{% url 'AAPlants:aaplantscategory_detail' category_slug='succulents' %}">Succulents</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' slug='indoor' %}">Indoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' slug='outdoor' %}">Outdoor Plants</a></li>
+                <li><a href="{% url 'AAPlants:aaplantscategory_detail' slug='succulents' %}">Succulents</a></li>
             </ul>
         </aside>
 
@@ -36,6 +36,7 @@
                     <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=1 %}">Zamioculcas zamiifolia</a></li>
                     <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=2 %}">Philodendron</a></li>
                     <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=3 %}">Homalomena</a></li>
+                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=4 %}">Diptera</a></li>
                 </ul>
             </section>
         </main>

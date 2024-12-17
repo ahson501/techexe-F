@@ -18,11 +18,23 @@
     <ul>
         {% for result in results %}
             <li>
-                <h3>{{ result.fields.name|default:result.fields.title|default:"Unnamed Item" }}</h3>
+                <h3>
+                    {% if result.object.name %}
+                        {{ result.object.name }}
+                    {% elif result.object.title %}
+                        {{ result.object.title }}
+                    {% else %}
+                        Unnamed Item
+                    {% endif %}
+                </h3>
                 <p>
-                    {% for field, value in result.fields.items %}
-                        <strong>{{ field|capfirst }}:</strong> {{ value }}<br>
-                    {% endfor %}
+                    {% if result.object.description %}
+                        {{ result.object.description }}
+                    {% elif result.object.content %}
+                        {{ result.object.content }}
+                    {% else %}
+                        No Description Available
+                    {% endif %}
                 </p>
                 <p>{{ result.model }} Model</p>
             </li>
@@ -31,6 +43,7 @@
 {% else %}
     <p>No results found for your query.</p>
 {% endif %}
+
 
 </body>
 </html>
