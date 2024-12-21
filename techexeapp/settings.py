@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-e6jdt)a8zvx02tl^c&l_0pm9zwc5k@r0z_@txs4j%&)dxjraxp
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['' , '172.16.2.35' , '111.68.111.222' , 'techexe.net' , 'www.techexe.net']
+ALLOWED_HOSTS = ['0.0.0.0' , '172.16.2.35' , '111.68.111.222' , 'techexe.net' , 'www.techexe.net']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://techexe.net',
@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'a_a_plants',
     'AAPlants',
     'django_elasticsearch_dsl',
-    
+    'elasticsearch',    
 ]
 
 MIDDLEWARE = [
@@ -173,9 +173,14 @@ CKEDITOR_CONFIGS = {
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': os.getenv('ELASTICSEARCH_DSL_HOST', 'http://elasticsearch:9200'),
+        'hosts': os.getenv('ELASTICSEARCH_DSL_HOST', 'http://es:9200'),
+        'http_auth': (
+            os.getenv('ELASTICSEARCH_USER', 'elastic'),
+            os.getenv('ELASTICSEARCH_PASSWORD', '12345678')
+        ),
     },
 }
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

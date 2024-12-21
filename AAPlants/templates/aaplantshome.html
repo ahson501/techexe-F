@@ -7,14 +7,28 @@
     <title>Home - AAPlants</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DdqWQrM1.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DiuoRrVt.css' %}">
 </head>
 <body>
     <!-- Header Section -->
-    <header class="header">
-        <div class="brand-title">AAPlants</div>
-        {% include 'aaplants_navbar.html' %}
+
+    <!-- Header Section -->
+
+    <header class="page-header">
+        <div class="header-left">
+            <form method="get" action="{% url 'AAPlants:aaplants_search' %}" class="header-search-form">
+                <input type="text" name="q" placeholder="Search..." required>
+                <button type="submit" class="search-button">
+                    <i class="search-icon">🔍</i>
+                </button>
+            </form>
+            
+        </div>
+        <div class="header-right">
+            <h1 class="page-title">AAPlants</h1>
+        </div>
     </header>
+    
 
     <!-- Layout Section -->
     <div class="layout">

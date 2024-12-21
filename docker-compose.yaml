@@ -31,6 +31,22 @@ services:
     networks:
       - app-network
 
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=12345678
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: always
+    networks:
+      - app-network
+
   web:
     build: .
     container_name: tech_web
@@ -40,10 +56,13 @@ services:
     depends_on:
       - db
       - vite
-      - elasticsearch
+      - es
     environment:
       - DEBUG=True
-      - DATABASE_URL=postgresql://node-1:12345678@db:5432/tech_db
+      - DATABASE_URL=postgresql://node-1:12345678@db:5432/
+      - ELASTIC_HOST=http://es:9200
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=12345678
       - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
       - EMAIL_HOST=smtp.gmail.com
       - EMAIL_PORT=587
@@ -116,17 +135,6 @@ services:
     networks:
       - app-network
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
 
 volumes:
   postgres_data:
@@ -141,3 +149,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
+    name: app-network

@@ -12,6 +12,7 @@ pytest-django
 django-taggit
 django-ckeditor
 django-debug-toolbar
+elasticsearch
 django-elasticsearch-dsl
 whitenoise
 django-storages
