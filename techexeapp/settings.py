@@ -173,10 +173,10 @@ CKEDITOR_CONFIGS = {
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': os.getenv('ELASTICSEARCH_DSL_HOST', 'http://es:9200'),
+        'hosts': os.getenv('ES_HOST', 'http://es:9200'), 
         'http_auth': (
-            os.getenv('ELASTICSEARCH_USER', 'elastic'),
-            os.getenv('ELASTICSEARCH_PASSWORD', '12345678')
+            os.getenv('ELASTIC_USERNAME', 'elastic'),
+            os.getenv('ELASTIC_PASSWORD', '12345678')
         ),
     },
 }

@@ -1,9 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from .models import Plant, About, Category, Testimonial, Item
-from django.http import JsonResponse
-from django_elasticsearch_dsl.search import Search
-from .documents import PlantDocument
-from elasticsearch import Elasticsearch  # Add this import
+from django.db import connection  # Add this import
 
 
 # View for the home page
@@ -31,30 +28,24 @@ def about(request):
 def contact(request):
     return render(request, 'aaplantscontact.html')
 
-# Set up Elasticsearch client
-
-es = Elasticsearch(
-    hosts=["http://es:9200"],  # Use 'es' as the hostname
-    http_auth=("elastic", "12345678")  # Your credentials
-)
-
 def aaplants_search(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get("q", "")
+    results = []
+
     if query:
-        search = PlantDocument.search().query(
-            "multi_match",
-            query=query,
-            fields=["name", "description", "scientific_name"]
-        )
-        results = search.execute()
-        plants = [
-            {
-                "name": hit.name,
-                "scientific_name": hit.scientific_name,
-                "description": hit.description,
-                "id": hit.meta.id,
-            }
-            for hit in results
-        ]
-        return JsonResponse({"plants": plants})
-    return render(request, "aaplants_search.html", {"message": "No search query provided"})
+        # Adjust the query to use category_id instead of category
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, name, scientific_name, description, care_instructions, category_id
+                FROM "AAPlants_plant"
+                WHERE name ILIKE %s
+                OR scientific_name ILIKE %s
+                OR description ILIKE %s
+                OR care_instructions ILIKE %s
+                OR category_id::text ILIKE %s  -- Assuming category_id is an integer and we are converting it to text
+                """, 
+                [f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"]
+            )
+            results = cursor.fetchall()
+
+    return render(request, "aaplants_search.html", {"results": results, "query": query})

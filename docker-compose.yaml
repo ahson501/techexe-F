@@ -31,22 +31,6 @@ services:
     networks:
       - app-network
 
-  es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-    environment:
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=true
-      - ELASTIC_USERNAME=elastic
-      - ELASTIC_PASSWORD=12345678
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    restart: always
-    networks:
-      - app-network
-
   web:
     build: .
     container_name: tech_web
@@ -56,13 +40,9 @@ services:
     depends_on:
       - db
       - vite
-      - es
     environment:
       - DEBUG=True
       - DATABASE_URL=postgresql://node-1:12345678@db:5432/
-      - ELASTIC_HOST=http://es:9200
-      - ELASTIC_USERNAME=elastic
-      - ELASTIC_PASSWORD=12345678
       - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
       - EMAIL_HOST=smtp.gmail.com
       - EMAIL_PORT=587
@@ -78,6 +58,8 @@ services:
       - ./frontend/static:/app/frontend/static
     networks:
       - app-network
+
+      
 
   vite:
     build:
@@ -144,7 +126,7 @@ volumes:
   static_volume:
   media_volume:
   cadvisor_data:  # Define the volume for persistent storage
-  elasticsearch_data:
+  
 
 networks:
   app-network:
