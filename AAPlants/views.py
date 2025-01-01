@@ -1,11 +1,14 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from .models import Plant, About, Category, Testimonial, Item
 from django.db import connection  # Add this import
+from django.contrib.auth.decorators import login_required
+from .forms import CustomLoginForm
+
 
 
 # View for the home page
 def home(request):
-    return render(request, 'aaplantshome.html')
+    return render(request, 'aaplantshome.html', {'on_homepage': True})
 
 def category_list(request):
     categories = Category.objects.all()
@@ -49,3 +52,18 @@ def aaplants_search(request):
             results = cursor.fetchall()
 
     return render(request, "aaplants_search.html", {"results": results, "query": query})
+
+@login_required
+def user_details(request):
+    if request.method == 'POST':
+        form = CustomLoginForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('profile')  # Redirect to the profile view after saving
+    else:
+        form = CustomLoginForm(instance=request.user)
+    return render(request, 'user_details.html', {'form': form})
+
+@login_required
+def profile_view(request):
+    return render(request, 'profile.html', {'user': request.user})

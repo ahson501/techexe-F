@@ -21,6 +21,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('TechExe/', include('TechExe.urls')),
@@ -29,9 +30,8 @@ urlpatterns = [
     path('', include('home.urls', namespace='home')),  # Register the 'home' namespace here
     path('portfolio/', include('portfolio.urls')),
     path('complaints/', include('complaints.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),  # For login/logout
     path('a_a_plants', include('a_a_plants.urls')),  # Include app-level URLs
-    path('AAPlants/', include('AAPlants.urls')),  # Include the aaplants app's URLs
+    path('AAPlants/', include('AAPlants.urls')),  # Include app URLs
 ] 
 
 if settings.DEBUG:

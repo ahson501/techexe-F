@@ -10,10 +10,9 @@ pytest
 Pillow
 pytest-django
 django-taggit
+django-allauth
 django-ckeditor
 django-debug-toolbar
-elasticsearch
-django-elasticsearch-dsl
 whitenoise
 django-storages
 djangorestframework

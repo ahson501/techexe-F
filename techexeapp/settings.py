@@ -51,8 +51,10 @@ INSTALLED_APPS = [
     'ckeditor_uploader',
     'a_a_plants',
     'AAPlants',
-    'django_elasticsearch_dsl',
-    'elasticsearch',    
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+        
 ]
 
 MIDDLEWARE = [
@@ -64,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'techexeapp.urls'
@@ -171,16 +174,21 @@ CKEDITOR_CONFIGS = {
     },
 }
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': os.getenv('ES_HOST', 'http://es:9200'), 
-        'http_auth': (
-            os.getenv('ELASTIC_USERNAME', 'elastic'),
-            os.getenv('ELASTIC_PASSWORD', '12345678')
-        ),
-    },
-}
 
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+AUTH_USER_MODEL = 'AAPlants.CustomUser'
+
+LOGIN_URL = '/AAPlants/login/'
+LOGIN_REDIRECT_URL = '/AAPlants/profile/'  # Redirect after successful login
+LOGOUT_REDIRECT_URL = '/AAPlants/login/'
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Optional for development
+ACCOUNT_AUTHENTICATION_METHOD = 'username'  # Can be 'email' or 'username'
+ACCOUNT_EMAIL_REQUIRED = False
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

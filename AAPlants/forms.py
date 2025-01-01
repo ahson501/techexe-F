@@ -1,4 +1,10 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 
-class SearchForm(forms.Form):
-    query = forms.CharField(label='Search Plants', max_length=100)
+class CustomLoginForm(AuthenticationForm):
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your username'})
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter your password'})
+    )

@@ -13,8 +13,81 @@ body {
     background-color: #f8f9fa;
     padding: 20px;
 }
+/* Login Page Specific Styles */
+#AAPlants-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #e8f5e9; /* Light green background */
+}
+
+#AAPlants-login .login-container {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px); /* Glass effect */
+    text-align: center;
+}
+
+#AAPlants-login .login-container h1 {
+    font-size: 1.8rem;
+    color: #2a7f3b;
+    margin-bottom: 20px;
+}
+
+#AAPlants-login .login-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#AAPlants-login .login-container input[type="text"],
+#AAPlants-login .login-container input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+#AAPlants-login .login-container button {
+    padding: 10px;
+    font-size: 1rem;
+    color: #fff;
+    background-color: #2a7f3b;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#AAPlants-login .login-container button:hover {
+    background-color: #1e6431;
+}
+
+#AAPlants-login .login-container a {
+    text-decoration: none;
+    color: #2a7f3b;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+#AAPlants-login .login-container a:hover {
+    color: #f4e04d;
+}
 
 /* Header Section */
+
+/* Add spacing between .page-header and LOGIN button */
+.page-header + .btn-primary {
+    margin-top: 20px; /* Adjust the value for desired spacing */
+    display: inline-block; /* Ensures proper button alignment */
+}
+
 .page-header {
     background-color: #dcd9d4;
     display: flex;
