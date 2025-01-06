@@ -18,7 +18,7 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 
 # Fetch data from the PostgreSQL table
-cursor.execute("SELECT id, name, description, category, care_instructions, available, created_at, updated_at FROM \"AAPlants_plant\"")
+cursor.execute("SELECT id, name, description, category_id, care_instructions, available, created_at, updated_at FROM \"AAPlants_plant\"")
 rows = cursor.fetchall()
 
 # Prepare the bulk data for export (in JSON format)
@@ -28,7 +28,7 @@ for row in rows:
         "id": row[0],
         "name": row[1],
         "description": row[2],
-        "category": row[3],
+        "category_id": row[3],
         "care_instructions": row[4],
         "available": row[5],
         "created_at": row[6].isoformat() if row[6] else None,

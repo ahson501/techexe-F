@@ -16,12 +16,12 @@
     </body>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-DFxQvVgC.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/AAPlants-AkjZSJXZ.css' %}">
 
     <header class="page-header">
         <div class="header-left">
             <form method="get" action="{% url 'AAPlants:aaplants_search' %}" class="header-search-form">
-    <!--  -->            <input type="text" name="q" placeholder="Search..." required>
+               <input type="text" name="q" placeholder="Search..." required>
                 <button type="submit" class="search-button">
                     <i class="search-icon">🔍</i>
                 </button>
@@ -61,14 +61,45 @@
         <main class="content">
             <section class="plant-grid">
                 <h2>Featured Plants</h2>
-                <ul>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=1 %}">Zamioculcas zamiifolia</a></li>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=2 %}">Philodendron</a></li>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=3 %}">Homalomena</a></li>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=4 %}">Diptera</a></li>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=5 %}">Swiss cheese plant</a></li>
-                    <li><a href="{% url 'AAPlants:aaplants_detail' plant_id=6 %}">RedRose</a></li>
+                <ul class="plant-list">
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=1 %}">
+                            <img src="{% static 'images/services/Zamioculcas zamiifolia.gif' %}" alt="Zamioculcas zamiifolia">
+                            <p>Zamioculcas zamiifolia</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=2 %}">
+                            <img src="{% static 'images/services/Philodendron.jpeg' %}" alt="Philodendron">
+                            
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=3 %}">
+                            <img src="{% static 'images/services/Homalomena.jpeg' %}" alt="Homalomena">
+                            
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=4 %}">
+                            <img src="{% static 'images/services/Diptera.jpeg' %}" alt="Diptera">
+                            
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=5 %}">
+                            <img src="{% static 'images/services/Swiss_cheese_plant.jpeg' %}" alt="Swiss cheese plant">
+                            Swiss cheese plant
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'AAPlants:aaplants_detail' plant_id=6 %}">
+                            <img src="{% static 'images/services/RedRose.jpeg' %}" alt="RedRose">
+                            RedRose
+                        </a>
+                    </li>
                 </ul>
+                
             </section>
         </main>
     </div>

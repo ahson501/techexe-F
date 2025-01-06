@@ -257,6 +257,81 @@ body {
     margin-bottom: 15px;
 }
 
+/* General styling for the plant grid */
+.plant-grid {
+    padding: 20px;
+    background-color: #f9f9f9;
+    text-align: center;
+}
+
+.plant-grid h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Plant List Styling */
+.plant-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Individual Plant Item Styling */
+.plant-list li {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+}
+
+/* Hover Effect for Plant Item */
+.plant-list li:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Links inside plant item */
+.plant-list a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    padding: 10px;
+}
+
+/* Styling for Plant Images */
+.plant-list img {
+    width: 100%; /* Make the image flexible */
+    height: auto; /* Let height adjust according to width */
+    object-fit: cover; /* Ensure the image fills the container properly */
+    margin: 0 auto;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Plant Name Styling */
+.plant-list p {
+    font-size: 1.2rem;
+    margin: 10px 0 0;
+    color: #00b62d;
+    font-weight: bold;
+}
+
+/* Hover Effect for Plant Image */
+.plant-list a:hover img {
+    transform: scale(1.1);
+}
+
+/* Hover Effect for Links */
+.plant-list a:hover {
+    color: #007bff;
+}
+
+/* Grid Layout with Flexibility */
 .plant-grid ul {
     list-style: none;
     display: grid;
@@ -264,13 +339,20 @@ body {
     gap: 15px;
 }
 
+/* Plant Item Styling inside Grid */
 .plant-grid ul li {
-    padding: 10px;
     background-color: #f4f9f4;
     border-radius: 5px;
     text-align: center;
+    transition: transform 0.3s ease-in-out;
 }
 
+/* Hover Effect for Grid Items */
+.plant-grid ul li:hover {
+    transform: scale(1.05);
+}
+
+/* Links inside Grid Items */
 .plant-grid ul li a {
     text-decoration: none;
     color: #333;
@@ -278,9 +360,39 @@ body {
     transition: color 0.3s ease;
 }
 
+/* Hover Effect for Grid Links */
 .plant-grid ul li a:hover {
     color: #2a7f3b;
 }
+
+/* Responsive Design */
+
+/* Tablet Screen: Adjustments for medium screens */
+@media (max-width: 768px) {
+    .plant-list img {
+        width: 100%; /* Let the image take full width */
+        height: auto; /* Let height adjust proportionally */
+    }
+
+    .plant-list li {
+        width: 100%; /* Ensure the list item takes full width */
+        height: auto; /* Adjust height proportionally */
+    }
+}
+
+/* Mobile Screen: Adjustments for small screens */
+@media (max-width: 480px) {
+    .plant-list img {
+        width: 100%; /* Make the image responsive */
+        height: auto; /* Let the image height adjust proportionally */
+    }
+
+    .plant-list li {
+        width: 100%; /* Ensure items fit fully */
+        height: auto; /* Allow for flexible height */
+    }
+}
+
 
 /* Footer */
 .footer {

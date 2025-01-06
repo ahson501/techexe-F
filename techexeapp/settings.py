@@ -181,7 +181,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-AUTH_USER_MODEL = 'AAPlants.CustomUser'
+AUTH_USER_MODEL = 'AAPlants.CustomUserAAPlants'
 
 LOGIN_URL = '/AAPlants/login/'
 LOGIN_REDIRECT_URL = '/AAPlants/profile/'  # Redirect after successful login
