@@ -36,6 +36,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'django.contrib.sites',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -54,6 +55,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'iccbs',
         
 ]
 
@@ -64,9 +66,10 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'techexeapp.middleware.DynamicSiteIDMiddleware',
 ]
 
 ROOT_URLCONF = 'techexeapp.urls'
@@ -83,6 +86,7 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'techexeapp.context_processors.current_site_processor',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -173,9 +177,25 @@ CKEDITOR_CONFIGS = {
         'extraAllowedContent': 'p[style]',  # Allow style attributes on <p> tags
     },
 }
-
-
 SITE_ID = 1
+
+SITE_ID = 2
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+AUTH_USER_MODEL = 'iccbs.CustomUsericcbs'
+
+LOGIN_URL = '/iccbs/login/'
+LOGIN_REDIRECT_URL = '/iccbs/profile/'  # Redirect after successful login
+LOGOUT_REDIRECT_URL = '/iccbs/login/'
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Optional for development
+ACCOUNT_AUTHENTICATION_METHOD = 'username'  # Can be 'email' or 'username'
+ACCOUNT_EMAIL_REQUIRED = False
+
+
+SITE_ID = 3
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -189,6 +209,8 @@ LOGOUT_REDIRECT_URL = '/AAPlants/login/'
 ACCOUNT_EMAIL_VERIFICATION = "none"  # Optional for development
 ACCOUNT_AUTHENTICATION_METHOD = 'username'  # Can be 'email' or 'username'
 ACCOUNT_EMAIL_REQUIRED = False
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

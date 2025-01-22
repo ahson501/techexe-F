@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Welcome to the BBB Page!</h1>
+
+  {% if user.is_authenticated %}
+    <p>Welcome back, {{ user.username }}!</p>
+    <p><a href="{% url 'iccbs_logout' %}">Logout</a></p>
+  {% else %}
+    <p>You are not logged in.</p>
+    <p><a href="{% url 'iccbs_login' %}">Login</a></p>
+    <p><a href="{% url 'iccbs-register' %}">Register</a></p>
+  {% endif %}
+
+  <div class="bbb-content">
+    <!-- Your custom content goes here -->
+    <h2>About BBB</h2>
+    <p>This is a page for the BBB app. Add more details here.</p>
+  </div>
+{% endblock %}

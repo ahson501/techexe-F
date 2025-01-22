@@ -1,0 +1,140 @@
+/* Global Styles */
+body, html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+/* Responsive Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 15px;
+}
+
+/* Navbar Styling */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #007bff; /* Bootstrap blue */
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+
+.navbar a {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 10px;
+    font-weight: bold;
+}
+
+.navbar a:hover {
+    color: #f8f9fa;
+    text-decoration: underline;
+}
+
+.navbar-toggler {
+    display: none;
+}
+
+/* Flash Messages */
+.alert {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.alert-dismissible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert .close {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2em;
+}
+
+/* Content Area */
+.content {
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer Styling */
+footer {
+    text-align: center;
+    padding: 15px 0;
+    margin-top: 30px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .navbar-toggler {
+        display: inline-block;
+        cursor: pointer;
+        background: #0056b3;
+        color: #fff;
+        border: none;
+        padding: 5px 10px;
+        font-size: 1rem;
+        border-radius: 3px;
+    }
+
+    .navbar-collapse {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        background: #007bff;
+        width: 100%;
+    }
+
+    .navbar-collapse.active {
+        display: flex;
+    }
+
+    .navbar a {
+        margin: 10px 0;
+    }
+
+    .content {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    body, html {
+        font-size: 14px;
+    }
+
+    .navbar {
+        padding: 10px;
+    }
+
+    .content {
+        padding: 10px;
+    }
+
+    footer {
+        font-size: 0.8rem;
+    }
+}

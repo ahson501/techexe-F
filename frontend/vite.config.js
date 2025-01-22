@@ -15,6 +15,7 @@ export default defineConfig({
         complaints: './src/css/complaints.css', // CSS entry for Complaints app
         home: './src/css/home.css',            // CSS entry for Home app
         AAPlants: './src/css/AAPlants.css',
+        iccbs: './src/css/iccbs.css',
       },
     },
   },

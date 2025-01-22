@@ -32,6 +32,8 @@ urlpatterns = [
     path('complaints/', include('complaints.urls')),
     path('a_a_plants', include('a_a_plants.urls')),  # Include app-level URLs
     path('AAPlants/', include('AAPlants.urls')),  # Include app URLs
+    path('iccbs/', include('iccbs.urls')),  # Include app URLs
+    
 ] 
 
 if settings.DEBUG:
