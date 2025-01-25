@@ -68,8 +68,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'allauth.account.middleware.AccountMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'techexeapp.middleware.DynamicSiteIDMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
 
 ROOT_URLCONF = 'techexeapp.urls'
@@ -86,7 +85,6 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'techexeapp.context_processors.current_site_processor',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -177,38 +175,7 @@ CKEDITOR_CONFIGS = {
         'extraAllowedContent': 'p[style]',  # Allow style attributes on <p> tags
     },
 }
-SITE_ID = 1
 
-SITE_ID = 2
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
-]
-AUTH_USER_MODEL = 'iccbs.CustomUsericcbs'
-
-LOGIN_URL = '/iccbs/login/'
-LOGIN_REDIRECT_URL = '/iccbs/profile/'  # Redirect after successful login
-LOGOUT_REDIRECT_URL = '/iccbs/login/'
-ACCOUNT_EMAIL_VERIFICATION = "none"  # Optional for development
-ACCOUNT_AUTHENTICATION_METHOD = 'username'  # Can be 'email' or 'username'
-ACCOUNT_EMAIL_REQUIRED = False
-
-
-SITE_ID = 3
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
-]
-AUTH_USER_MODEL = 'AAPlants.CustomUserAAPlants'
-
-LOGIN_URL = '/AAPlants/login/'
-LOGIN_REDIRECT_URL = '/AAPlants/profile/'  # Redirect after successful login
-LOGOUT_REDIRECT_URL = '/AAPlants/login/'
-ACCOUNT_EMAIL_VERIFICATION = "none"  # Optional for development
-ACCOUNT_AUTHENTICATION_METHOD = 'username'  # Can be 'email' or 'username'
-ACCOUNT_EMAIL_REQUIRED = False
 
 
 
@@ -217,6 +184,7 @@ ACCOUNT_EMAIL_REQUIRED = False
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
+LOGIN_REDIRECT_URL = '/'  # Redirect after successful login
+LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
 
 

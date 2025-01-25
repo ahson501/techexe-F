@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% load static %}
 {% block title %} Home Page {% endblock title%}
 {% block content %}
     <div class="jumbotron">
@@ -9,9 +9,9 @@
         </p>
         <hr class="my-4">
         <p class="lead">
-            <a class="btn btn-primary btn-lg" href="#" role="button">Logout</a>
-            <a class="btn btn-primary btn-lg" href="#" role="button">Sign in</a>
+            <a class="btn btn-primary btn-lg" href="{% url 'iccbs:iccbs_base' %}" role="button">Logout</a>
+            
         </p>
     </div>
-    <p>Current Site ID: {{ current_site_id }}</p>
+    
 {% endblock content %}

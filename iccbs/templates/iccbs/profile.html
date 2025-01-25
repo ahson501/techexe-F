@@ -1,10 +1,41 @@
-{% extends "base.html" %}
-{% block content %}
-    <h1>Profile</h1>
-    <form method="post" enctype="multipart/form-data">
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <!-- Display Profile Picture -->
+        {% if user.profile.profile_picture %}
+            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" 
+                 style="width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        {% else %}
+            <img src="{% static 'default-profile.png' %}" alt="Default Profile Picture" 
+                 style="width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        {% endif %}
+    </div>
+
+    <p style="font-weight: bold; font-style: italic; color: #4CAF50; font-size: 1.5em; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); text-align: center;">
+        Welcome, {{ user.username }}!
+    </p>
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 600px; margin: 0 auto;">
         {% csrf_token %}
+        <h3>Update User Info</h3>
         {{ user_form.as_p }}
         {{ profile_form.as_p }}
-        <button type="submit">Update Profile</button>
+        <button type="submit" style="background-color: #007BFF; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em;">
+            Save Changes
+        </button>
     </form>
-{% endblock %}
+
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="{% url 'iccbs:iccbshome' %}" style="margin-right: 15px; text-decoration: none; color: #007BFF;">Go Back</a>
+        <a href="{% url 'iccbs:iccbs_logout' %}" style="text-decoration: none; color: #FF5733;">Logout</a>
+    </div>
+</body>
+</html>
