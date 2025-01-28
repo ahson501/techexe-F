@@ -11,7 +11,8 @@ urlpatterns = [
     # Home Page
     path('iccbshome/', views.iccbshome, name='iccbshome'),  # Home page (requires login)
     path('profile/', views.profile, name='profile'), 
-    
+    path('profile/<str:username>/', views.public_profile, name='public_profile'),
+
     # Registration
     path('register/', views.RegisterView.as_view(), name='iccbs_register'),  # User registration
     

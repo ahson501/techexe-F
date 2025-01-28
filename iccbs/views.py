@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views import View
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -102,3 +103,9 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         "If an account exists with the email entered, check your inbox (and spam folder)."
     )
     success_url = reverse_lazy('iccbs:iccbs_base')
+
+def public_profile(request, username):
+    """Render a public profile page."""
+    user = get_object_or_404(User, username=username)
+    profile = user.profile  # Assuming you have a `Profile` model related to `User`
+    return render(request, 'iccbs/public_profile.html', {'user': user, 'profile': profile})
