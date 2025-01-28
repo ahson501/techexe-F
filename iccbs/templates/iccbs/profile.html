@@ -1,4 +1,4 @@
-{% load static %} 
+{% load static %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +18,7 @@
             {% if user.profile.profile_picture %}
                 <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic">
             {% else %}
-                <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
+                <img src="{% static 'images/services/iccbs.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
             {% endif %}
 
             <h1>{{ user.get_full_name }}</h1>
@@ -39,8 +39,80 @@
             <h2>Update Profile</h2>
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
+                <!-- Rendering user form (if needed) -->
                 {{ user_form.as_p }}
-                {{ profile_form.as_p }}
+
+                <!-- Profile Fields -->
+                <fieldset>
+                    <legend>Profile Information</legend>
+                    
+                    <!-- Profile Picture -->
+                    <label for="profile_picture">Profile Picture:</label>
+                    {{ profile_form.profile_picture }}
+                    
+                    <!-- Full Name -->
+                    <label for="full_name">Full Name:</label>
+                    {{ profile_form.full_name }}
+
+                    <!-- Bio -->
+                    <label for="bio">Bio:</label>
+                    {{ profile_form.bio }}
+                    
+                    <!-- Country -->
+                    <label for="country">Country:</label>
+                    {{ profile_form.country }}
+
+                    <!-- City -->
+                    <label for="city">City:</label>
+                    {{ profile_form.city }}
+                </fieldset>
+
+                <!-- Academic and Professional Details -->
+                <fieldset>
+                    <legend>Academic and Professional Details</legend>
+                    
+                    <!-- Highest Qualification -->
+                    <label for="highest_qualification">Highest Qualification:</label>
+                    {{ profile_form.highest_qualification }}
+
+                    <!-- Specialization -->
+                    <label for="specialization">Specialization:</label>
+                    {{ profile_form.specialization }}
+                    
+                    <!-- Institution -->
+                    <label for="institution">Institution:</label>
+                    {{ profile_form.institution }}
+                </fieldset>
+
+                <!-- Skills and Links -->
+                <fieldset>
+                    <legend>Skills and Links</legend>
+                    
+                    <!-- Skills -->
+                    <label for="skills">Skills:</label>
+                    {{ profile_form.skills }}
+
+                    <!-- Frequently Used Tools -->
+                    <label for="tools">Frequently Used Tools:</label>
+                    {{ profile_form.tools }}
+                    
+                    <!-- LinkedIn -->
+                    <label for="linkedin">LinkedIn:</label>
+                    {{ profile_form.linkedin }}
+                    
+                    <!-- GitHub -->
+                    <label for="github">GitHub:</label>
+                    {{ profile_form.github }}
+                    
+                    <!-- Google Scholar -->
+                    <label for="google_scholar">Google Scholar:</label>
+                    {{ profile_form.google_scholar }}
+                    
+                    <!-- Personal Website/Portfolio -->
+                    <label for="personal_website">Personal Website/Portfolio:</label>
+                    {{ profile_form.link }}
+                </fieldset>
+
                 <button type="submit" class="btn save">Save Changes</button>
             </form>
         </section>
@@ -54,7 +126,7 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2025 ICCBS Community | All rights reserved.</p>
+        <p>&copy; 2025 iccbs Community | All rights reserved.</p>
     </footer>
 
 </body>

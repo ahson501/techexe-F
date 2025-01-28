@@ -10,4 +10,7 @@ class UpdateUserForm(forms.ModelForm):
 class UpdateProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ('bio', 'profile_picture')
+        fields = (
+            'bio', 'profile_picture', 'designation', 'country', 'city', 'highest_qualification', 
+            'specialization', 'institution', 'skills', 'tools', 'linkedin', 'github', 'google_scholar', 'link'
+        )
