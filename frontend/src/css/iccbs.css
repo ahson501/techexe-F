@@ -32,7 +32,7 @@ body.login-page {
 }
 
 .login-container {
-    background-color: #1a1414;/* Dark semi-transparent background */
+    background-color: #000000;/* Dark semi-transparent background */
     padding: 30px 40px;
     border-radius: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
@@ -118,93 +118,206 @@ body.login-page {
     }
 }
 
-
-/* Profile Picture Styling */
-.profile-picture {
-    display: block;
-    margin: 0 auto 20px;
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    object-fit: cover;
+/* Profile Styles */*
+{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Welcome Message */
-.welcome-message {
+body, html {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333;
+    background-color: #333333;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Hero Section */
+.hero {
+    background: #007bff;
+    color: white;
     text-align: center;
-    font-weight: bold;
-    font-style: italic;
-    color: #4CAF50;
-    font-size: 1.5em;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    padding: 40px 0;
+    border-bottom: 4px solid #0056b3;
 }
 
-/* Form Styling */
-form {
-    max-width: 600px;
+.hero-content {
+    max-width: 900px;
     margin: 0 auto;
 }
 
-form h3 {
-    text-align: center;
-    font-size: 1.4em;
-    margin-bottom: 15px;
+.profile-pic {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 5px solid white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    object-fit: cover;
+}
+
+.hero h1 {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.designation {
+    font-size: 1.2rem;
+    font-style: italic;
+    color: #f0f0f0;
+}
+
+/* Main Profile Container */
+.container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* About Section */
+.about {
+    margin-bottom: 30px;
+}
+
+.about h2 {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+.about p {
+    font-size: 1rem;
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Update Profile Form */
+.update-form {
+    margin-bottom: 40px;
+}
+
+.update-form h2 {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #007bff;
+    margin-bottom: 20px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+form p {
+    font-size: 1rem;
     color: #333;
 }
 
-form button {
-    display: block;
-    width: 100%;
-    background-color: #007BFF;
+button[type="submit"] {
+    background-color: #007bff;
     color: white;
     border: none;
-    padding: 10px;
+    padding: 12px 20px;
+    font-size: 1rem;
     border-radius: 5px;
-    font-size: 1em;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
+    width: 150px;
+    margin: 0 auto;
 }
 
-form button:hover {
+button[type="submit"]:hover {
     background-color: #0056b3;
 }
 
-/* Navigation Links */
+/* Profile Links */
 .profile-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.profile-links .btn {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    font-size: 1rem;
     text-align: center;
-    margin-top: 20px;
+    transition: background-color 0.3s ease;
 }
 
-.profile-links a {
-    margin: 0 10px;
-    text-decoration: none;
-    color: #007BFF;
-    font-weight: bold;
-    transition: color 0.3s;
+.profile-links .btn:hover {
+    background-color: #0056b3;
 }
 
-.profile-links a:hover {
-    color: #0056b3;
+.profile-links .logout {
+    background-color: #dc3545;
 }
 
-.profile-links a.logout {
-    color: #FF5733;
-}
-
-.profile-links a.logout:hover {
-    color: #C70039;
+.profile-links .logout:hover {
+    background-color: #c82333;
 }
 
 /* Footer */
 footer {
     text-align: center;
-    padding: 15px 0;
-    background-color: #007BFF;
+    padding: 15px;
+    background-color: #333;
     color: white;
     font-size: 0.9rem;
-    margin-top: 30px;
+    margin-top: 40px;
     border-radius: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+
+    .hero .designation {
+        font-size: 1rem;
+    }
+
+    .container {
+        padding: 15px;
+    }
+
+    .profile-pic {
+        width: 120px;
+        height: 120px;
+    }
+
+    .update-form h2,
+    .about h2 {
+        font-size: 1.5rem;
+    }
+
+    button[type="submit"] {
+        width: 100%;
+    }
+
+    .profile-links {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    footer {
+        font-size: 0.8rem;
+    }
 }
 
 /* Responsive Media Queries */

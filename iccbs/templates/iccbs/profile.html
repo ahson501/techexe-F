@@ -1,42 +1,61 @@
-{% load static %}
+{% load static %} 
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile</title>
+    <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-DF9CYB20.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs--LG0kBY6.css' %}">
 </head>
-<body>
-    <div class="container">
-        <!-- Display Profile Picture -->
-        {% if user.profile.profile_picture %}
-            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" class="profile-picture">
-        {% else %}
-            <img src="{% static 'default-profile.png' %}" alt="Default Profile Picture" class="profile-picture">
-        {% endif %}
+<body class="profile-page">
 
-        <!-- Welcome Message -->
-        <p class="welcome-message">
-            Welcome, {{ user.username }}!
-        </p>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <!-- Profile Picture -->
+            {% if user.profile.profile_picture %}
+                <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic">
+            {% else %}
+                <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
+            {% endif %}
 
-        <!-- Update User Info Form -->
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <h3>Update User Info</h3>
-            {{ user_form.as_p }}
-            {{ profile_form.as_p }}
-            <button type="submit">Save Changes</button>
-        </form>
+            <h1>{{ user.get_full_name }}</h1>
+            <p class="designation">{{ user.profile.designation|default:"Chemistry Enthusiast" }}</p>
+        </div>
+    </header>
+
+    <!-- Profile Container -->
+    <main class="container">
+        <!-- About Section -->
+        <section class="about">
+            <h2>About Me</h2>
+            <p>{{ user.profile.bio|default:"No bio available." }}</p>
+        </section>
+
+        <!-- Update Profile Form -->
+        <section class="update-form">
+            <h2>Update Profile</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ user_form.as_p }}
+                {{ profile_form.as_p }}
+                <button type="submit" class="btn save">Save Changes</button>
+            </form>
+        </section>
 
         <!-- Profile Links -->
-        <div class="profile-links">
-            <a href="{% url 'iccbs:iccbshome' %}">Go Back</a>
-            <a href="{% url 'iccbs:iccbs_logout' %}" class="logout">Logout</a>
-        </div>
-    </div>
+        <section class="profile-links">
+            <a href="{% url 'iccbs:iccbshome' %}" class="btn">Go Back</a>
+            <a href="{% url 'iccbs:iccbs_logout' %}" class="btn logout">Logout</a>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 ICCBS Community | All rights reserved.</p>
+    </footer>
+
 </body>
 </html>
