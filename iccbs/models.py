@@ -10,11 +10,13 @@ class Profile(models.Model):
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     full_name = models.CharField(max_length=100, blank=True, null=True)
-    link = models.URLField(max_length=200, blank=True, null=True)
+    link1 = models.URLField(blank=True, null=True, verbose_name="Computational Experiments-01")
+    link2 = models.URLField(blank=True, null=True, verbose_name="Computational Experiments-02")
+    link3 = models.URLField(blank=True, null=True, verbose_name="Computational Experiments-03")
 
     # Add the designation field
     designation = models.CharField(max_length=100, blank=True, null=True)
-    
+
     # Academic and Professional Details
     highest_qualification = models.CharField(max_length=100, blank=True, null=True)
     specialization = models.CharField(max_length=100, blank=True, null=True)

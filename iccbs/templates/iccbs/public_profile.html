@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs--LG0kBY6.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-lJJIxPvN.css' %}">
 </head>
 <body class="public-profile-page">
 
@@ -18,7 +18,7 @@
             {% else %}
                 <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
             {% endif %}
-            <h1>{{ profile.full_name }}</h1>
+            <h1>{{ user.get_full_name }}</h1>
             <p class="designation">{{ profile.designation|default:"Bioinformatics Enthusiast" }}</p>
         </div>
     </header>
@@ -26,7 +26,7 @@
     <!-- Profile Details -->
     <main class="container">
         <section class="about">
-            <h2>About {{ profile.full_name }}</h2>
+            <h2>About {{ user.get_full_name }}</h2>
             <p>{{ profile.bio|default:"No bio available." }}</p>
         </section>
 
@@ -50,7 +50,21 @@
         </section>
 
         <section class="links">
+
+
             <h3>Links</h3>
+        <ul>
+            {% if profile.link1 %}
+            <li><a href="{{ profile.link1 }}" target="_blank">Computational Experiments-01</a></li>
+            {% endif %}
+            {% if profile.link2 %}
+            <li><a href="{{ profile.link2 }}" target="_blank">Computational Experiments-02</a></li>
+            {% endif %}
+            {% if profile.link3 %}
+            <li><a href="{{ profile.link3 }}" target="_blank">Computational Experiments-03</a></li>
+            {% endif %}
+        </ul>
+
             {% if profile.linkedin %}
                 <p><a href="{{ profile.linkedin }}" target="_blank">LinkedIn</a></p>
             {% endif %}
@@ -60,15 +74,13 @@
             {% if profile.google_scholar %}
                 <p><a href="{{ profile.google_scholar }}" target="_blank">Google Scholar</a></p>
             {% endif %}
-            {% if profile.link %}
-                <p><a href="{{ profile.link }}" target="_blank">Personal Website</a></p>
-            {% endif %}
+            
         </section>
     </main>
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2025 ccbs Community | All rights reserved.</p>
+        <p>&copy; 2025 ICCBS Community | All rights reserved.</p>
     </footer>
 </body>
 </html>

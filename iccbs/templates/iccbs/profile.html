@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs--LG0kBY6.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-lJJIxPvN.css' %}">
 </head>
 <body class="profile-page">
 
@@ -46,6 +46,16 @@
                 <fieldset>
                     <legend>Profile Information</legend>
                     
+                    <!-- Personal Website/Portfolio -->
+                    <label for="link1">Computational Experiments-01:</label>
+                    {{ profile_form.link1 }}
+
+                    <label for="link2">Computational Experiments-02:</label>
+                    {{ profile_form.link2 }}
+
+                    <label for="link3">Computational Experiments-03:</label>
+                    {{ profile_form.link3 }}
+
                     <!-- Profile Picture -->
                     <label for="profile_picture">Profile Picture:</label>
                     {{ profile_form.profile_picture }}
@@ -108,9 +118,7 @@
                     <label for="google_scholar">Google Scholar:</label>
                     {{ profile_form.google_scholar }}
                     
-                    <!-- Personal Website/Portfolio -->
-                    <label for="personal_website">Personal Website/Portfolio:</label>
-                    {{ profile_form.link }}
+                    
                 </fieldset>
 
                 <button type="submit" class="btn save">Save Changes</button>

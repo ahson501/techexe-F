@@ -11,16 +11,15 @@ body, html {
 
 /* Centered Container */
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 20px auto;
-    padding: 15px;
+    padding: 20px;
     background: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Login Page Specific Styles */
-/* Global Styles */
 body.login-page {
     margin: 0;
     padding: 0;
@@ -32,7 +31,7 @@ body.login-page {
 }
 
 .login-container {
-    background-color: #000000;/* Dark semi-transparent background */
+    background-color: #000000; /* Dark semi-transparent background */
     padding: 30px 40px;
     border-radius: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
@@ -99,56 +98,17 @@ body.login-page {
 .login-container a:hover {
     color: #fff;
 }
-.login-btn:hover {
-    background: #0056b3;
-}
-
-@media (max-width: 768px) {
-    .login-box {
-        padding: 20px;
-    }
-
-    .login-box h2 {
-        font-size: 1.5em;
-    }
-
-    .login-btn {
-        font-size: 0.9em;
-        padding: 8px 15px;
-    }
-}
-
-/* Profile Styles */*
-{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body, html {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #def0f8;
-    background-color: #333333;
-    line-height: 1.6;
-    font-size: 16px;
-}
-
-a {
-    text-decoration: none;
-    color: inherit;
-}
 
 /* Hero Section */
 .hero {
-    background: #007bff;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
     color: white;
+    padding: 60px 20px;
     text-align: center;
-    padding: 40px 0;
-    border-bottom: 4px solid #0056b3;
 }
 
 .hero-content {
-    max-width: 900px;
+    max-width: 800px;
     margin: 0 auto;
 }
 
@@ -156,144 +116,201 @@ a {
     width: 150px;
     height: 150px;
     border-radius: 50%;
+    border: 4px solid white;
     margin-bottom: 20px;
-    border: 5px solid white;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    object-fit: cover;
 }
 
 .hero h1 {
-    font-size: 2.2rem;
-    margin-bottom: 10px;
-    font-weight: 600;
+    font-size: 2.5rem;
+    margin: 10px 0;
 }
 
 .designation {
     font-size: 1.2rem;
     font-style: italic;
-    color: #f0f0f0;
-}
-
-/* Main Profile Container */
-.container {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 20px;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    color: #e0e0e0;
 }
 
 /* About Section */
 .about {
-    margin-bottom: 30px;
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .about h2 {
-    font-size: 1.8rem;
-    font-weight: 500;
-    color: #007bff;
+    font-size: 2rem;
     margin-bottom: 10px;
+    color: #333;
 }
 
 .about p {
     font-size: 1rem;
-    color: #666;
-    line-height: 1.6;
+    color: #555;
+}
+
+/* Details Section */
+.details, .academic, .skills, .links {
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.details h3, .academic h3, .skills h3, .links h3 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.details p, .academic p, .skills p, .links p {
+    font-size: 1rem;
+    color: #555;
+    margin: 5px 0;
+}
+
+.details strong, .academic strong, .skills strong, .links strong {
+    color: #333;
+}
+
+/* Links Section */
+.links a {
+    color: #2575fc;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.links a:hover {
+    color: #1a5bbf;
 }
 
 /* Update Profile Form */
 .update-form {
-    margin-bottom: 40px;
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .update-form h2 {
-    font-size: 1.8rem;
-    font-weight: 500;
-    color: #007bff;
+    font-size: 2rem;
     margin-bottom: 20px;
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-form p {
-    font-size: 1rem;
     color: #333;
 }
 
-button[type="submit"] {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 12px 20px;
+.update-form fieldset {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.update-form legend {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #333;
+    padding: 0 10px;
+}
+
+.update-form label {
+    display: block;
     font-size: 1rem;
-    border-radius: 5px;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.update-form input[type="text"],
+.update-form input[type="url"],
+.update-form textarea,
+.update-form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.update-form button.btn.save {
+    background: #2575fc;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 150px;
-    margin: 0 auto;
+    transition: background 0.3s ease;
 }
 
-button[type="submit"]:hover {
-    background-color: #0056b3;
+.update-form button.btn.save:hover {
+    background: #1a5bbf;
 }
 
-/* Profile Links */
+/* Profile Links Section */
 .profile-links {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
+    text-align: center;
+    margin: 20px 0;
 }
 
 .profile-links .btn {
+    display: inline-block;
+    margin: 5px;
     padding: 10px 20px;
-    background-color: #007bff;
+    background: #2575fc;
     color: white;
-    border-radius: 5px;
+    text-decoration: none;
+    border-radius: 4px;
     font-size: 1rem;
-    text-align: center;
-    transition: background-color 0.3s ease;
+    transition: background 0.3s ease;
+}
+
+.profile-links .btn.logout {
+    background: #ff4d4d;
 }
 
 .profile-links .btn:hover {
-    background-color: #0056b3;
+    background: #1a5bbf;
 }
 
-.profile-links .logout {
-    background-color: #dc3545;
-}
-
-.profile-links .logout:hover {
-    background-color: #c82333;
+.profile-links .btn.logout:hover {
+    background: #cc0000;
 }
 
 /* Footer */
 footer {
-    text-align: center;
-    padding: 15px;
-    background-color: #333;
+    background: #333;
     color: white;
-    font-size: 0.9rem;
+    text-align: center;
+    padding: 20px;
     margin-top: 40px;
-    border-radius: 8px;
+}
+
+footer p {
+    margin: 0;
+    font-size: 0.9rem;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .hero h1 {
-        font-size: 1.8rem;
+        font-size: 2rem;
     }
 
-    .hero .designation {
+    .designation {
         font-size: 1rem;
     }
 
-    .container {
-        padding: 15px;
+    .about h2,
+    .update-form h2,
+    .details h3,
+    .academic h3,
+    .skills h3,
+    .links h3 {
+        font-size: 1.5rem;
     }
 
     .profile-pic {
@@ -301,12 +318,12 @@ footer {
         height: 120px;
     }
 
-    .update-form h2,
-    .about h2 {
-        font-size: 1.5rem;
+    .container {
+        padding: 15px;
     }
 
-    button[type="submit"] {
+    .update-form button.btn.save,
+    .profile-links .btn {
         width: 100%;
     }
 
@@ -317,39 +334,5 @@ footer {
 
     footer {
         font-size: 0.8rem;
-    }
-}
-
-/* Responsive Media Queries */
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
-
-    form {
-        padding: 0 10px;
-    }
-
-    form button {
-        font-size: 0.9em;
-    }
-}
-
-@media (max-width: 480px) {
-    body, html {
-        font-size: 14px;
-    }
-
-    .welcome-message {
-        font-size: 1.2em;
-    }
-
-    form button {
-        padding: 8px;
-    }
-
-    .profile-links a {
-        margin: 0 5px;
-        font-size: 0.9em;
     }
 }
