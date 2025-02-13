@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  notebook:
+    build: .
+    container_name: Compute1_container
+    ports:
+      - "3333:3333"  # SSH port
+      - "10000:10000"  # Jupyter Notebook port
+    volumes:
+      - notebook_data:/root/notebooks  # Volume for Jupyter data
+      - ssh_config:/etc/ssh  # Volume for SSH configuration (if needed)
+    networks:
+      - app-network
+
+volumes:
+  notebook_data:
+  ssh_config:
+
+networks:
+  app-network:
+

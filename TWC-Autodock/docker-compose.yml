@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  autodock:
+    build: .  # Path to your Dockerfile directory
+    container_name: TWC_Autodock
+    runtime: nvidia  # Enables GPU access if using Nvidia GPUs
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    volumes:
+      - ./data:/data  # Mount the data directory from host to /data in the container
+    working_dir: /workdir  # Set the working directory for commands inside the container
+    command: tail -f /dev/null  # Keeps the container running for manual interaction (change if you want a different entrypoint)
+    ports:
+      - "5000:5000"  # Example port, adjust according to your needs

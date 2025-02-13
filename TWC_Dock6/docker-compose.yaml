@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  dock6:
+    container_name: TWC-dock6
+    build: .
+    volumes:
+      - ./dock6.12_source.tar.gz:/dock6/dock6.12_source.tar.gz  # Mount the file into the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true

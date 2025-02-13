@@ -1,0 +1,42 @@
+# Use a base Ubuntu image or any other base image you prefer
+FROM ubuntu:22.04
+
+# Install necessary utilities including sudo and coreutils
+RUN apt-get update && \
+    apt-get install -y wget gcc make \
+    openssh-server \
+    python3-pip \
+    sudo \
+    vim \
+    less \
+    curl \
+    git \
+    net-tools \
+    iputils-ping \
+    lsb-release \
+    coreutils \
+    && mkdir /var/run/sshd \
+    && apt-get clean
+
+# Create a user named Compute1 and grant sudo access
+RUN useradd -m -s /bin/bash Compute1 && \
+    echo "Compute1:12345678" | chpasswd && \
+    echo "Compute1 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Ensure the user has sudo privileges without password
+RUN echo "Compute1 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Configure SSH server to use port 3333
+RUN sed -i 's/^#Port 22/Port 3333/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Install Jupyter Notebook
+RUN pip3 install jupyter
+
+# Expose the SSH port and Jupyter port
+EXPOSE 3333 10000
+
+# Start the SSH service and Jupyter Notebook server
+CMD ["/bin/bash", "-c", "service ssh start && jupyter notebook --ip=0.0.0.0 --port=10000 --no-browser --allow-root"]
+
