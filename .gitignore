@@ -1,2 +1,3 @@
+# ignore ALL .tar files
 **/*.tar.gz
 
