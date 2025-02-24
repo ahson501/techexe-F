@@ -1,3 +1,4 @@
-# ignore ALL .tar files
-**/*.tar.gz
+TWC-Dock6/dock.6.12_source.tar.gz
+/TWC-Dock6/dock.6.12_source.tar.gz
+**/dock.6.12_source.tar.gz
 
