@@ -6,6 +6,7 @@ services:
     build: .
     volumes:
       - ./dock6.12_source.tar.gz:/dock6/dock6.12_source.tar.gz  # Mount the file into the container
+      - ./:/tf/notebooks
     deploy:
       resources:
         reservations:

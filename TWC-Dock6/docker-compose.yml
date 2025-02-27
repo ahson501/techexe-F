@@ -1,18 +1,20 @@
-version: '3.8'
+version: "3.8"
 
 services:
   dock6:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: TWC_dock6
-    build: .
-    runtime: nvidia  # Add this line
-    ports:
-      - "7777:8888"  
-    volumes:
-      - ./dock6.12_source.tar.gz:/dock6/dock6.12_source.tar.gz  
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - JUPYTER_TOKEN=twc@211_huzaifa 
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+    volumes:
+      - ./notebooks:/tf/notebooks
+      - ./dock6_backups:/dock6/backups
+    ports:
+      - "7777:8888"
     deploy:
       resources:
         reservations:
@@ -20,5 +22,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    stdin_open: true
-    tty: true
+    command: >
+      bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+      conda activate openmm-env && \
+      jupyter notebook --ip=0.0.0.0 --port=8888 --notebook-dir=/tf/notebooks --no-browser --allow-root"
