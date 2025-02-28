@@ -9,6 +9,13 @@ body, html {
     color: #333;
 }
 
+.rich-text-content {
+    text-align: justify;
+    line-height: 1.8;
+    color: #333;
+}
+
+
 /* Centered Container */
 .container {
     max-width: 1200px;
@@ -31,7 +38,7 @@ body.login-page {
 }
 
 .login-container {
-    background-color: #000000; /* Dark semi-transparent background */
+    background-color: #3333334a; /* Dark semi-transparent background */
     padding: 30px 40px;
     border-radius: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
@@ -103,14 +110,34 @@ body.login-page {
 .hero {
     background: linear-gradient(135deg, #6a11cb, #2575fc);
     color: white;
-    padding: 60px 20px;
+    padding: 60px 0px;
     text-align: center;
 }
 
 .hero-content {
-    max-width: 800px;
-    margin: 0 auto;
+    position: relative;
+    width: 100%;
+    min-height: 400px; /* Adjust height as needed */
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white; /* Ensure text is readable */
+    padding: 20px;
 }
+
+.hero-content::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Optional: Dark overlay for readability */
+}
+
 
 .profile-pic {
     width: 150px;

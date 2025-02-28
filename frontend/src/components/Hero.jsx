@@ -4,6 +4,7 @@ import "../css/portfolio.css";
 import "../css/blog.css";
 import "../css/complaints.css";
 import "../css/a_a_plants.css";
+import "../css/iccbs.css";
 import heroImage from "../images/TechExe.jpg";
 import { useEffect } from 'react';
 

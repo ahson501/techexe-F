@@ -7,18 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-lJJIxPvN.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-saxUKSI2.css' %}">
 </head>
 <body class="profile-page">
 
     <!-- Hero Section -->
     <header class="hero">
         <div class="hero-content">
-            <!-- Profile Picture -->
-            {% if user.profile.profile_picture %}
-                <img src="{{ user.profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic">
+            {% if profile.profile_picture %}
+                <img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name }}" class="profile-pic">
             {% else %}
-                <img src="{% static 'images/services/iccbs.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
+                <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="Default Profile Picture" class="profile-pic">
             {% endif %}
 
             <h1>{{ user.get_full_name }}</h1>
@@ -31,9 +30,8 @@
         <!-- About Section -->
         <section class="about">
             <h2>About Me</h2>
-            <p>{{ user.profile.bio|default:"No bio available." }}</p>
+            <p>{{ user.profile.bio|default:"No bio available."|safe }}</p>
         </section>
-
         <!-- Update Profile Form -->
         <section class="update-form">
             <h2>Update Profile</h2>

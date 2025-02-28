@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-lJJIxPvN.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CstheDiQ.css' %}">
 </head>
 <body class="public-profile-page">
 
@@ -25,9 +25,27 @@
 
     <!-- Profile Details -->
     <main class="container">
+
+
+        <section class="links">
+
+
+            <h3>Links</h3>
+        <ul>
+            {% if profile.link1 %}
+            <li><a href="{{ profile.link1 }}" target="_blank">Computational Experiments-01</a></li>
+            {% endif %}
+            {% if profile.link2 %}
+            <li><a href="{{ profile.link2 }}" target="_blank">Computational Experiments-02</a></li>
+            {% endif %}
+            {% if profile.link3 %}
+            <li><a href="{{ profile.link3 }}" target="_blank">Computational Experiments-03</a></li>
+            {% endif %}
+        </ul>
+
         <section class="about">
             <h2>About {{ user.get_full_name }}</h2>
-            <p>{{ profile.bio|default:"No bio available." }}</p>
+            <p>{{ profile.bio|default:"No bio available."|safe }}</p>
         </section>
 
         <section class="details">
@@ -49,21 +67,6 @@
             <p><strong>Tools:</strong> {{ profile.tools|default:"Not specified" }}</p>
         </section>
 
-        <section class="links">
-
-
-            <h3>Links</h3>
-        <ul>
-            {% if profile.link1 %}
-            <li><a href="{{ profile.link1 }}" target="_blank">Computational Experiments-01</a></li>
-            {% endif %}
-            {% if profile.link2 %}
-            <li><a href="{{ profile.link2 }}" target="_blank">Computational Experiments-02</a></li>
-            {% endif %}
-            {% if profile.link3 %}
-            <li><a href="{{ profile.link3 }}" target="_blank">Computational Experiments-03</a></li>
-            {% endif %}
-        </ul>
 
             {% if profile.linkedin %}
                 <p><a href="{{ profile.linkedin }}" target="_blank">LinkedIn</a></p>
