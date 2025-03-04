@@ -1,4 +1,6 @@
 {% load static %}
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CstheDiQ.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-DcNiOY8u.css' %}">
 </head>
 <body class="public-profile-page">
 
@@ -20,7 +22,13 @@
             {% endif %}
             <h1>{{ user.get_full_name }}</h1>
             <p class="designation">{{ profile.designation|default:"Bioinformatics Enthusiast" }}</p>
+            <!-- Contact Me Button -->
+            <a href="{% url 'iccbs:contact_me' %}" class="contact-button">Contact Me</a>
         </div>
+        <!-- Fonts and Icons -->
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
     </header>
 
     <!-- Profile Details -->
@@ -67,7 +75,6 @@
             <p><strong>Tools:</strong> {{ profile.tools|default:"Not specified" }}</p>
         </section>
 
-
             {% if profile.linkedin %}
                 <p><a href="{{ profile.linkedin }}" target="_blank">LinkedIn</a></p>
             {% endif %}
@@ -79,6 +86,29 @@
             {% endif %}
             
         </section>
+        <section class="contact-details">
+            <h2>Contact Information</h2>
+            <ul>
+                <li><strong>Email:</strong> {{ profile.contact_email|default:"Not provided" }}</li>
+                <li><strong>Phone:</strong> {{ profile.phone_number|default:"Not provided" }}</li>
+                <li>
+                    <strong>WhatsApp:</strong>
+                    {% if profile.whatsapp_number %}
+                        <a href="https://wa.me/{{ profile.whatsapp_number|default:''|cut:' ' }}" 
+                           target="_blank" 
+                           class="whatsapp-link">
+                            <i class="fab fa-whatsapp"></i> 
+                        </a>
+                    {% else %}
+                        Not provided
+                    {% endif %}
+                </li>
+                
+                
+                
+            </ul>
+        </section>
+        
     </main>
 
     <!-- Footer -->

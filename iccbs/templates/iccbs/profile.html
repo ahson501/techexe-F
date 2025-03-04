@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-saxUKSI2.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-DcNiOY8u.css' %}">
 </head>
 <body class="profile-page">
 
@@ -116,9 +116,19 @@
                     <label for="google_scholar">Google Scholar:</label>
                     {{ profile_form.google_scholar }}
                     
-                    
-                </fieldset>
+                    <!-- Contact Information -->
+                    <h3>Contact Information</h3>
 
+                    
+                    <label for="contact_email">Email:</label>
+                    {{ profile_form.contact_email }}
+                    
+                    <label for="phone_number">Phone:</label>
+                    {{ profile_form.phone_number }}
+
+                    <label for="whatsapp_number">WhatsApp:</label>
+                    {{ profile_form.whatsapp_number }}
+                    
                 <button type="submit" class="btn save">Save Changes</button>
             </form>
         </section>
@@ -132,7 +142,7 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2025 iccbs Community | All rights reserved.</p>
+        <p>&copy; 2025 ICCBS Community | All rights reserved.</p>
     </footer>
 
 </body>

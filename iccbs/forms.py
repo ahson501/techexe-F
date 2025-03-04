@@ -28,7 +28,7 @@ class UpdateProfileForm(forms.ModelForm):
         model = Profile
         fields = (
             'bio', 'profile_picture', 'designation', 'country', 'city', 'highest_qualification', 
-            'specialization', 'institution', 'skills', 'tools', 'linkedin', 'github', 'google_scholar', 'link1', 'link2', 'link3'
+            'specialization', 'institution', 'skills', 'tools', 'linkedin', 'github', 'google_scholar', 'link1', 'link2', 'link3', 'quote', 'contact_email', 'phone_number', 'whatsapp_number'
         )
         widgets = {
             'link1': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Computational Experiments-01'}),

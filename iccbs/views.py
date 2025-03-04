@@ -109,3 +109,6 @@ def public_profile(request, username):
     user = get_object_or_404(User, username=username)
     profile = user.profile  # Assuming you have a `Profile` model related to `User`
     return render(request, 'iccbs/public_profile.html', {'user': user, 'profile': profile})
+
+def contact_me(request):
+    return render(request, 'iccbs/contact_me.html')

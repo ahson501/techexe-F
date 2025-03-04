@@ -57,6 +57,11 @@ class Profile(models.Model):
     tagline = models.CharField(max_length=150, blank=True, null=True)
     quote = models.CharField(max_length=200, blank=True, null=True)
 
+    # Contact Me Details
+    contact_email = models.EmailField(max_length=200, blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
+    
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
