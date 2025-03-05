@@ -8,8 +8,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-DcNiOY8u.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CKvDFM5e.css' %}">
 </head>
+    <!-- Navigation Menu -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="#about">About Me</a></li>
+            <li><a href="#academic">Academic</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#links">Projects</a></li>
+            <li><a href="#contact-details">Contact</a></li>
+        </ul>
+    </nav>
 <body class="public-profile-page">
 
     <!-- Header Section -->
@@ -22,21 +32,16 @@
             {% endif %}
             <h1>{{ user.get_full_name }}</h1>
             <p class="designation">{{ profile.designation|default:"Bioinformatics Enthusiast" }}</p>
-            <!-- Contact Me Button -->
-            <a href="{% url 'iccbs:contact_me' %}" class="contact-button">Contact Me</a>
+            
         </div>
         <!-- Fonts and Icons -->
             <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
             <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-
     </header>
-
     <!-- Profile Details -->
     <main class="container">
 
-
-        <section class="links">
-
+        <section id="links" class="links"></section>
 
             <h3>Links</h3>
         <ul>
@@ -51,7 +56,7 @@
             {% endif %}
         </ul>
 
-        <section class="about">
+        <section id="about" class="about">
             <h2>About {{ user.get_full_name }}</h2>
             <p>{{ profile.bio|default:"No bio available."|safe }}</p>
         </section>
@@ -62,14 +67,14 @@
             <p><strong>City:</strong> {{ profile.city|default:"Not specified" }}</p>
         </section>
 
-        <section class="academic">
+        <section id="academic" class="academic">
             <h3>Academic and Professional Background</h3>
             <p><strong>Highest Qualification:</strong> {{ profile.highest_qualification|default:"Not specified" }}</p>
             <p><strong>Specialization:</strong> {{ profile.specialization|default:"Not specified" }}</p>
             <p><strong>Institution:</strong> {{ profile.institution|default:"Not specified" }}</p>
         </section>
 
-        <section class="skills">
+        <section id="skills" class="skills">
             <h3>Skills and Expertise</h3>
             <p><strong>Skills:</strong> {{ profile.skills|default:"Not specified" }}</p>
             <p><strong>Tools:</strong> {{ profile.tools|default:"Not specified" }}</p>
@@ -86,7 +91,7 @@
             {% endif %}
             
         </section>
-        <section class="contact-details">
+        <section id="contact-details" class="contact-details">
             <h2>Contact Information</h2>
             <ul>
                 <li><strong>Email:</strong> {{ profile.contact_email|default:"Not provided" }}</li>
@@ -114,6 +119,8 @@
     <!-- Footer -->
     <footer>
         <p>&copy; 2025 ICCBS Community | All rights reserved.</p>
+        <!-- Contact Me Button -->
+        <a href="{% url 'iccbs:contact_me' %}" class="contact-button">Contact Me</a>
     </footer>
 </body>
 </html>
