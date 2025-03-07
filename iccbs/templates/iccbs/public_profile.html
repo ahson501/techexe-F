@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Profile</title>
     <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CKvDFM5e.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-BupvvuTo.css' %}">
 </head>
     <!-- Navigation Menu -->
     <nav class="navbar">
@@ -24,6 +24,20 @@
 
     <!-- Header Section -->
     <header class="hero">
+        <div class="slideshow">
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/ICCBS.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/GRAFANA.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/SNMPStats.png');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/BIOTECH.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/9thCOHORT.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/NANO_LEJ.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/Dr.Zaheer.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/LEJ.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/profile_public.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/CSCR.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/LEJ.jpeg');"></div>
+            <div class="slide" style="background-image: url('https://techexe.net/static/images/services/Jenkins.png');"></div>
+        </div>
         <div class="hero-content">
             {% if profile.profile_picture %}
                 <img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name }}" class="profile-pic">
@@ -122,5 +136,32 @@
         <!-- Contact Me Button -->
         <a href="{% url 'iccbs:contact_me' %}" class="contact-button">Contact Me</a>
     </footer>
+
+    <!-- JavaScript for slideshow -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const slides = document.querySelectorAll('.slide');
+    let currentIndex = 0;
+
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.remove('active');
+        });
+        slides[index].classList.add('active');
+    }
+
+    function nextSlide() {
+        currentIndex = (currentIndex + 1) % slides.length;
+        showSlide(currentIndex);
+    }
+
+    // Initial slide setup
+    showSlide(currentIndex);
+
+    // Auto-slide every 5 seconds
+    setInterval(nextSlide, 5000);
+});
+
+</script>
 </body>
 </html>

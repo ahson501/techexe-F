@@ -131,13 +131,19 @@ body {
     padding: 20px;
 }
 /* Navigation Menu */
+/* Navbar */
 .navbar {
-    background: #2E5933; /* Matches your designation background */
+    background: #2E5933;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
     padding: 0.8rem 2rem;
     text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    margin: 8; /* Center horizontally */
+    box-sizing: border-box;
 }
 
 .navbar ul {
@@ -147,6 +153,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 2rem;
+    flex-wrap: wrap;
 }
 
 .navbar li {
@@ -157,46 +164,72 @@ body {
     text-decoration: none;
     font-weight: 600;
     font-size: 1.1em;
-    color: #F7F9F3; /* Light text */
+    color: #F7F9F3;
     padding: 0.5rem 1rem;
     border-radius: 5px;
     transition: background 0.3s ease;
 }
 
 .navbar a:hover {
-    background: #00c4ff; /* Light blue hover effect */
-    color: #2E5933; /* Dark green text */
+    background: #00c4ff;
+    color: #2E5933;
 }
 
 /* Hero Section */
-header.hero { 
+header.hero {
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     align-items: center;
     text-align: center;
-    background: linear-gradient(135deg, rgba(0, 196, 255, 0.8), rgba(102, 37, 252, 0.8)), 
-                url('https://techexe.net/static/images/services/ICCBS.jpeg') no-repeat center center;
-    background-size: cover;
-    padding: 50px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    color: white;
-}
-
-/* Container for user info */
-.hero-content {
-    background: #f7f9f3a8;
-    padding: 3rem;
-    max-width: 600px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    margin: 0 auto; /* Center within the page */
+    position: relative;
+    height: 540px;
     width: 100%;
+    margin: 0 auto;
+    color: white;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(0, 196, 255, 0.8), rgba(102, 37, 252, 0.8)),;
+    border-radius: 10px;
 }
 
-/* Full name styling */
+/* Slideshow Container */
+.slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+}
+
+/* Show active slide */
+.slide.active {
+    opacity: 1;
+}
+
+/* Hero Content */
+.hero-content {
+    background: rgba(247, 249, 243, 0.8);
+    padding: 0rem;
+    max-width: 400px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 2;
+    position: relative;
+    width: 90%;
+    margin-right: 1rem;
+}
+
 .hero-content h1 {
     font-size: 3em;
     color: #2E5933;
@@ -205,11 +238,8 @@ header.hero {
     padding: 1rem;
     background: white;
     border-radius: 8px;
-    display: block;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Designation styling */
 .designation {
     font-size: 1.5em;
     color: #F7F9F3;
@@ -217,16 +247,7 @@ header.hero {
     padding: 1rem;
     border-radius: 8px;
     font-weight: 600;
-    display: block;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin-top: -0.5rem;
 }
-
-/* Ensure consistent spacing between sections */
-section {
-    padding: 2rem;
-}
-
 
 /* Profile Picture */
 .profile-pic {
@@ -235,6 +256,44 @@ section {
     border-radius: 50%;
     object-fit: cover;
     border: 5px solid white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-content h1 {
+        font-size: 2em;
+    }
+
+    .designation {
+        font-size: 1.2em;
+    }
+
+    header.hero {
+        height: 400px;
+    }
+
+    .profile-pic {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-content {
+        padding: 2rem;
+    }
+
+    .hero-content h1 {
+        font-size: 1.8em;
+    }
+
+    .designation {
+        font-size: 1em;
+    }
+
+    header.hero {
+        height: 350px;
+    }
 }
 
 /* Contact Me Button */
@@ -507,3 +566,5 @@ footer p {
 
     
 }
+
+
