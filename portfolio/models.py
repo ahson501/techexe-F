@@ -10,6 +10,8 @@ class Portfolio(models.Model):
         ('Django', 'Django'),
         ('React', 'React'),
         ('SNMP','SNMP'),
+        ('Infrastructure', 'Infrastructure'),
+        ('Syslog', 'Syslog'),
     ]
 
     title = models.CharField(max_length=300)

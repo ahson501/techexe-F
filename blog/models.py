@@ -18,6 +18,8 @@ class Category(models.Model):
         ('React', 'React'),
         ('SNMP', 'SNMP'),
         ('Botany', 'Botany'),
+        ('Infrastructure', 'Infrastructure'),
+        ('Syslog', 'Syslog'),
     ]
 
     name = models.CharField(max_length=100, unique=True, choices=CATEGORY_CHOICES)

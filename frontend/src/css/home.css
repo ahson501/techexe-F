@@ -98,29 +98,49 @@ h1, h2 {
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, #3498db, #9b59b6);
-  padding: 10px;
-  text-align: center;
-  color: #fff;
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
 
-/* Glass Effect */
 .glass {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    transition: transform 0.3s ease-in-out; /* Smooth scaling effect */
-  }
-.hero:hover {
-    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-  }
-.hero:hover .glass {
-    transform: scale(1.05); /* Slightly enlarge the glass on hover */
-  }
-  
+  position: relative;
+  z-index: 1;
+  background: #9b59b67d;
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 3rem;
+  max-width: fit-content;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.glass h1 {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.glass p {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
 /* Section Intro */
 .section-intro {
   background: linear-gradient(to bottom right, var(--primary-color), var(--secondary-color));
