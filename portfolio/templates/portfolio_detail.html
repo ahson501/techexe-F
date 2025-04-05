@@ -5,18 +5,23 @@
     <meta charset="UTF-8">
     <title>{{ portfolio.title }}</title>
     <!-- Portfolio-specific CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-DQU1RKkg.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/portfolio-BusFleZB.css' %}">
     
 </head>
 <body>
-    <h1 class="centered-title">{{ portfolio.title }}</h1>
-    <div class="description-container">
-        <p><strong></strong> {{ portfolio.description|safe }}</p>
+    <div class="container">
+        <h1 class="centered-title">{{ portfolio.title }}</h1>
+
+        <div class="description-container">
+            <p><strong></strong> {{ portfolio.description|safe }}</p>
+        </div>
+
+        <img src="{{ portfolio.image.url }}" alt="{{ portfolio.title }}">
+
+        <p><strong>Technologies Used:</strong> {{ portfolio.technology }}</p>
+        <p>{{ portfolio.date_pub }}</p>
+
+        <a href="{% url 'portfolio_list' %}">Back to List</a>
     </div>
-    <img src="{{ portfolio.image.url }}" alt="{{ portfolio.title }}">
-    <p><strong>Technologies Used:</strong> {{ portfolio.technology }}</p>
-    <p>{{ portfolio.date_pub }}</p>
-    
-    <a href="{% url 'portfolio_list' %}">Back to List</a>
 </body>
 </html>
