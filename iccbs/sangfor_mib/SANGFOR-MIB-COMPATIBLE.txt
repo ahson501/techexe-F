@@ -1,0 +1,2142 @@
+SANGFOR-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    OBJECT-TYPE, NOTIFICATION-TYPE, MODULE-IDENTITY,
+    Integer32, enterprises, Counter32, Counter64, Unsigned32,
+    IpAddress
+        FROM SNMPv2-SMI
+
+    TEXTUAL-CONVENTION, DisplayString, TruthValue,
+    MacAddress,TimeStamp
+	FROM SNMPv2-TC
+
+    InterfaceIndex
+    FROM IF-MIB
+
+    AddressFamilyNumbers
+    FROM IANA-ADDRESS-FAMILY-NUMBERS-MIB;
+
+sangfor MODULE-IDENTITY
+    LAST-UPDATED "202003110000Z"
+    ORGANIZATION "Sangfor"
+    CONTACT-INFO "Sangfor"
+    DESCRIPTION
+	"This file defines the private Sangfor SNMP MIB extensions."
+    ::= { enterprises 35047 }
+
+general           OBJECT IDENTIFIER ::= { sangfor 1 }
+
+product           OBJECT IDENTIFIER ::= { sangfor 2 }
+
+pGeneral          OBJECT IDENTIFIER ::= { product 100 }
+
+sfGeneralTrap     OBJECT IDENTIFIER ::= { sangfor 110 }
+
+sfDeviceDescr OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE (0..255))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+            "A textual description of the entity.  This value should
+            include the full name and version identification of
+            the system's hardware type, software operating-system,
+            and networking software."
+    ::= { general 1 }
+
+sfSysDate OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+            "The time (in hundredths of a second) since the
+            network management portion of the general was last
+            re-initialized."
+    ::= { general 2 }
+
+sfSysCpuCostRate OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+            "Cpu current cost percentage.The unit is %."
+    ::= { general 3 }
+
+sfDiskTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF sfDiskEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	    "One disk infomation"
+    ::= { general 5 }
+
+sfDiskEntry OBJECT-TYPE
+    SYNTAX     sfDiskEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "An entry containing a disk and its statistics."
+    INDEX      { diskIndex }
+    ::= { sfDiskTable  1 }
+
+sfDiskEntry ::= SEQUENCE {
+    diskIndex		Integer32,
+    sfFilesystemName		DisplayString,
+	sfDiskSize      DisplayString,
+	sfDiskUsed      DisplayString,
+	sfDiskAvail     DisplayString,
+	sfDiskUsedPercent       DisplayString,
+    sfIntDiskSize	Integer32,
+    sfIntDiskUsed	Integer32,
+    sfIntDiskAvail	Integer32,
+    sfDiskTemp     	Integer32
+}
+
+diskIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Integer reference number (row number) for the disk mib."
+    ::= { sfDiskEntry 1 }
+
+sfFilesystemName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"File system of the disk"
+    ::= { sfDiskEntry 2 }
+
+sfDiskSize OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Size of the disk"
+    ::= { sfDiskEntry 3 }
+
+sfDiskUsed OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Used size of the disk"
+    ::= { sfDiskEntry 4 }
+
+sfDiskAvail OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Available size of the disk"
+    ::= { sfDiskEntry 5 }
+
+sfDiskUsedPercent OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Used percent of the disk"
+    ::= { sfDiskEntry 6 }
+
+sfIntDiskSize OBJECT-TYPE
+    SYNTAX	Integer32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Size of the disk(M)"
+    ::= { sfDiskEntry 7 }
+
+sfIntDiskUsed OBJECT-TYPE
+    SYNTAX	Integer32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Used size of the disk(M)"
+    ::= { sfDiskEntry 8 }
+
+sfIntDiskAvail OBJECT-TYPE
+    SYNTAX	Integer32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Available size of the disk(M)"
+    ::= { sfDiskEntry 9 }
+
+sfDiskTemp OBJECT-TYPE
+    SYNTAX	Integer32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"Temperature of the disk( Celsius)"
+    ::= { sfDiskEntry 10 }
+
+sfDeviceStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    Warning(0),
+                    Normal(1)
+                    }
+	MAX-ACCESS	read-only
+    STATUS	current
+	DESCRIPTION		"0--warning 1--normal"
+	::=  { general  12 }
+
+sfSysMemory OBJECT IDENTIFIER ::= { general 13 }
+
+sfSysFreeMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+        "The total amount of memory free or available for use on
+         this host.  This value typically covers both real memory
+         and swap space or virtual memory."
+    ::= { sfSysMemory 1 }
+
+sfSysTotalMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The total amount of real/virtual memory installed
+         on this host."
+    ::= { sfSysMemory 2 }
+
+sfIntSysFreeMemory OBJECT-TYPE
+    SYNTAX	Integer32
+    UNITS       "kB"
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+        "The total amount of memory free or available for use on
+         this host.  This value typically covers both real memory
+         and swap space or virtual memory."
+    ::= { sfSysMemory 3 }
+
+sfIntSysTotalMemory OBJECT-TYPE
+    SYNTAX	Integer32
+    UNITS       "kB"
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The total amount of real/physical memory installed
+         on this host."
+    ::= { sfSysMemory 4 }
+
+sfSysMemoryUsage OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The percent of memory currently unused."
+    ::= { sfSysMemory 5 }
+
+sfSysAvailMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The amount of real/physical memory currently unused
+         or available."
+    ::= { sfSysMemory 6 }
+
+sfSysShareMemory  OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+        "The total amount of real or virtual memory currently
+         allocated for use as shared memory.
+
+         This object will not be implemented on hosts where the
+         underlying operating system does not explicitly identify
+         memory as specifically reserved for this purpose."
+    ::= { sfSysMemory 7 }
+
+sfSysBufferMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+        "The total amount of real or virtual memory currently
+         allocated for use as memory buffers.
+
+         This object will not be implemented on hosts where the
+         underlying operating system does not explicitly identify
+         memory as specifically reserved for this purpose."
+    ::= { sfSysMemory 8 }
+
+sfSysCachedMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+        "The total amount of real or virtual memory currently
+         allocated for use as cached memory.
+
+         This object will not be implemented on hosts where the
+         underlying operating system does not explicitly identify
+         memory as specifically reserved for this purpose."
+    ::= { sfSysMemory 9 }
+
+sfSysTotalRealMemory OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The total amount of real/physical sfSysMemory installed
+         on this host."
+    ::= { sfSysMemory 10 }
+
+sfSysFanTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfSysFanEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"Fan information table"
+		::=  { general  14}
+
+sfSysFanEntry	OBJECT-TYPE
+		SYNTAX		sfSysFanEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"One Fan information"
+		INDEX		{  fanIndex  }
+		::=  { sfSysFanTable 1 }
+
+sfSysFanEntry  ::=  SEQUENCE {
+		fanIndex  Integer32,
+		sfFanName  DisplayString,
+		sfFanSpeed Integer32,
+		sfFanState  Integer32
+}
+
+fanIndex	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Fan index"
+		::=  {  sfSysFanEntry  1  }
+
+sfFanName	OBJECT-TYPE
+		SYNTAX			DisplayString
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Fan Name"
+		::=  {  sfSysFanEntry  2  }
+
+sfFanSpeed	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Fan speed(RPM)"
+		::=  {  sfSysFanEntry  3  }
+
+sfFanState	OBJECT-TYPE
+		SYNTAX	        Integer32 {
+                        warning(0),
+                        normal(1),
+                        high(2),
+                        vearyHigh(3)
+                        }
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Fan state:
+                        0 - Warning;
+                        1 - Normal;
+                        2 - High;
+                        3 - Veary High"
+		::=  {  sfSysFanEntry  4  }
+
+sfSysPowerTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfSysPowerEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"Power information table"
+		::=  { general  15}
+
+sfSysPowerEntry	OBJECT-TYPE
+		SYNTAX		sfSysPowerEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"One Power information"
+		INDEX		{  powerIndex  }
+		::=  { sfSysPowerTable 1 }
+
+sfSysPowerEntry  ::=  SEQUENCE {
+		powerIndex  Integer32,
+		sfPowerName  DisplayString,
+		sfPowerState Integer32
+}
+
+powerIndex	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Power index"
+		::=  {  sfSysPowerEntry  1  }
+
+sfPowerName	OBJECT-TYPE
+		SYNTAX			DisplayString
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The Power Name"
+		::=  {  sfSysPowerEntry  2  }
+
+sfPowerState	OBJECT-TYPE
+		SYNTAX			Integer32 {
+                        unknown(1),
+                        running(2),
+                        ready(3),
+                        notReady(4),
+                        runningFullSpeed(5),
+                        down(6),
+                        backup(7)
+                        }
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION	"The Power state:
+					  1- Unknown 
+					  2- Up and running
+					  3- Ready to run, not running yet
+					  4- Held in reset, not ready yet
+			          5- Running at Full Speed (valid for fans only)
+                      6- Down or off (for power supply) 
+			          7- Running as a standby (Backup)"
+		::=  {  sfSysPowerEntry  3  }
+
+sfCpuTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfCpuEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"CPU information table"
+		::=  { general  16 }
+
+sfCpuEntry	OBJECT-TYPE
+		SYNTAX		sfCpuEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"One CPU information"
+		INDEX		{  cpuIndex  }
+		::=  { sfCpuTable 1 }
+
+sfCpuEntry  ::=  SEQUENCE {
+		cpuIndex  Integer32,
+		sfCpuName DisplayString,
+		sfCpuLoadLast1Min Integer32,
+		sfCpuLoadLast5Min Integer32,
+		sfCpuLoadLast15Min Integer32,
+		sfCpuTemp DisplayString,
+		sfIntCpuTemp Integer32
+		}
+
+cpuIndex	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS		read-only
+		STATUS			current
+		DESCRIPTION		"The index of CPU table"
+		::=  {  sfCpuEntry  1  }
+
+sfCpuName	OBJECT-TYPE
+		SYNTAX			DisplayString
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"CPU's  name or number."
+		::=  {  sfCpuEntry  2  }
+
+sfCpuLoadLast1Min	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"load average in past 1 minute.the unit is %"
+		::=  {  sfCpuEntry  3  }
+
+sfCpuLoadLast5Min	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"load average in past 5 minutes.the unit is %."
+		::=  {  sfCpuEntry  4  }
+
+sfCpuLoadLast15Min	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"load average in past 15 minutes.the unit is %."
+		::=  {  sfCpuEntry  5  }
+
+sfCpuTemp	OBJECT-TYPE
+		SYNTAX			DisplayString
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"current temperature. end with Celsius."
+		::=  {  sfCpuEntry  6  }
+
+sfIntCpuTemp	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"current temperature.the unit is Celsius"
+		::=  {  sfCpuEntry  7  }
+
+sfSysDevName	OBJECT-TYPE
+	    SYNTAX			DisplayString
+	    MAX-ACCESS			read-only
+	    STATUS			current
+	    DESCRIPTION		"System Name"
+	    ::=  {  general  17  }
+
+sfSysSoftVersion	OBJECT-TYPE
+	    SYNTAX			DisplayString
+	    MAX-ACCESS			read-only
+	    STATUS			current
+	    DESCRIPTION		"System software version"
+	    ::=  {  general  18  }
+
+sfCpuUsage OBJECT IDENTIFIER ::= { general 19 }
+
+sfCpuUserCostRate	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing
+         user-level code, calculated over the last minute."
+		::=  {  sfCpuUsage  1  }
+
+sfCpuSysCostRate	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing
+         system-level code, calculated over the last minute."
+		::=  {  sfCpuUsage  2  }
+
+sfCpuAllCostRate	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing,
+        calculated over the last minute."
+		::=  {  sfCpuUsage  3  }
+
+sfCpuCostRateTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfCpuCostRateEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"CPU usage information table"
+		::=  { general  20 }
+
+sfCpuCostRateEntry	OBJECT-TYPE
+		SYNTAX		sfCpuCostRateEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"One CPU usage information"
+		INDEX		{  cpuIndex  }
+		::=  { sfCpuCostRateTable 1 }
+
+sfCpuCostRateEntry  ::=  SEQUENCE {
+		cpuIndex  Integer32,
+		sfCpuUser Integer32,
+		sfCpuSys Integer32,
+		sfCpuAll Integer32
+		}
+
+cpuIndex	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS		read-only
+		STATUS			current
+		DESCRIPTION		"The index of CPU table"
+		::=  {  sfCpuCostRateEntry  1  }
+
+sfCpuUser	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing
+         user-level code, calculated over the last minute."
+		::=  {  sfCpuCostRateEntry  2  }
+
+sfCpuSys	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing
+         system-level code, calculated over the last minute."
+		::=  {  sfCpuCostRateEntry  3  }
+
+sfCpuAll	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION
+        "The percentage of CPU time spent processing,
+        calculated over the last minute."
+		::=  {  sfCpuCostRateEntry  4  }
+
+sfCpuNum OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The number of processors, as counted by the agent.
+         This object's value may be useful in the management
+         of certain operating systems where notions such as
+         load average do not take into account the number of
+         processors in the system."
+    ::= { general 21 }
+
+sfFreeCpu OBJECT-TYPE
+    SYNTAX      Counter32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The number of 'ticks' (typically 1/100s) spent idle."
+    ::= { general 22 }
+
+sfUsers OBJECT-TYPE
+    SYNTAX      Counter32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The number of users in system."
+    ::= { general 23 }
+
+afSysSoftVersion	OBJECT-TYPE
+	    SYNTAX			DisplayString
+	    MAX-ACCESS			read-only
+	    STATUS			current
+	    DESCRIPTION		"af software version"
+	    ::=  {  general  24  }
+
+sfSessions OBJECT IDENTIFIER ::= { general 27 }
+
+sfNewSessions OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "current established sessions."
+    ::= { sfSessions 1 }
+
+sfTotalSessions OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "Total sessions nums."
+    ::= { sfSessions 2 }
+
+sfCurSession OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "Concurrent sessions every second."
+    ::= { sfSessions 3 }
+
+sfNewSessionPerSec OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "new established sessions every second."
+    ::= { sfSessions 4 }
+
+sysNewConnTable OBJECT-TYPE
+    SYNTAX  SEQUENCE OF sysNewConnEntry
+    MAX-ACCESS  not-accessible
+    STATUS  current
+    DESCRIPTION
+            "Top 60 session information."
+    ::= { sfSessions 5 }
+
+sysNewConnEntry OBJECT-TYPE
+    SYNTAX  sysNewConnEntry
+    MAX-ACCESS  not-accessible
+    STATUS  current
+    DESCRIPTION
+            "Each entry contains one IpAddress and its connection count."
+    INDEX   { sysNewConnIndex }
+    ::= { sysNewConnTable 1 }
+
+sysNewConnEntry ::=
+    SEQUENCE {
+        sysNewConnIndex
+            Integer32,
+        sfVsysId
+            DisplayString,
+        sysNewConnIpAddress
+            IpAddress,
+        sysNewConnCount
+            Integer32
+    }
+
+sysNewConnIndex OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The connection index."
+    ::= { sysNewConnEntry 1 }
+
+sfVsysId OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "Vsys identifier."
+    ::= { sysNewConnEntry 2 }
+
+sysNewConnIpAddress OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The IpAddress of the connection."
+    ::= { sysNewConnEntry 3 }
+
+sysNewConnCount OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The nwe connection count of that IpAddress."
+    ::= { sysNewConnEntry 4 }
+
+
+sfIfTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfIfEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "The  table of interface contained by the
+        host."
+    ::= { general 34 }
+
+sfIfEntry OBJECT-TYPE
+    SYNTAX      sfIfEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many interfaces info"
+    INDEX   { sfIfIndex }
+    ::= { sfIfTable 1 }
+
+sfIfEntry ::=
+    SEQUENCE {
+        sfIfIndex
+            InterfaceIndex,
+        sfIfName
+            DisplayString,
+        sfIfType
+            Integer32,
+        sfIfAddr
+            IpAddress,
+        sfIfMask
+            IpAddress,
+        sfIfManage
+            IpAddress,
+        sfIfInRate
+            Counter64,
+        sfIfOutRate
+            Counter64,
+        sfIfInPps
+            Counter64,
+        sfIfOutPps
+            Counter64,
+        sfIfIpAddressFamily
+            Integer32,
+        sfIfInPkts
+            Counter64,
+        sfIfOutPkts
+            Counter64,
+        sfIfInDrop
+            Counter64,
+        sfIfOutDrop
+            Counter64,
+        sfIfIPv4InRate
+            Counter64,
+        sfIfIPv4OutRate
+            Counter64,
+        sfIfIPv6InRate
+            Counter64,
+        sfIfIPv6OutRate
+            Counter64,
+        sfIfIPv4InPps
+            Counter64,
+        sfIfIPv4OutPps
+            Counter64,
+        sfIfIPv6InPps
+            Counter64,
+        sfIfIPv6OutPps
+            Counter64,
+        sfIfIPv4InPkts
+            Counter64,
+        sfIfIPv4OutPkts
+            Counter64,
+        sfIfIPv6InPkts
+            Counter64,
+        sfIfIPv6OutPkts
+            Counter64,
+        sfIfIPv4InDrop
+            Counter64,
+        sfIfIPv4OutDrop
+            Counter64,
+        sfIfIPv6InDrop
+            Counter64,
+        sfIfIPv6OutDrop
+            Counter64
+    }
+
+sfIfIndex OBJECT-TYPE
+    SYNTAX  InterfaceIndex
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface index"
+    ::= { sfIfEntry 1 }
+
+sfIfName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface name"
+    ::= { sfIfEntry 2 }
+
+sfIfType OBJECT-TYPE
+    SYNTAX  Integer32 {
+            nobind(1),
+            wanZone(2),
+            lanZone(3)
+            }
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterfaceType of bind zone"
+    ::= { sfIfEntry 3 }
+
+sfIfAddr OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The IpAddress of the sfInterface A."
+    ::= { sfIfEntry 4 }
+
+sfIfMask OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface mask IpAddress."
+    ::= { sfIfEntry 5 }
+
+
+sfIfManage OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface manage IpAddress. If no manage Ip , return ifIp"
+    ::= { sfIfEntry 6 }
+
+sfIfInRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface pkg inRate , byte/s."
+    ::= { sfIfEntry 8 }
+
+sfIfOutRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface pkg outRate , byte/s."
+    ::= { sfIfEntry 9 }
+
+sfIfInPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv pkg forward speed , byte/s."
+    ::= { sfIfEntry  10}
+
+sfIfOutPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send pkg forward speed , byte/s ."
+    ::= { sfIfEntry  11}
+
+sfIfIpAddressFamily OBJECT-TYPE
+    SYNTAX  Integer32{
+            ipv4(1),
+            ipv6(2),
+            others(3)
+            }
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface Ip Address Family.Such as ipv4 ipv6.
+             For more details see IANA-ADDRESS-FAMILY-NUMBERS-MIB"
+    ::= { sfIfEntry  12}
+
+sfIfInPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv pkg forward speed , pkt/s ."
+    ::= { sfIfEntry  13}
+
+sfIfOutPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send pkg forward speed , pkt/s ."
+    ::= { sfIfEntry  14}
+
+sfIfInDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv pkg drop statics ."
+    ::= { sfIfEntry  15}
+
+sfIfOutDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send pkg drop statics ."
+    ::= { sfIfEntry  16}
+
+sfIfIPv4InRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv4 pkg speed , byte/s"
+    ::= { sfIfEntry  17}
+
+sfIfIPv4OutRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv4 pkg speed , byte/s"
+    ::= { sfIfEntry  18}
+
+sfIfIPv6InRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv6 pkg speed , byte/s ."
+    ::= { sfIfEntry  19}
+
+sfIfIPv6OutRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv6 pkg speed , byte/s ."
+    ::= { sfIfEntry  20}
+
+sfIfIPv4InPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv pkg speed , pkt/s ."
+    ::= { sfIfEntry  21}
+
+
+sfIfIPv4OutPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv4 pkg speed , pkt/s ."
+    ::= { sfIfEntry  22}
+
+sfIfIPv6InPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv6 pkg speed , pkt/s ."
+    ::= { sfIfEntry  23}
+
+sfIfIPv6OutPps OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv6 pkg speed , pkt/s ."
+    ::= { sfIfEntry  24}
+
+sfIfIPv4InPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv4 pkg number ."
+    ::= { sfIfEntry  25}
+
+sfIfIPv4OutPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv4 pkg number ."
+    ::= { sfIfEntry  26}
+
+sfIfIPv6InPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv6 pkg number ."
+    ::= { sfIfEntry  27}
+
+sfIfIPv6OutPkts OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv4 pkg number ."
+    ::= { sfIfEntry  28}
+
+sfIfIPv4InDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv4 drop statics ."
+    ::= { sfIfEntry  29}
+
+sfIfIPv4OutDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv4 drop statics ."
+    ::= { sfIfEntry  30}
+
+sfIfIPv6InDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface recv ipv6 drop statics ."
+    ::= { sfIfEntry  31}
+
+sfIfIPv6OutDrop OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface send ipv6 drop statics ."
+    ::= { sfIfEntry  32}
+
+sfSFPTable  OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfSFPEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "The  table of interface contained by the
+        host."
+    ::= { general 60 }
+
+sfSFPEntry  OBJECT-TYPE
+    SYNTAX      sfSFPEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many interfaces info"
+    INDEX   { sfSFPIfIndex }
+    ::= { sfSFPTable 1 }
+
+sfSFPEntry ::=
+    SEQUENCE {
+        sfSFPIfIndex
+            InterfaceIndex,
+        sfSFPIfName
+            DisplayString,
+        sfSFPIdentifier
+            DisplayString,
+        sfSFPTransceiverType
+            DisplayString,
+        sfSFPConnector
+            DisplayString,
+        sfSFPLaserWavelength
+            Integer32,
+        sfSFPVendorName
+            DisplayString,
+        sfSFPVendorPN
+            DisplayString,
+        sfIfInPps
+            DisplayString,
+        sfIfOutPps
+            DisplayString,
+        sfSFPOpticaldiagnostics
+            Integer32,
+        sfSFPTemperature
+            DisplayString,
+        sfSFPVoltage
+            DisplayString,
+        sfSFPBiasCurrent
+            DisplayString,
+        sfSFPLaserOutputPower
+            DisplayString,
+        sfSFPReceiverPower
+            DisplayString
+    }
+
+sfSFPIfIndex OBJECT-TYPE
+    SYNTAX  InterfaceIndex
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface index ."
+    ::= { sfSFPEntry 1 }
+
+sfSFPIfName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfInterface name ."
+    ::= { sfSFPEntry 2 }
+
+sfSFPIdentifier OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The Identifier of the SFP ."
+    ::= { sfSFPEntry 3 }
+
+sfSFPTransceiverType OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The TransceiverType of the SFP ."
+    ::= { sfSFPEntry 4 }
+
+sfSFPConnector OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The connector type of the SFP ."
+    ::= { sfSFPEntry 5 }
+
+sfSFPLaserWavelength OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The wave length of the SFP ."
+    ::= { sfSFPEntry 6 }
+
+sfSFPVendorName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The vendor Name of the SFP ."
+    ::= { sfSFPEntry 7 }
+
+sfSFPVendorPN OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The vendor Part Number of the SFP ."
+    ::= { sfSFPEntry  8}
+
+sfSFPOpticaldiagnostics OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "If support show Diagnostic information 0---don't support, 1---support."
+    ::= { sfSFPEntry 9 }
+
+sfSFPTemperature OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The temperature of the SFP ."
+    ::= { sfSFPEntry  10}
+
+sfSFPVoltage OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The voltage of the SFP ."
+    ::= { sfSFPEntry 11 }
+
+sfSFPBiasCurrent OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The bias of the SFP ."
+    ::= { sfSFPEntry  12}
+
+sfSFPLaserOutputPower OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The output Power of the SFP ."
+    ::= { sfSFPEntry  13}
+
+sfSFPReceiverPower OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The Receiver Power of the SFP ."
+    ::= { sfSFPEntry  14}
+
+sfVedorOUI OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "vendor"
+    ::= { general 35 }
+
+sfSwap OBJECT IDENTIFIER ::= { general 38 }
+
+sfMemTotalSwap	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+       "The total amount of swap memory installed
+        on this host."
+	::=  {  sfSwap  1  }
+
+sfMemAvailSwap	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "The amount of swap memory currently unused
+     or available."
+	::=  {  sfSwap  2  }
+
+sfSnGW	OBJECT-TYPE
+	SYNTAX			DisplayString
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "The sn number of GW"
+	::=  {  general  40  }
+
+sfSnmpStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    Warning(0),
+                    Normal(1)
+                    }
+	MAX-ACCESS	read-only
+    STATUS	current
+	DESCRIPTION		"0--warning 1--normal"
+	::=  { general  51 }
+
+
+sfSysOverallThroughput	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "The Overall throughput"
+	::=  {  general  48  }
+
+sfSysOutThroughput	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "Upstream overall throughput"
+	::=  {  sfSysOverallThroughput  1  }
+
+sfSysInThroughput 	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "Downstream overall throughput"
+	::=  {  sfSysOverallThroughput  2  }
+
+sfSysDisk OBJECT IDENTIFIER ::= { general 52 }
+
+sfSysDiskUsage	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "Used percent of the disk"
+	::=  {  sfSysDisk  1  }
+
+sfEncOrDecCard OBJECT IDENTIFIER ::= { general 55 }
+
+sfCheckEDCard	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    noCard(0),
+                    hasCard(1)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "Have EDCard or not"
+	::=  {  sfEncOrDecCard  1  }
+
+sfEDCardStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    unavailable(0),
+                    available(1)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "Have EDCard or not"
+	::=  {  sfEncOrDecCard  2  }
+
+sfVInterfaces OBJECT IDENTIFIER ::= { general 58 }
+
+sfVIfTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfVIfEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "The  table of vInterface contained by the
+        host."
+    ::= { sfVInterfaces 1 }
+
+sfVIfEntry OBJECT-TYPE
+    SYNTAX      sfVIfEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many interfaces info"
+    INDEX   { sfVIfIndex }
+    ::= { sfVIfTable 1 }
+
+sfVIfEntry ::=
+    SEQUENCE {
+        sfVIfIndex
+            InterfaceIndex,
+        sfVIfName
+            DisplayString,
+        sfVIfAddrIP
+            IpAddress,
+        sfVIfAddrMask
+            IpAddress,
+        sfVIfType
+            Integer32,
+        sfVIfInTotalFlow
+            Counter64,
+        sfVIfOutTotalFlow
+            Counter64,
+        sfVIfInRate
+            Counter64,
+        sfVIfOutRate
+            Counter64
+    }
+
+sfVIfIndex OBJECT-TYPE
+    SYNTAX  InterfaceIndex
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface index"
+    ::= { sfVIfEntry 1 }
+
+sfVIfName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface name"
+    ::= { sfVIfEntry 2 }
+
+sfVIfAddrIP OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface ipAddr"
+    ::= { sfVIfEntry 3 }
+
+sfVIfAddrMask OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface ip mask Addr"
+    ::= { sfVIfEntry 4 }
+
+sfVIfType OBJECT-TYPE
+    SYNTAX  Integer32{
+            gre(1),
+            aggr(2),
+            vlan(3),
+            vpntun(4)
+            }
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface type such as gre "
+    ::= { sfVIfEntry 5 }
+
+sfVIfInTotalFlow OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface recv flow , unit is byte"
+    ::= { sfVIfEntry 6 }
+
+sfVIfOutTotalFlow OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface send flow , unit is byte"
+    ::= { sfVIfEntry 7 }
+
+sfVIfInRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface recv flow speed , unit is byte/s"
+    ::= { sfVIfEntry 8 }
+
+sfVIfOutRate OBJECT-TYPE
+    SYNTAX  Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The sfVInterface send flow speed , unit is byte/s"
+    ::= { sfVIfEntry 9 }
+
+sfTempSensorTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfTempSensorEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"Temperature sensor information table"
+		::=  { general  59}
+
+sfTempSensorEntry	OBJECT-TYPE
+		SYNTAX		sfTempSensorEntry
+		MAX-ACCESS		not-accessible
+		STATUS		current
+		DESCRIPTION	"One temperature sensor information"
+		INDEX		{ sfTempSensorIndex }
+		::=  { sfTempSensorTable 1 }
+
+sfTempSensorEntry  ::=  SEQUENCE {
+		sfTempSensorIndex   Integer32,
+		sfTempSensorName  DisplayString,
+		sfTempSensorReading Integer32
+}
+
+sfTempSensorIndex	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The temperature sensor index"
+		::=  {  sfTempSensorEntry  1  }
+
+sfTempSensorName	OBJECT-TYPE
+		SYNTAX			DisplayString
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The temperature sensor Name"
+		::=  {  sfTempSensorEntry  2  }
+
+sfTempSensorReading	OBJECT-TYPE
+		SYNTAX			Integer32
+		MAX-ACCESS			read-only
+		STATUS			current
+		DESCRIPTION		"The temperature sensor Reading"
+		::=  {  sfTempSensorEntry  3  }
+
+sfEthDev OBJECT IDENTIFIER ::= { general 61 }
+
+sfEthDevTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfEthDevEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "Ethernet device information contained by the host."
+    ::= { sfEthDev 1 }
+
+sfEthDevEntry OBJECT-TYPE
+    SYNTAX      sfEthDevEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many interfaces info"
+    INDEX   { sfEthDevIndex }
+    ::= { sfEthDevTable 1 }
+
+sfEthDevEntry ::=
+    SEQUENCE {
+        sfEthDevIndex
+            InterfaceIndex,
+        sfEthDevName
+            DisplayString,
+        sfEthDevSupportedPort
+            DisplayString,
+        sfEthDevDriver
+            DisplayString,
+        sfEthDevAutoNegEnable
+            TruthValue,
+        sfEthDevSpeed
+            Integer32,
+        sfEthDevDuplex
+            DisplayString
+    }
+
+sfEthDevIndex OBJECT-TYPE
+    SYNTAX  InterfaceIndex
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device index"
+    ::= { sfEthDevEntry 1 }
+
+sfEthDevName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device name"
+    ::= { sfEthDevEntry 2 }
+
+sfEthDevSupportedPort OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device supported port"
+    ::= { sfEthDevEntry 3 }
+
+sfEthDevDriver OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device driver"
+    ::= { sfEthDevEntry 4 }
+
+sfEthDevAutoNegEnable OBJECT-TYPE
+    SYNTAX  TruthValue
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device auto negotiation staus"
+    ::= { sfEthDevEntry 5 }
+
+sfEthDevSpeed OBJECT-TYPE
+    SYNTAX  Integer32
+    UNITS      "Mbps"
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device speed, unit is Mbps"
+    ::= { sfEthDevEntry 6 }
+
+sfEthDevDuplex OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ethernet device duplex"
+    ::= { sfEthDevEntry 7 }
+
+
+sfNat OBJECT IDENTIFIER ::= { general 63 }
+
+sfNat4ResourceTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfNat4ResourceEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "snat4 tcp udp resourece table"
+    ::= { sfNat 1 }
+
+sfNat4ResourceEntry OBJECT-TYPE
+    SYNTAX      sfNat4ResourceEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many snat info"
+    INDEX   { sfNat4ResourceIndex }
+    ::= { sfNat4ResourceTable 1 }
+
+sfNat4ResourceEntry ::=
+    SEQUENCE {
+        sfNat4ResourceIndex
+            Integer32,
+        sfNat4Name
+            DisplayString,
+        sfNat4TCPLocalPortUsage
+            Integer32,
+        sfNat4UDPLocalPortUsage
+            Integer32
+    }
+
+
+sfNat4ResourceIndex OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat rule id"
+    ::= { sfNat4ResourceEntry 1 }
+
+sfNat4Name OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat rule name"
+    ::= { sfNat4ResourceEntry 2 }
+
+sfNat4TCPLocalPortUsage OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat tcp port usage"
+    ::= { sfNat4ResourceEntry 3 }
+
+sfNat4UDPLocalPortUsage OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat udp port usage"
+    ::= { sfNat4ResourceEntry 4 }
+
+sfNat6ResourceTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfNat6ResourceEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "snat6 tcp udp resourece table."
+    ::= { sfNat 2 }
+
+sfNat6ResourceEntry OBJECT-TYPE
+    SYNTAX      sfNat6ResourceEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many snat info"
+    INDEX   { sfNat6ResourceIndex }
+    ::= { sfNat6ResourceTable 1 }
+
+sfNat6ResourceEntry ::=
+    SEQUENCE {
+        sfNat6ResourceIndex
+            Integer32,
+        sfNat6Name
+            DisplayString,
+        sfNat6TCPLocalPortUsage
+            Integer32,
+        sfNat6UDPLocalPortUsage
+            Integer32
+    }
+
+
+sfNat6ResourceIndex OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat rule id"
+    ::= { sfNat6ResourceEntry 1 }
+
+sfNat6Name OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat rule name"
+    ::= { sfNat6ResourceEntry 2 }
+
+sfNat6TCPLocalPortUsage OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat tcp port usage"
+    ::= { sfNat6ResourceEntry 3 }
+
+sfNat6UDPLocalPortUsage OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "snat udp port usage"
+    ::= { sfNat6ResourceEntry 4 }
+
+
+sfHA OBJECT IDENTIFIER ::= { general 64 }
+
+sfHAEnable	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    disabled(0),
+                    enabled(1)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "HA enable status"
+	::=  { sfHA  1 }
+
+sfHAMode	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    master-master(1),
+                    master-slave(2),
+                    mirror(3)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION		"HA mode"
+	::=  { sfHA  2 }
+	
+sfHACurStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    init(1),
+                    master(4),
+                    slave(5)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION		"HA status"
+	::=  { sfHA  3 }
+
+sfHAZmode	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    disabled(0),
+                    enabled(1)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "HA zmode status"
+	::=  { sfHA  4 }
+
+sfHATransparent	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    disabled(0),
+                    enabled(1)
+                    }
+	MAX-ACCESS		read-only
+	STATUS			current
+	DESCRIPTION
+    "HA transparent status"
+	::=  { sfHA  5 }	
+
+sfHACtrlLinkStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    normal(1),
+                    abnormal(2)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA state of the ctrllink"
+	::=  { sfHA  6 }
+
+sfHADataLinkStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    normal(1),
+                    abnormal(2)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA state of the ctrllink"
+	::=  { sfHA  7 }
+ 
+sfHASyncState	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    sync-running(1),
+					sync-end(2),
+					unknown(3)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA state of the sysncd"
+	::=  { sfHA  8 } 
+
+sfHAGroupTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfHaGroupEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+            "HA group table.  This table contains,
+            one entry per HA group, information about
+            the HA group status."
+    ::= { sfHA 9 }
+	
+    sfHaGroupEntry OBJECT-TYPE
+        SYNTAX     sfHaGroupEntry
+        MAX-ACCESS not-accessible
+        STATUS     current
+        DESCRIPTION
+                "Entry containing information about
+                the HA group status."
+        INDEX { sfHAGroupId }
+        ::= { sfHAGroupTable 1 }
+    
+    sfHaGroupEntry ::= SEQUENCE {
+                sfHAGroupId
+    			    INTEGER,
+                sfHAGroupLocalState
+                    INTEGER,
+                sfHAGroupPeerState
+                    INTEGER 
+                }
+       
+    sfHAGroupId OBJECT-TYPE
+        SYNTAX     INTEGER (0..1)
+        MAX-ACCESS read-only
+        STATUS     current
+        DESCRIPTION
+                "The HA group id."
+        ::= { sfHaGroupEntry 1 }
+		
+    sfHAGroupLocalState OBJECT-TYPE
+        SYNTAX			Integer32 {
+                        init(1),
+                        master(4),
+                        slave(5)
+                        }
+        MAX-ACCESS		read-only
+        STATUS			current
+        DESCRIPTION		"HA status"
+        ::=  { sfHaGroupEntry  2 }
+    
+	sfHAGroupPeerState OBJECT-TYPE
+        SYNTAX			Integer32 {
+                        init(1),
+                        master(4),
+                        slave(5)
+                        }
+        MAX-ACCESS		read-only
+        STATUS			current
+        DESCRIPTION		"HA status"
+        ::=  { sfHaGroupEntry  3 }    
+    
+sfDhcp	OBJECT IDENTIFIER   ::=  {  pGeneral  1  }
+
+sfEnableDHCP	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    disable(0),
+                    enable(1)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"0--disable.1--enable."
+	::=  {  sfDhcp  1  }
+
+sfNumOfTotalIpAddr	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"The total IP address's number in IP pool."
+	::=  {  sfDhcp  2  }
+
+sfNumOfLeftIp	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"The number of left."
+	::=  {  sfDhcp  3  }
+
+sfNumOfOccupyIp	OBJECT-TYPE
+	SYNTAX			Integer32
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"The number which already be used."
+	::=  {  sfDhcp  4  }
+
+sfIpMacTable OBJECT-TYPE
+    SYNTAX  SEQUENCE OF sfIpMacEntry
+    MAX-ACCESS  not-accessible
+    STATUS  current
+    DESCRIPTION
+            "Ip-MAC table."
+    ::= { sfDhcp 5 }
+
+sfIpMacEntry OBJECT-TYPE
+    SYNTAX  sfIpMacEntry
+    MAX-ACCESS  not-accessible
+    STATUS  current
+    DESCRIPTION
+            "Each entry contains one IpAddress to
+            `physical' address equivalence."
+    INDEX   { ipMacIndex }
+    ::= { sfIpMacTable 1 }
+
+sfIpMacEntry ::=
+    SEQUENCE {
+        ipMacIndex
+            Integer32,
+        sfIpMacIp
+            IpAddress,
+        sfIpMacMac
+            MacAddress
+    }
+
+ipMacIndex OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "index of the table."
+    ::= { sfIpMacEntry 1 }
+
+sfIpMacIp OBJECT-TYPE
+    SYNTAX  IpAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The IpAddress that be bound with Mac."
+    ::= { sfIpMacEntry 2 }
+
+sfIpMacMac OBJECT-TYPE
+    SYNTAX  MacAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The MacAddress corresponding to the IpAddress."
+    ::= { sfIpMacEntry 3 }
+
+sfEnableDoubleHost	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    disable(0),
+                    enable(1)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"0--disable.1--enable."
+	::=  { pGeneral  3 }
+
+sfHAStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    init(1),
+                    master(4),
+                    slave(5)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA status"
+	::=  { pGeneral  4 }
+
+sfHaModuleSyncTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF sfHaModuleSyncEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+        "Ha module sync state info."
+    ::= { pGeneral 8 }
+
+sfHaModuleSyncEntry OBJECT-TYPE
+    SYNTAX      sfHaModuleSyncEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION "Each entry contains many ha module sync state info"
+    INDEX   { sfHaModuleSyncIndex }
+    ::= { sfHaModuleSyncTable 1 }
+
+sfHaModuleSyncEntry ::=
+    SEQUENCE {
+        sfHaModuleSyncIndex
+            Integer32,
+        sfHaModuleSyncName
+            DisplayString,
+        sfHaModuleSyncState
+            DisplayString,
+        sfHaModuleSyncRate
+            Integer32,
+        sfHaModuleSyncUseTime
+            Integer32
+    }
+
+sfHaModuleSyncIndex OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The ha module sync state index"
+    ::= { sfHaModuleSyncEntry 1 }
+
+sfHaModuleSyncName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The module name"
+    ::= { sfHaModuleSyncEntry 2 }
+
+sfHaModuleSyncState OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The module sync state"
+    ::= { sfHaModuleSyncEntry 3 }
+
+sfHaModuleSyncRate OBJECT-TYPE
+    SYNTAX  Integer32
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The module sync rate"
+    ::= { sfHaModuleSyncEntry 4 }
+
+sfHaModuleSyncUseTime OBJECT-TYPE
+    SYNTAX  Integer32
+    UNITS      "millisecond"
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+            "The module sync usetime"
+    ::= { sfHaModuleSyncEntry 5 }
+
+sfHACurMode	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    master-master(1),
+                    master-slave(2),
+                    mirror(3)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA mode"
+	::=  { pGeneral  5 }
+
+sfHAHeartBeatStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    normal(1),
+                    abnormal(2)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA state of the heart"
+	::=  { pGeneral  6 }
+
+sfHASyncStatus	OBJECT-TYPE
+	SYNTAX			Integer32 {
+                    invalid(0),
+                    normal(1),
+                    abnormal(2)
+                    }
+	MAX-ACCESS			read-only
+	STATUS			current
+	DESCRIPTION		"HA status of the sysncd"
+	::=  { pGeneral  7 }
+
+sfTemperatureWarnTrap 	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"The temperature exceeds the threshold."
+	::=  { sfGeneralTrap 1 }
+
+sfCPUWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"CPU usage exceeds the threshold (80% by default)."
+	::=  { sfGeneralTrap 2 }
+
+sfMemoryWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Memory usage exceeds the threshold (90% by default)."
+	::=  { sfGeneralTrap 3 }
+
+sfDiskWarnTrap	 NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Disk usage exceeds the threshold (90% by default)."
+	::=  { sfGeneralTrap 4 }
+
+sfPowerWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Power supply is abnormal."
+	::=  { sfGeneralTrap 5 }
+
+sfInterfaceDownTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Network interface went down."
+	::=  { sfGeneralTrap 6 }
+
+sfFanWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Fan failed."
+	::=  { sfGeneralTrap 7 }
+
+sfHAStatusTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"HA status changed."
+	::=  { sfGeneralTrap 8 }
+
+sfIpsecStatusTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Ipsec status change notification"
+	::=  { sfGeneralTrap 9 }
+
+sfRuleBaseUpgradeTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Signature database updated."
+	::=  { sfGeneralTrap 17 }
+
+sfBypassChangeTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION
+    		"Passthrough status changed."
+	::=  { sfGeneralTrap 19 }
+
+sfHotStartTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION
+    		"Hot start notification"
+	::=  { sfGeneralTrap 22 }
+
+sfLinkUpTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION
+    		"Link recovered."
+	::=  { sfGeneralTrap 23 }
+
+sfLinkDownTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION
+    		"Link error occurred."
+	::=  { sfGeneralTrap 24 }
+
+sfPortResourceWarnTrap  NOTIFICATION-TYPE
+    STATUS                  current
+    DESCRIPTION
+            "Link error occurred."
+    ::=  { sfGeneralTrap 25}
+END

@@ -1,0 +1,18 @@
+SANGFOR_MIB_MAP = {
+    "1.3.6.1.4.1.35047.110.1": "Temperature Alert",
+    "1.3.6.1.4.1.35047.110.2": "CPU Alert",
+    "1.3.6.1.4.1.35047.110.3": "Memory Alert",
+    "1.3.6.1.4.1.35047.110.4": "Hard Disk Alert",
+    "1.3.6.1.4.1.35047.110.5": "Power Alert",
+    "1.3.6.1.4.1.35047.110.6": "Interface Alert",
+    "1.3.6.1.4.1.35047.110.7": "Fan Alert",
+    "1.3.6.1.4.1.35047.110.8": "HA Status Alert",
+    "1.3.6.1.4.1.35047.110.17": "Database Update Alert",
+    "1.3.6.1.4.1.35047.110.19": "Passthrough Status Alert",
+    "1.3.6.1.4.1.35047.110.23": "Link Recovery Alert",
+    "1.3.6.1.4.1.35047.110.24": "Link Failure Alert",
+    "1.3.6.1.4.1.35047.110.25": "Insufficient Port Resources",
+    "1.3.6.1.4.1.35047.200.200.6": "Firewall Attacked Alert",
+    "1.3.6.1.4.1.35047.200.200.7": "Protected Network Attacked Alert",
+    "1.3.6.1.6.3.1.1.5.2": "Warm Start Alert",
+}

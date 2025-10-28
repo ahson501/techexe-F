@@ -1,21 +1,7 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:latest
-    container_name: tech_data
-    environment:
-      POSTGRES_USER: node-1
-      POSTGRES_PASSWORD: 12345678
-      POSTGRES_DB: tech_db
-    ports:
-      - "5444:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - postgres_backups:/var/lib/postgresql/backups
-    networks:
-      - app-network
-
+  
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
@@ -31,6 +17,22 @@ services:
     networks:
       - app-network
 
+  db:
+    image: postgres:latest
+    container_name: tech_data
+    environment:
+      POSTGRES_USER: node-1
+      POSTGRES_PASSWORD: 12345678
+      POSTGRES_DB: tech_db
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/var/lib/postgresql/backups
+    networks:
+      - app-network
+
+
   web:
     build: .
     container_name: tech_web
@@ -40,6 +42,7 @@ services:
     depends_on:
       - db
       - vite
+    privileged: true
     environment:
       - DEBUG=True
       - DATABASE_URL=postgresql://node-1:12345678@db:5432/
@@ -50,6 +53,7 @@ services:
       - EMAIL_HOST_USER=aitechexe.net@gmail.com
       - EMAIL_HOST_PASSWORD=lycsxkhtlfgqfghx # Your Gmail password or app password
       - DEFAULT_FROM_EMAIL=aitechexe.net@gmail.com
+      - ./iccbs/.env
     volumes:
       - .:/app
       - /app/venv
@@ -59,7 +63,23 @@ services:
     networks:
       - app-network
 
-      
+  snmp-trap-receiver:
+    build: .
+    container_name: snmp_trap_receiver
+    command: python /app/iccbs/snmp_trap_receiver.py
+    network_mode: host
+    environment:
+      - DJANGO_SETTINGS_MODULE=techexeapp.settings
+    depends_on:
+      - web
+    restart: always
+    cap_add:
+      - NET_BIND_SERVICE
+    privileged: true
+    volumes:
+      - .:/app
+    
+
 
   vite:
     build:

@@ -97,13 +97,32 @@ h1, h2 {
 }
 
 /* Hero Section */
+
 .hero {
   position: relative;
   height: 100vh;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+.slider-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  z-index: 0;
+}
+
+.slide.active {
+  opacity: 1;
+  z-index: 1;
 }
 
 .bg-image {
@@ -114,20 +133,37 @@ h1, h2 {
   width: 100%;
   object-fit: cover;
   z-index: 0;
+  pointer-events: none;
 }
 
+/* Optional: Gradient overlay to improve contrast */
+.slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6));
+  z-index: 1;
+}
+
+/* Content sits above the gradient and image */
 .glass {
   position: relative;
-  z-index: 1;
-  background: #9b59b67d;
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 3rem;
-  max-width: fit-content;
+  z-index: 2;
   text-align: center;
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  color: white;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0 auto;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  max-width: 700px;
+  backdrop-filter: blur(10px);
 }
+
 
 .glass h1 {
   font-size: 3rem;
@@ -135,11 +171,13 @@ h1, h2 {
   margin-bottom: 1rem;
 }
 
-.glass p {
-  font-size: 1.25rem;
-  line-height: 1.6;
-  margin-bottom: 2rem;
+.glass p.bolded-copy {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
+
 
 /* Section Intro */
 .section-intro {
@@ -164,15 +202,18 @@ h1, h2 {
 }
 
 /* Call-to-Action Button */
-.cta-button {
-  background-color: #34db86;
-  border: none;
+.hero .cta-button {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 12px 30px;
+  background-color: #ff5e3a;
   color: white;
-  padding: 12px 24px;
-  border-radius: 8px; /* Rounded corners */
-  font-size: 1.1rem; /* Slightly larger font for emphasis */
-  cursor: pointer; /* Pointer cursor on hover */
-  transition: transform 0.3s; /* Smooth scaling animation */
+  font-weight: bold;
+  border-radius: 30px;
+  text-decoration: none;
 }
 
 .cta-button:hover {

@@ -1,0 +1,1152 @@
+sangfor
+
+sangfor	OBJECT IDENTIFIER
+		::=  {  enterprises  35047  }
+
+参见: SNMP v2 Trap
+
+general
+标记: 公共项
+
+general	OBJECT IDENTIFIER
+		::=  {  sangfor  1  }
+
+sfDeviceDescr
+标记: 标准oid为.1.3.6.1.2.1.1.1.0 设备描述
+
+	sfDeviceDescr	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Device name&model"
+		::=  {  general  1  }
+
+sfSysDate
+标记: 系统时间日期
+
+	sfSysDate	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"System's date."
+		::=  {  general  2  }
+
+sfSysCpuCostRate
+标记: CPU使用率(%), 多个cpu时算平均
+
+	sfSysCpuCostRate	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION "Cpu current cost percentage.The unit is  %."
+		::=  {  general  3  }
+
+sfSysFreeMemory
+标记: 可用内存大小
+
+	sfSysFreeMemory	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Free memory."
+		::=  {  general  4  }
+
+sfDiskTable
+
+	sfDiskTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  SfDiskEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"Disk infomation table"
+		::=  { general  5 }
+
+sfDiskEntry
+
+	sfDiskEntry	OBJECT-TYPE
+		SYNTAX		SfDiskEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"One disk infomation"
+		INDEX		{  diskIndex  }
+		::=  { sfDiskTable 1 }
+
+    SfDiskEntry  ::=  SEQUENCE {
+		diskIndex  INTEGER,
+		sfFilesystemName  DisplayString,
+		sfDiskSize  DisplayString,
+		sfDiskUsed  DisplayString,
+		sfDiskAvail  DisplayString,
+		sfDiskUsedPercent  DisplayString,
+		sfIntDiskSize INTEGER,
+		sfIntDiskUsed INTEGER,
+		sfIntDiskAvail INTEGER
+		}
+
+diskIndex
+
+	diskIndex	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The disk index"
+		::=  {  sfDiskEntry  1  }
+
+sfFilesystemName
+标记: 文件系统名
+
+sfFilesystemName	OBJECT-TYPE
+		SYNTAX			DisplayString
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"File system of the disk"
+		::=  {  sfDiskEntry  2  }
+
+sfDiskSize
+标记: 磁盘大小(M)
+
+sfDiskSize	OBJECT-TYPE
+		SYNTAX			DisplayString
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Size of the disk"
+		::=  {  sfDiskEntry  3  }
+
+sfDiskUsed
+标记: 已使用的磁盘大小(M)
+
+sfDiskUsed	OBJECT-TYPE
+		SYNTAX			DisplayString
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Used size of the disk"
+		::=  {  sfDiskEntry  4  }
+
+sfDiskAvail
+标记: 可用磁盘大小(M)
+
+sfDiskAvail	OBJECT-TYPE
+		SYNTAX			DisplayString
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Available size of the disk"
+		::=  {  sfDiskEntry  5  }
+
+sfDiskUsedPercent
+标记: 磁盘使用百分比(%)
+
+sfDiskUsedPercent	OBJECT-TYPE
+	SYNTAX			DisplayString
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Used percent of the disk"
+	::=  {  sfDiskEntry  6  }
+
+sfIntDiskSize
+标记: 磁盘大小整数形式(M)
+
+sfDiskUsedPercent	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Size of the disk(M)"
+	::=  {  sfDiskEntry  7  }
+
+sfIntDiskUsed
+标记: 已使用的磁盘大小整数形式(M)
+
+sfDiskAvail	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Used size of the disk(M)"
+		::=  {  sfDiskEntry  8  }
+
+sfIntDiskAvail
+标记: 可用磁盘大小整数形式(M)
+
+sfDiskAvail	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Available size of the disk(M)"
+		::=  {  sfDiskEntry  9  }
+
+sfDiskTemp
+标记: 硬盘温度
+
+sfDiskAvail	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Temperature of the disk(℃)"
+	::=  {  sfDiskEntry  10  }
+
+cpuLoadAvg/sfDeviceStatus
+标记: 设备状态(0--warning 1--normal ...)/CPU负载
+
+sfDeviceStatus	OBJECT-TYPE
+		SYNTAX			INTEGER  ( 0 .. 1  )
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"0--warning 1--normal"
+		::=  {  general  6  }
+
+sfSysBoardFanStatus/sfEnableDoubleHost
+标记: 主板风扇状态或者双机状态
+
+sfSysBoardFanStatus	OBJECT-TYPE
+	SYNTAX			INTEGER  ( 0 .. 1  )
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION	"status of board fan: (0--异常; 1--正常; 2 -- 其中一个风扇异常(如果有多个主板风扇))"
+	::=  {  general  7  }
+
+sfSysPowerStatus/dhcp
+标记: 电源状态或者dhcp
+
+sfSysPowerStatus	OBJECT-TYPE
+	SYNTAX			INTEGER  ( 0 .. 1  )
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"0--warning 1--normal"
+	::=  {  general  8  }
+
+sfSysTotalMemory/sfCpuTable
+标记: 全部内存(AC/WOC)或者CPU负载(AD)
+
+sfSysTotalMemory	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Total memory"
+		::=  {  general  9  }
+
+sfDeviceStatus
+
+sfDeviceStatus	OBJECT-TYPE
+		SYNTAX			INTEGER  ( 0 .. 1  )
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"0--warning 1--normal"
+		::=  {  general  12  }
+
+sfSysMemory
+
+sfSysMemory 	OBJECT IDENTIFIER
+		::=  {  general  13  }
+
+sfSysFreeMemory
+标记: 可用内存大小(M)
+
+	sfSysFreeMemory	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Free memory."
+		::=  {  sfSysMemory  1  }
+
+sfSysTotalMemory
+标记: 全部内存大小(M)
+
+	sfSysTotalMemory	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Total memory."
+		::=  {  sfSysMemory  2  }
+
+sfIntSysFreeMemory
+标记: 可用内存大小的整数形式(KB)
+
+	sfSysFreeMemory	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Free memory(KB)."
+		::=  {  sfSysMemory  3  }
+
+sfIntSysTotalMemory
+标记: 全部内存大小的整数形式(KB), 存在标准oid.1.3.6.1.2.1.25.2.2.0
+
+sfSysTotalMemory	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"Total memory(KB)."
+		::=  {  sfSysMemory  4  }
+
+sfSysFanTable
+标记: 风扇状态信息
+
+sfSysFanTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfSysFanEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"Fan information table"
+		::=  { general  14}
+
+sfSysFanEntry
+
+sfSysFanEntry	OBJECT-TYPE
+		SYNTAX		sfSysFanEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"One Fan information"
+		INDEX		{  fanIndex  }
+		::=  { sfSysFanTable 1 }
+
+sfSysFanEntry  ::=  SEQUENCE {
+		fanIndex  INTEGER,
+		sfFanName  OCTET STRING,
+		sfFanSpeed INTEGER,
+		sfFanState  INTEGER,
+}
+
+fanIndex
+
+fanIndex	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Fan index"
+		::=  {  sfSysFanEntry  1  }
+
+sfFanName
+标记: 风扇名称(最好能指出是CPU或者主板获取其他风扇)
+
+sfFanName	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Fan Name"
+		::=  {  sfSysFanEntry  2  }
+
+sfFanSpeed
+标记: 风扇转速
+
+sfFanSpeed	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Fan speed(RPM)"
+		::=  {  sfSysFanEntry  3  }
+
+sfFanState
+标记: 风扇的状态
+
+sfFanState	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Fan state:
+                                      0 - Warning;
+                                      1 - Normal;
+                                      2 - High;
+                                      3 - Veary High"
+		::=  {  sfSysFanEntry  4  }
+
+sfSysPowerTbale
+
+sfSysPowerTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfSysPowerEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"Power information table"
+		::=  { general  15}
+
+sfSysPowerEntry
+
+sfSysPowerEntry	OBJECT-TYPE
+		SYNTAX		sfSysPowerEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"One Power information"
+		INDEX		{  powerIndex  }
+		::=  { sfSysPowerTbale 1 }
+
+sfSysPowerEntry  ::=  SEQUENCE {
+		powerIndex  INTEGER,
+		sfPowerName  OCTET STRING,
+		sfPowerState INTEGER,
+}
+
+powerIndex
+
+powerIndex	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Power index"
+		::=  {  sfSysPowerEntry  1  }
+
+sfPowerName
+标记: 电源名称
+
+sfPowerName	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The Power Name"
+		::=  {  sfSysPowerEntry  2  }
+
+sfPowerState
+标记: 电源状态
+
+sfPowerState	OBJECT-TYPE
+		SYNTAX			 OCTET STRING
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION	"The Power state:
+					  1- Unknown 
+					  2- Up and running
+					  3- Ready to run, not running yet
+					  4- Held in reset, not ready yet
+			          5- Running at Full Speed (valid for fans only)
+                      6- Down or off (for power supply) 
+			          7- Running as a standby (Backup)"
+		::=  {  sfSysPowerEntry  3  }
+
+sfCpuTable
+
+sfCpuTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  SfCpuEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"CPU information table"
+		::=  { general  16 }
+
+sfCpuEntry
+
+sfCpuEntry	OBJECT-TYPE
+		SYNTAX		SfCpuEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"One CPU information"
+		INDEX		{  cpuIndex  }
+		::=  { sfCpuTable 1 }
+
+SfCpuEntry  ::=  SEQUENCE {
+		cpuIndex  INTEGER,
+		sfCpuName  OCTET STRING,
+		sfCpuLoadLast1Min  OCTET STRING,
+		sfCpuLoadLast5Min  OCTET STRING,
+		sfCpuLoadLast15Min  OCTET STRING,
+		sfCpuTemp  OCTET STRING,
+		sfIntCpuTemp INTEGER
+		}
+
+cpuIndex
+
+cpuIndex	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			not-accessible
+		STATUS			mandatory
+		DESCRIPTION		"The index of CPU table"
+		::=  {  sfCpuEntry  1  }
+
+sfCpuName
+标记: CPU名称或者序号
+
+sfCpuName	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"CPU's  name or number."
+		::=  {  sfCpuEntry  2  }
+
+sfCpuLoadLast1Min
+标记: 最近1分钟cpu的负载(%)
+
+sfCpuLoadLast1Min	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"load average in past 1 minute.the unit is %"
+		::=  {  sfCpuEntry  3  }
+
+sfCpuLoadLast5Min
+标记: 最近5分钟CPU的负载(%)
+
+sfCpuLoadLast5Min	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"load average in past 5 minutes.the unit is %."
+		::=  {  sfCpuEntry  4  }
+
+sfCpuLoadLast15Min
+标记: 最近15分钟CPU的负载(%)
+
+sfCpuLoadLast15Min	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"load average in past 15 minutes.the unit is %."
+		::=  {  sfCpuEntry  5  }
+
+sfCpuTemp
+标记: CPU的温度(℃)
+
+sfCpuTemp	OBJECT-TYPE
+		SYNTAX			OCTET STRING
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"current temperature. end with 'C."
+		::=  {  sfCpuEntry  6  }
+
+sfIntCpuTemp
+标记: CPU的温度(整数, 单位℃)
+
+sfIntCpuTemp	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"current temperature.the unit is ℃"
+		::=  {  sfCpuEntry  7  }
+
+只是换了个位置
+(cpuIndex, sfCpuName, sfCpuLoadLast1Min, sfCpuLoadLast5Min, sfCpuLoadLast15Min, sfCpuTemp)
+
+sfSysDevName
+标记: 标准oid为.1.3.6.1.2.1.1.5.0, 设备名称, 不要直接实现为返回Linux
+
+sfSysDevName	OBJECT-TYPE
+	SYNTAX			OCTET STRING
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"System Name"
+	::=  {  general  17  }
+
+sfSysSoftVersion
+标记: 设备软件版本
+
+sfSysSoftVersion	OBJECT-TYPE
+	SYNTAX			OCTET STRING
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"System software version"
+	::=  {  general  18  }
+
+这4个oid保留,各个产品线原先这里是什么现在依然保持不变,但新的MIB文件中不包含这两项,仅仅是为了兼容老客户升级
+(cpuLoadAvg/sfDeviceStatus, sfSysBoardFanStatus/sfEnableDoubleHost, sfSysPowerStatus/dhcp, sfSysTotalMemory/sfCpuTable)
+
+这个oid保留,原先这里是怎么实现的现在保持不变,但新的MIB规范中不包含这一项,仅是为了兼容老客户升级
+(sfSysFreeMemory)
+
+product
+标记: 安全平台
+
+secure	OBJECT IDENTIFIER
+		::=  {  sangfor  2  }
+
+pGeneral
+
+pGeneral	OBJECT IDENTIFIER
+		::=  {  product  100  }
+
+sfDhcp
+
+	sfDhcp	OBJECT IDENTIFIER
+		::=  {  pGeneral  1  }
+
+sfEnableDHCP
+标记: 是否启用DHCP
+
+sfEnableDHCP	OBJECT-TYPE
+	SYNTAX			INTEGER  ( 0 .. 1  )
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"0--disable.1--enable."
+	::=  {  sfDhcp  1  }
+
+sfNumOfTotalIpAddr
+标记: 全部ip数
+
+sfNumOfTotalIpAddr	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The total IP address's number in IP pool."
+	::=  {  sfDhcp  2  }
+
+sfNumOfLeftIp
+标记: 剩余可分配ip数
+
+sfNumOfLeftIp	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"The number of left."
+		::=  {  sfDhcp  3  }
+
+sfNumOfOccupyIp
+标记: 已分配ip数
+
+sfNumOfOccupyIp	OBJECT-TYPE
+		SYNTAX			INTEGER
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"The number which already be used."
+		::=  {  sfDhcp  4  }
+
+sfIpsecVPN
+
+sfIpsecVPN	OBJECT IDENTIFIER
+		::=  {  sGeneral  2  }
+
+sfIPSecVPNStatus
+标记: 是否启用了ipsec vpn(0: 正常启用 1:启用但有故障;2:未启用;3:不支持该功能)
+
+sfIPSecVPNEnable	OBJECT-TYPE
+		SYNTAX			INTEGER  ( 0 .. 2 )
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"0--disable.1--enable.2--unsupport"
+		::=  {  sfIpsecVPN  1  }
+
+sfNumOfConnections
+标记: 连接管理中配置的连接数
+
+sfNumOfConnections	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of connections in the config connection-management.."
+	::=  {  sfIpsecVPN  2  }
+
+sfNumOfDevs
+标记: 第三方对接第一阶段配置数
+
+sfNumOfDevs	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of devices in the config of Phase-one."
+	::=  {  sfIpsecVPN 3  }
+
+sfNumOfInPoliy
+标记: 第三方对接入站策略数
+
+sfNumOfInPoliy	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of in-policies in the config of Phase-two."
+	::=  {  sfIpsecVPN  4  }
+
+sfNumOfOutPolicy
+标记: 第三方对接出站策略数
+
+sfNumOfOutPoliy	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of out-policies in the config of Phase-two."
+	::=  {  sfIpsecVPN  5  }
+
+sfNumOfConnected
+标记: 已建立的vpn连接数(包括sangfor vpn和ipsec vpn)
+
+sfNumOfConnected	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of established SangforVPN and standard IpsecVPN connections."
+	::=  {  sfIpsecVPN  6  }
+
+sfWanTrafficRecv
+标记: 外网接收流量(Byte/s)
+
+sfWanTrafficRecv	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The WAN traffic of recv(Byte/s)."
+	::=  {  sfIpsecVPN  7  }
+
+sfWanTrafficSend
+标记: 外网发送流量(Byte/s)
+
+sfWanTrafficSend	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The WAN traffic of send(Byte/s)."
+	::=  {  sfIpsecVPN  8  }
+
+sfVPNTrafficRecv
+标记: vpn接口接收流量(Byte/s)
+
+sfVPNTrafficRecv	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The VPN traffic(Byte/s)."
+	::=  {  sfIpsecVPN  9  }
+
+sfVPNTrafficSend
+标记: vpn接口发送流量(Byte/s)
+
+sfVPNTrafficSend	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The VPN traffic(Byte/s)."
+	::=  {  sfIpsecVPN  10  }
+
+sfNumOfNatUsers
+标记: NAT用户数
+
+sfNumOfNatUsers	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of NAT users."
+	::=  {  sfIpsecVPN  11  }
+
+sfNumOfNatNets
+标记: NAT网段数
+
+sfNumOfNatNets	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"The number of NAT nets."
+	::=  {  sfIpsecVPN  12  }
+
+sfConnectionTable
+标记: 已建立的连接信息
+
+sfConnectionTable	OBJECT-TYPE
+		SYNTAX		SEQUENCE  OF  sfConnectionEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"Table of established connections info."
+		::=  { sfIpsecVPN  13 }
+
+sfConnectionEntry
+
+sfConnectionEntry	OBJECT-TYPE
+		SYNTAX		sfConnectionEntry
+		ACCESS		not-accessible
+		STATUS		mandatory
+		DESCRIPTION	"Entry of connection info."
+		INDEX		{  connectionIndex  }
+		::=  { sfConnectionTable 1 }
+
+	sfConnectionEntry  ::=  SEQUENCE {
+		connectionIndex  INTEGER,
+		sfConnectionName  DisplayString,
+		sfUserName  DisplayString,
+		sfConnectionFlowRecv  INTEGER,
+		sfConnectionFlowSend  INTEGER,
+		sfConnectedTime  DisplayString
+		}
+
+connectionIndex
+
+connectionIndex	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			not-accessible
+	STATUS			mandatory
+	DESCRIPTION		"Index."
+	::=  {  sfConnectionEntry  1  }
+
+sfConnectionName
+标记: 连接名
+
+sfConnectionName   OBJECT-TYPE
+	SYNTAX			DisplayString
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Name of connection."
+	::=  {  sfConnectionEntry  2  }
+
+sfUserName
+标记: 用户名
+
+sfUserName	OBJECT-TYPE
+	SYNTAX			DisplayString
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Name of user."
+	::=  {  sfConnectionEntry  3 }
+
+sfConnectionFlowRecv
+标记: 接收的流量
+
+sfConnectionFlowRecv	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Recv Flow of connection.(Byte/s)"
+	::=  {  sfConnectionEntry  3  }
+
+sfConnectionFlowSend
+标记: 发送的流量
+
+sfConnectionFlowSend	OBJECT-TYPE
+	SYNTAX			INTEGER
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"Send Flow of connection.(Byte/s)"
+	::=  {  sfConnectionEntry  4  }
+
+sfConnectedTime
+标记: 接入时间
+
+sfConnectedTime	OBJECT-TYPE
+	SYNTAX			DisplayString
+	ACCESS			read-only
+	STATUS			mandatory
+	DESCRIPTION		"the time of connnection established."
+	::=  {  sfConnectionEntry  6  }
+
+sfEnableDoubleHost
+标记: 是否启用了双机(0..1)
+
+sfEnableDoubleHost	OBJECT-TYPE
+		SYNTAX			INTEGER  ( 0 .. 1  )
+		ACCESS			read-only
+		STATUS			mandatory
+		DESCRIPTION		"0--disable.1--enable"
+		::=  {  sGeneral  3  }
+
+aCSG
+标记: AC和SG共用一个
+
+aCSG 	OBJECT IDENTIFIER
+		::=  {  product  1  }
+
+acSGTrap
+
+aD
+
+aD 	OBJECT IDENTIFIER
+		::=  {  product  2  }
+
+adTrap
+
+mIGVPN
+标记: 小硬件MIG和DLAN共用一个
+
+mIGVPN 	OBJECT IDENTIFIER
+		::=  {  product  3  }
+
+migVPNTrap
+
+aF
+标记: AF当前是sangfor下一个独立的节点
+
+aF 	OBJECT IDENTIFIER
+		::=  {  product  4  }
+
+afTrap
+
+sC
+
+sC 	OBJECT IDENTIFIER
+		::=  {  product  5  }
+
+scTrap
+
+vDI
+标记: 原本和sSLVPN的oid冲突了
+
+vDI 	OBJECT IDENTIFIER
+		::=  {  product  9  }
+
+vdiTrap
+
+sSLVPN
+
+sSLVPN 	OBJECT IDENTIFIER
+		::=  {  product  10  }
+
+sSLVPNTrap
+
+wOC
+
+wOC 	OBJECT IDENTIFIER
+		::=  {  product  11  }
+
+wocTrap
+
+sIP
+
+sIP 	OBJECT IDENTIFIER
+		::=  {  product  12  }
+
+sipTrap
+
+sDWR
+
+sDWR 	OBJECT IDENTIFIER
+		::=  {  product  13  }
+
+sdwrTrap
+
+aTrust
+
+aTrust 	OBJECT IDENTIFIER
+		::=  {  product  15  }
+
+aTrustTrap
+
+iDTrust
+
+iDTrust 	OBJECT IDENTIFIER
+		::=  {  product  16  }
+
+iDTrustTrap
+
+cloud
+标记: 虚拟化平台
+
+cloud	OBJECT IDENTIFIER
+		::=  {  sangfor  3  }
+
+cGeneral
+标记: 公共项
+
+cGeneral	OBJECT IDENTIFIER
+		::=  {  cloud  1  }
+
+cProduct
+
+cProduct	OBJECT IDENTIFIER
+		::=  {  cloud  2  }
+
+hCI
+
+hCI	OBJECT IDENTIFIER
+		::=  {  vProduct  1  }
+
+hCITrap
+
+aBOS
+
+aBOS	OBJECT IDENTIFIER
+		::=  {  vProduct  2  }
+
+aBosTrap
+
+bBC
+
+bBC	OBJECT IDENTIFIER
+		::=  {  vProduct  3  }
+
+bBCTrap
+
+sfFirewall
+标记: 给AF保留
+
+sfFirewall	OBJECT IDENTIFIER
+		::=  {  sangfor  200  }
+
+sundray
+标记: 信锐技术的子节点
+
+sundary	OBJECT IDENTIFIER
+		::=  {  sangfor  4  }
+
+sGeneral
+
+sGeneral	OBJECT IDENTIFIER
+		::=  {  sundary  1 }
+
+sProduct
+
+sProduct	OBJECT IDENTIFIER
+		::=  {  sundary  2 }
+
+wNS
+
+wNSTrap
+
+SNMP v1 Trap
+
+coldStart
+标记: 设备冷启动
+
+coldStart	TRAP-TYPE
+	ENTERPRISE		snmp
+	DESCRIPTION		"coldStart trap"
+	::=  0
+
+warmStart
+标记: 设备热启动
+
+warmStart	TRAP-TYPE
+	ENTERPRISE		snmp
+	DESCRIPTION	"warmStart trap"
+	::=  1
+
+linkDown
+标记: 链路故障
+
+linkDown	TRAP-TYPE
+	ENTERPRISE		snmp
+	VARIABLES		{ ifIndex }
+	DESCRIPTION		"linkDown trap"
+	::=  2
+
+linkUp
+标记: 链路恢复
+
+linkUp	TRAP-TYPE
+	ENTERPRISE		snmp
+	VARIABLES		{ ifIndex }
+	DESCRIPTION		"linkUp trap"
+	::=  3
+
+authenticationFailure
+标记: snmp认证失败
+
+authenticationFailure	TRAP-TYPE
+	ENTERPRISE		snmp
+	DESCRIPTION		"authenticationFailure trap"
+	::=  4
+
+enterpriseSpecific
+标记: 自定义事件
+
+enterpriseSpecific	TRAP-TYPE
+	ENTERPRISE		sangfor
+	VARIABLES		{ sfSysIpAddr }
+	DESCRIPTION		"enterpriseSpecific trap"
+	::=  6
+
+systemWarnTrap
+标记: AD保留, 系统告警, 新规范请将私有trap移到product下各自节点或者公共trap下
+
+systemWarnTrap	TRAP-TYPE
+	ENTERPRISE		sangfor
+	VARIABLES		{ adSystemWarn }
+	DESCRIPTION		"system warn trap"
+	::=  7
+
+sfTemperatureWarnTrap
+
+sfTemperatureWarnTrap	 TRAP-TYPE
+	ENTERPRISE		sangfor
+	DESCRIPTION		"Temperature is above threshold(default is 75℃)"
+	::=  10
+
+sfCPUWarnTrap
+
+sfCPUWarnTrap	TRAP-TYPE
+	ENTERPRISE		sangfor
+	DESCRIPTION	"CPU Usage is above threshold(default is 80%)"
+	::=  11
+
+sfMemoryWarnTrap
+
+sfMemoryWarnTrap	TRAP-TYPE
+	STATUS					current
+	ENTERPRISE		sangfor
+	DESCRIPTION		"Memory Usage is above threshold(default is 95%)"
+	::=  12
+
+sfDiskWarnTrap
+
+sfDiskWarnTrap	TRAP-TYPE
+	STATUS					current
+	ENTERPRISE		sangfor
+	DESCRIPTION		"Disk Usage is above threshold(default is 90%)"
+	::=  13
+
+sfPowerWarnTrap
+
+sfPowerWarnTrap	TRAP-TYPE
+	STATUS				current
+	ENTERPRISE		 sangfor
+	DESCRIPTION	"All or One of Power Failure"
+	::=  14
+
+sfInterfacDownTrap
+
+sfInterfacDownTrap	TRAP-TYPE
+	STATUS				 current
+	ENTERPRISE		 sangfor
+	DESCRIPTION	"One of Network Interfacehas gone down"
+	::=  16
+
+sfFanWarnTrap
+
+sfFanWarnTrap	TRAP-TYPE
+	STATUS				 current
+	ENTERPRISE		 sangfor
+	DESCRIPTION	"All or One of Fan warn"
+	::=  17
+
+snmp standard trap
+(coldStart, warmStart, linkDown, linkUp, authenticationFailure)
+
+如果不支持v2 TRAP,就将自定义的trap实现在这里,否则请优先用v2实现
+(enterpriseSpecific)
+
+SNMP v2 Trap
+标记: 公共trap项(v2c)
+
+sfGeneralTrap OBJECT IDENTIFIER
+	::= {  sangfor  110  }
+
+参见: sangfor
+
+sfTemperatureWarnTrap
+标记: 温度超出阈值
+
+sfTemperatureWarnTrap 	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Temperature is above threshold(default is 75℃)"
+	::=  { sfGeneralTrap 1 }
+
+sfCPUWarnTrap
+标记: CPU占用超出阈值
+
+sfCPUWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"CPU Usage is above threshold(default is 80%)"
+	::=  { sfGeneralTrap 2 }
+
+sfMemoryWarnTrap
+标记: 内存使用超出阈值
+
+sfMemoryWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Memory Usage is above threshold(default is 95%)"
+	::=  { sfGeneralTrap 3 }
+
+
+sfDiskWarnTrap
+标记: 磁盘使用超出阈值
+
+sfDiskWarnTrap	 NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"Disk Usage is above threshold(default is 90%)"
+	::=  { sfGeneralTrap 4 }
+
+sfPowerWarnTrap
+标记: 电源故障
+
+sfPowerWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"All or One of Power Failure"
+	::=  { sfGeneralTrap 5 }
+
+sfInterfacDownTrap
+标记: 接口down
+
+sfInterfacDownTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"One of Network Interfacehas gone down"
+	::=  { sfGeneralTrap 6 }
+
+sfFanWarnTrap
+标记: 风扇故障
+
+sfFanWarnTrap	NOTIFICATION-TYPE
+	STATUS					current
+	DESCRIPTION		"All or One of Fan warn"
+	::=  { sfGeneralTrap 7 }

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from .metrics import metrics_view
 
 app_name = 'iccbs'  # Namespace for the app
 
@@ -20,5 +21,7 @@ urlpatterns = [
     path("password-reset-confirm/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(template_name="iccbs/password_reset_confirm.html"), name="password_reset_confirm"),
     path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(template_name="iccbs/password_reset_complete.html"), name="password_reset_complete"),
     path('contact-me/', views.contact_me, name='contact_me'),
+    path("metrics/", metrics_view, name="metrics"),
 
 ]
+

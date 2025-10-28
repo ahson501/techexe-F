@@ -11,6 +11,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from .forms import UpdateUserForm, UpdateProfileForm
 
 
+
 # Base Page View
 def iccbs_base(request):
     """Render the base template (home page)."""

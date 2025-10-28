@@ -940,3 +940,6 @@ ON_DEMAND_LOG_COUNT = 10000
 #############################################################################
 from pgadmin.evaluate_config import evaluate_and_patch_config
 locals().update(evaluate_and_patch_config(locals()))
+
+DATA_RESULT_ROWS_PER_PAGE = 100  # Or any other integer value you'd like
+

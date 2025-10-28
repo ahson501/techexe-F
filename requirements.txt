@@ -9,6 +9,8 @@ django-allauth
 pytest
 Pillow
 pytest-django
+pysnmp
+prometheus-client
 django-taggit
 django-allauth
 django-ckeditor

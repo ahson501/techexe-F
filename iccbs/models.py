@@ -73,3 +73,85 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
     instance.profile.save()
+
+# ===================== NETWORK MONITORING MODELS =====================
+
+class NetworkDevice(models.Model):
+    """Stores SNMP-capable devices"""
+    name = models.CharField(max_length=100)
+    ip_address = models.GenericIPAddressField(unique=True)
+    description = models.CharField(max_length=200, blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    snmp_version = models.CharField(max_length=10, default='v3')
+    context = models.CharField(max_length=100, blank=True, null=True)
+    auth_protocol = models.CharField(max_length=20, default='SHA')
+    priv_protocol = models.CharField(max_length=20, default='AES')
+    auth_password = models.CharField(max_length=100, blank=True, null=True)
+    priv_password = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.ip_address})"
+
+
+class NetworkInterface(models.Model):
+    """Represents each interface on a network device"""
+    device = models.ForeignKey(NetworkDevice, on_delete=models.CASCADE, related_name='interfaces')
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200, blank=True, null=True)
+    if_index = models.IntegerField()
+    speed = models.BigIntegerField(blank=True, null=True)
+    admin_status = models.BooleanField(default=True)
+    oper_status = models.BooleanField(default=True)
+    last_change = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.device.name} - {self.name}"
+
+
+class SNMPTrap(models.Model):
+    """Stores SNMP Traps received from devices"""
+    device = models.ForeignKey(NetworkDevice, on_delete=models.CASCADE, related_name='traps')
+    trap_oid = models.CharField(max_length=200)
+    trap_type = models.CharField(max_length=100, blank=True, null=True)  # linkUp, linkDown, coldStart, etc.
+    message = models.TextField(blank=True, null=True)
+    severity = models.CharField(max_length=20, choices=[
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('critical', 'Critical'),
+    ], default='info')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.trap_type} on {self.device.name} at {self.timestamp}"
+
+
+class SessionAlert(models.Model):
+    """Tracks ISP or user session alerts"""
+    isp_name = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=[
+        ('up', 'Up'),
+        ('down', 'Down'),
+        ('flapping', 'Flapping'),
+    ], default='up')
+    reason = models.CharField(max_length=200, blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.isp_name} - {self.status}"
+
+
+class SystemAlert(models.Model):
+    """System-level alerts (CPU, Memory, Disk, etc.)"""
+    hostname = models.CharField(max_length=100)
+    alert_type = models.CharField(max_length=100)
+    message = models.TextField()
+    severity = models.CharField(max_length=20, choices=[
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('critical', 'Critical'),
+    ], default='info')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.hostname}: {self.alert_type} ({self.severity})"

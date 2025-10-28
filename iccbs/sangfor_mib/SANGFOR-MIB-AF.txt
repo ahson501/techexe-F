@@ -1,0 +1,85 @@
+SANGFOR-AF-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    OBJECT-TYPE, NOTIFICATION-TYPE, MODULE-IDENTITY,
+    Integer32, Opaque, enterprises, Counter32, Unsigned32
+        FROM SNMPv2-SMI
+
+    TEXTUAL-CONVENTION, DisplayString, TruthValue
+	FROM SNMPv2-TC;
+
+sangfor MODULE-IDENTITY
+    LAST-UPDATED "201311200000Z"
+    ORGANIZATION "sangfor"
+    CONTACT-INFO    
+	""
+    DESCRIPTION
+	"This file defines sangfor private MIB extensions."
+
+    REVISION	 "201311200000Z"
+    DESCRIPTION
+	"only has trap private mibs"
+    ::= { enterprises 35047 }
+
+sfFirewall  OBJECT IDENTIFIER
+	::= {  sangfor  200  }
+	
+sfFirewallOprLog OBJECT-TYPE
+    SYNTAX	OCTET  STRING
+    ACCESS  not-accessible
+    STATUS	current
+    DESCRIPTION
+	"send trap with additions"
+    ::= { sfFirewall 1 }
+
+sfFirewallTraps OBJECT IDENTIFIER
+	::= {  sfFirewall  200  }
+
+--update configuration
+sfFirewallTrapConfChange NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"update configuration"
+    ::= { sfFirewallTraps 1 }
+
+--dual switch
+sfFirewallTrapDualSwitch NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"dual switch"
+    ::= { sfFirewallTraps 2 }
+
+--update rules
+sfFirewallRulebaseUpdate NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"update rules"
+    ::= { sfFirewallTraps 3 }
+
+--interfaces link working properly
+sfFirewallTrapIfNormal NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"interfaces link working properly"
+    ::= { sfFirewallTraps 4 }
+
+--interfaces link went wrong
+sfFirewallTrapIfFail NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"interfaces link went wrong"
+    ::= { sfFirewallTraps 5 }
+
+sfFirewallTrapFwAttack NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"firewall under attack"
+    ::= { sfFirewallTraps 6 }
+
+sfFirewallTrapNetworkAttack NOTIFICATION-TYPE
+    STATUS	current
+    DESCRIPTION
+	"protected network under attack"
+    ::= { sfFirewallTraps 7 }
+
+END

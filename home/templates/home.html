@@ -3,101 +3,176 @@
 <html lang="en">
 <head>
   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CTLHDZ4G7"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8CTLHDZ4G7"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-8CTLHDZ4G7');
+  </script>
 
-  gtag('config', 'G-8CTLHDZ4G7');
-</script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TechExe: Transforming AI and Web Development{% endblock %}</title>
 
-    <!-- Fonts and Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+  <!-- Fonts and Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-Nqzwou5J.css' %}">
+  <!-- CSS -->
+  <link rel="stylesheet" href="{% static 'frontend/dist/assets/home-C7VY-Gtt.css' %}">
 </head>
 <body>
-    {% block content %}
-    <!-- Hero Section -->
-    <!-- HTML -->
-    <section class="hero">
-        <img src="{% static 'images/services/1892751.jpg' %}" alt="input" class="bg-image">
-        
+  {% block content %}
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="slider-container">
+      <div class="slide active">
+        <img src="{% static 'images/services/1892751.jpg' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
         <div class="glass">
-            <h1>Welcome to TechExe</h1>
-            <p>
-                Building intelligent AI applications, robust Python-Django web solutions, and dynamic Grafana dashboards—
-                tailored to meet your business needs with innovation and precision.
-            </p>
-            <a href="/portfolio/" class="cta-button">View Our Portfolio</a>      
-        </div>   
-    </section>
-    
-
-
-    <!-- Intro Section -->
-    <div class="section-intro">
-        <h1>Empowering Industries with Next-Gen AI Solutions</h1>
-        <p>Discover how our cutting-edge AI and web development solutions are transforming industries.</p>
-        <button class="cta-button" onclick="window.location.href='/services/'" style="display: none;">Get Started</button>
-    </div>
-
-    <!-- Skills and Services Section -->
-    <section id="skills-services">
-      <h2 style="text-align: center;">Services We Offer</h2>
-        <div class="services-container">
-            <div class="service-box">
-                <i class="fa fa-cogs"></i>
-                <h3>
-                    <a href=https://techexe.net/portfolio/portfolio/3/ target="_blank">
-                        Web Development
-                    </a>  
-                </h3>
-            </div>
-            <div class="service-box">
-                <i class="fa fa-robot"></i>
-                <h3>
-                    <a href=https://techexe.net/portfolio/portfolio/4/ target="_blank">
-                        Secure. Scalable. AI-Ready</a>
-                </h3>
-            </div>
-            <div class="service-box">
-              <i class="fa fa-tachometer-alt"></i>
-              <h3>
-                  <a href="https://techexe.net/portfolio/portfolio/1/" target="_blank">
-                      Dashboard Creation
-                  </a>
-              </h3>
-          </div>
-          
+          <h1>Welcome to TechExe</h1>
+          <p class="bolded-copy">Building intelligent AI apps and dashboards with precision.</p>
         </div>
-    </section>
+      </div>
+  
+      <div class="slide">
+        <img src="{% static 'images/services/DJANGO.png' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
+        <div class="glass">
+          <h1>AI Meets Web</h1>
+          <p class="bolded-copy">Dockerizing Django, uWSGI and Postgres; Build-Ship-Run your own container according to your instructions</p>
+          <p>No need for a virtual environment! Keep apps isolated in containers — each container already has its own isolated environment. </p>
+          <p>Docker’s homepage describes Docker as follows:
 
-    <!-- Footer Section -->
-    <footer>
-      <h2>Contact Us</h2>
-      <p>
-          <i class="fab fa-whatsapp"></i> 
-          <a href="https://wa.me/34663455354" target="_blank" style="text-decoration: none; color: inherit;">
-              +34 663 45 53 54
-          </a>
-          <br>
-          <i class="fab fa-whatsapp"></i> 
-          <a href="https://wa.me/923082454008" target="_blank" style="text-decoration: none; color: inherit;">
-              +92 308 245 4008
-          </a>
-      </p>
+            “Docker is an open platform for building, shipping and running distributed applications. It gives programmers, development teams, and operations engineers the common toolbox 
+            they need to take advantage of the distributed and networked nature of modern applications.”</p>
+        </div>
+      </div>
+  
+      <div class="slide">
+        <img src="{% static 'images/services/Intelligent_AI.png' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
+        <div class="glass">
+          <h1>Data to Insight</h1>
+          <p class="bolded-copy">Turn data into dashboards with Grafana & Prometheus.</p>
+        </div>
+      </div>
+  
+      <div class="slide">
+        <img src="{% static 'images/services/slide3.jpg' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
+        <div class="glass">
+          <h1>Data to Insight</h1>
+          <p class="bolded-copy">Turn data into dashboards with Grafana & Prometheus.</p>
+        </div>
+      </div>
+
+      <div class="slide">
+        <img src="{% static 'images/services/slide3.jpg' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
+        <div class="glass">
+          <h1>Data to Insight</h1>
+          <p class="bolded-copy">Turn data into dashboards with Grafana & Prometheus.</p>
+        </div>
+      </div>
+
+      <div class="slide">
+        <img src="{% static 'images/services/slide3.jpg' %}" class="bg-image rellax" data-rellax-speed="-4" data-rellax-percentage="0.5">
+        <div class="glass">
+          <h1>Data to Insight</h1>
+          <p class="bolded-copy">Turn data into dashboards with Grafana & Prometheus.</p>
+        </div>
+      </div>
+
+
+      <a href="/portfolio/" class="cta-button">View Our Portfolio</a>
+    </div>
+  </section>
+  
+
+  <!-- Intro Section -->
+  <div class="section-intro">
+      <h1>Empowering Industries with Next-Gen AI Solutions</h1>
+      <p>Discover how our cutting-edge AI and web development solutions are transforming industries.</p>
+      <button class="cta-button" onclick="window.location.href='/services/'" style="display: none;">Get Started</button>
+  </div>
+
+  <!-- Skills and Services Section -->
+  <section id="skills-services">
+    <h2 style="text-align: center;">Services We Offer</h2>
+    <div class="services-container">
+        <div class="service-box">
+            <i class="fa fa-cogs"></i>
+            <h3>
+                <a href="https://techexe.net/portfolio/portfolio/3/" target="_blank">
+                    Web Development
+                </a>  
+            </h3>
+        </div>
+        <div class="service-box">
+            <i class="fa fa-robot"></i>
+            <h3>
+                <a href="https://techexe.net/portfolio/portfolio/4/" target="_blank">
+                    Secure. Scalable. AI-Ready
+                </a>
+            </h3>
+        </div>
+        <div class="service-box">
+            <i class="fa fa-tachometer-alt"></i>
+            <h3>
+                <a href="https://techexe.net/portfolio/portfolio/1/" target="_blank">
+                    Dashboard Creation
+                </a>
+            </h3>
+        </div>
+    </div>
+  </section>
+
+  <!-- Footer Section -->
+  <footer>
+    <h2>Contact Us</h2>
+    <p>
+        <i class="fab fa-whatsapp"></i> 
+        <a href="https://wa.me/34663455354" target="_blank" style="text-decoration: none; color: inherit;">
+            +34 663 45 53 54
+        </a>
+        <br>
+        <i class="fab fa-whatsapp"></i> 
+        <a href="https://wa.me/923082454008" target="_blank" style="text-decoration: none; color: inherit;">
+            +92 308 245 4008
+        </a>
+    </p>
   </footer>
+  {% endblock %}
 
-    {% endblock %}
+  <!-- Vite Scripts -->
+  <script type="module" src="{% static 'frontend/dist/assets/main-C3XFqd18.js' %}"></script>
 
-    <!-- Vite Scripts -->
-    <script type="module" src="{% static 'frontend/dist/assets/main-C3XFqd18.js' %}"></script>
+    <!-- ✅ Rellax.js for Parallax -->
+    <script src="https://cdn.jsdelivr.net/npm/rellax@1.12.1/rellax.min.js"></script>
+    <script>
+        new Rellax('.rellax', {
+            speed: -4,
+            center: true,
+            wrapper: null,
+            round: true,
+            vertical: true,
+            horizontal: false
+        });
+    </script>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+    
+        function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+        });
+        }
+    
+        setInterval(() => {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+        }, 5000); // 5 seconds per slide
+    </script>
+
 </body>
 </html>
+
