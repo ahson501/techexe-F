@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UPLC Request Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        fieldset { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; }
+        legend { font-weight: bold; padding: 0 10px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        .errorlist { color: red; }
+    </style>
+</head>
+<body>
+
+<form method="post">
+    {% csrf_token %}
+
+    <h2>UPLC Request Form</h2>
+
+    {% if form.errors %}
+        <div style="background: #fee; color: red; padding: 10px; border: 1px solid red; margin-bottom: 20px;">
+            <strong>Please fix the errors below:</strong>
+            {{ form.errors }}
+        </div>
+    {% endif %}
+
+    <fieldset>
+        <legend>Basic Information</legend>
+        <label>Name:</label>
+        {{ form.name }}
+
+        <label>Supervisor:</label>
+        {{ form.supervisor }}
+
+        <label>Intercom #:</label>
+        {{ form.intercom }}
+
+        <label>Sample Code:</label>
+        {{ form.sample_code }}
+    </fieldset>
+
+    <fieldset>
+        <legend>1. Type of Sample</legend>
+        <small>(plant, animal, synthetic, etc.)</small>
+        {{ form.sample_type }}
+    </fieldset>
+
+    <fieldset>
+        <legend>2. Solubility</legend>
+        {{ form.solubility }}
+    </fieldset>
+
+    <fieldset>
+        <legend>3. Wavelength (nm)</legend>
+        {{ form.wavelength }}
+    </fieldset>
+
+    <fieldset>
+        <legend>4. Flow Rate</legend>
+        {{ form.flow_rate }}
+    </fieldset>
+
+    <fieldset>
+        <legend>5. UPLC Method Detail (Solvent System)</legend>
+        <label>A:</label>
+        {{ form.solvent_a }}
+        <label>B:</label>
+        {{ form.solvent_b }}
+    </fieldset>
+
+    <fieldset>
+        <legend>Available Columns</legend>
+        {{ form.column }}
+    </fieldset>
+
+    <fieldset>
+        <legend>Important Precautions</legend>
+        <ul>
+            <li>Filter all aqueous buffers and samples through 0.2 µm filter</li>
+            <li>Replace mobile phase buffers every 24–48 hours</li>
+            <li>Sample must be soluble in mobile phase</li>
+            <li>Log entry required</li>
+        </ul>
+        {{ form.precautions_ack }} <strong>I acknowledge the precautions.</strong>
+    </fieldset>
+
+    <button type="submit" style="padding: 10px 20px; background: green; color: white; border: none; cursor: pointer;">
+        Submit Request
+    </button>
+</form>
+
+</body>
+</html>

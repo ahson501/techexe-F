@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab Workflow Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 30px; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border: 1px solid #ddd; }
+        th { background-color: #f4f4f4; }
+        
+        /* Button Styling */
+        .btn {
+            padding: 6px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .btn-approve { background-color: #28a745; color: white; border: 1px solid #218838; }
+        .btn-reject { background-color: #dc3545; color: white; border: 1px solid #c82333; }
+        .btn-approve:hover { background-color: #218838; }
+        .btn-reject:hover { background-color: #c82333; }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .status-in_review { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+    <h2>UPLC Request Dashboard</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sample Code</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in requests %}
+            <tr>
+                <td><strong>{{ r.sample_code }}</strong></td>
+                <td>
+                    <span class="status-badge status-{{ r.status }}">
+                        {{ r.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    {# UPDATED LOGIC: Checking for 'in_review' AND 'pending' #}
+                    {% if r.status == 'in_review' or r.status == 'pending' %}
+                        <a href="{% url 'approve_request' r.pk %}" class="btn btn-approve">Approve</a>
+                        <a href="{% url 'reject_request' r.pk %}" class="btn btn-reject">Reject</a>
+                    {% else %}
+                        <span style="color: #666; font-style: italic;">Action Completed</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No requests found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <a href="{% url 'uplc_form' %}" style="color: #007bff;">+ Submit New Request</a>
+
+</body>
+</html>

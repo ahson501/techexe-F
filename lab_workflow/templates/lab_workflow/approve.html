@@ -1,0 +1,13 @@
+{% if request.user == form.supervisor and form.status == 'pending' %}
+
+<form method="post" action="{% url 'approve_request' form.id %}">
+    {% csrf_token %}
+    <button type="submit">Approve</button>
+</form>
+
+<form method="post" action="{% url 'reject_request' form.id %}">
+    {% csrf_token %}
+    <button type="submit">Reject</button>
+</form>
+
+{% endif %}

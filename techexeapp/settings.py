@@ -29,7 +29,7 @@ ALLOWED_HOSTS = ['0.0.0.0' , '172.16.2.35' , '111.68.111.222' , 'techexe.net' , 
 
 CSRF_TRUSTED_ORIGINS = [
     'https://techexe.net',
-    'https://www.techexe.net'
+    'https://www.techexe.net',
 ]
 
 # Application definition
@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'iccbs',
-        
+    'lab_workflow',       
 ]
 
 MIDDLEWARE = [
@@ -72,6 +72,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'techexeapp.urls'
+SITE_ID = 1
 
 import os
 

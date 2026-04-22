@@ -19,6 +19,7 @@ class Category(models.Model):
         ('SNMP', 'SNMP'),
         ('Botany', 'Botany'),
         ('Infrastructure', 'Infrastructure'),
+        ('Web','Web'),
         ('Syslog', 'Syslog'),
     ]
 
