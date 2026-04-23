@@ -30,6 +30,8 @@ ALLOWED_HOSTS = ['0.0.0.0' , '172.16.2.35' , '111.68.111.222' , 'techexe.net' , 
 CSRF_TRUSTED_ORIGINS = [
     'https://techexe.net',
     'https://www.techexe.net',
+    'https://172.16.2.35',
+    'https://111.68.111.222',
 ]
 
 # Application definition
