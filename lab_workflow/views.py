@@ -52,7 +52,9 @@ def dashboard(request):
     requests = UPLCRequest.objects.all().order_by('-created_at')
     return render(request, "lab_workflow/dashboard.html", {"requests": requests})
 
-
+def request_detail(request, pk):
+    uplc_request = get_object_or_404(UPLCRequest, pk=pk)
+    return render(request, 'lab_workflow/request_detail.html', {'r': uplc_request})
 # =========================
 # APPROVE REQUEST (PUBLIC)
 # =========================

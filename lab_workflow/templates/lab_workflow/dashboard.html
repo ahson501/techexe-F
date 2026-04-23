@@ -1,80 +1,177 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Lab Workflow Dashboard</title>
+    <meta charset="UTF-8">
+    <title>UPLC Dashboard | ICCBS</title>
     <style>
-        body { font-family: sans-serif; margin: 30px; }
-        h2 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border: 1px solid #ddd; }
-        th { background-color: #f4f4f4; }
-        
-        /* Button Styling */
-        .btn {
-            padding: 6px 12px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: bold;
-            display: inline-block;
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --slate: #64748b;
         }
-        .btn-approve { background-color: #28a745; color: white; border: 1px solid #218838; }
-        .btn-reject { background-color: #dc3545; color: white; border: 1px solid #c82333; }
-        .btn-approve:hover { background-color: #218838; }
-        .btn-reject:hover { background-color: #c82333; }
-        
-        .status-badge {
-            padding: 4px 8px;
+
+        body { margin: 0; padding: 0; }
+
+        .dashboard-wrapper {
+            padding: 40px;
+            background-color: #f1f5f9;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 30px;
             border-radius: 12px;
-            font-size: 12px;
-            text-transform: uppercase;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: auto;
         }
-        .status-in_review { background: #fff3cd; color: #856404; }
-        .status-approved { background: #d4edda; color: #155724; }
-        .status-rejected { background: #f8d7da; color: #721c24; }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 20px;
+        }
+
+        .header-text h2 {
+            margin: 0;
+            color: var(--dark);
+            font-size: 1.5rem;
+        }
+
+        .btn-new {
+            background-color: var(--primary);
+            color: white !important;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .btn-new:hover { background-color: #1d4ed8; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--slate);
+            text-transform: uppercase;
+            padding: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .status-pending { background: #fef9c3; color: #854d0e; }
+        .status-approved { background: #dcfce7; color: #166534; }
+
+        .action-form { display: inline; }
+        
+        .action-btn {
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 5px;
+            transition: 0.2s;
+        }
+
+        .btn-approve { background: var(--success); color: white; }
+        .btn-reject { background: var(--danger); color: white; }
+        .action-btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
 
-    <h2>UPLC Request Dashboard</h2>
+<div class="dashboard-wrapper">
+    <div class="dashboard-card">
+        <div class="header-flex">
+            <div class="header-text">
+                <h2>International Center for Chemical and Biological Sciences</h2>
+                <p style="color: var(--slate); margin: 5px 0 0 0;">UPLC Request Management Portal</p>
+            </div>
+            <a href="{% url 'uplc_form' %}" class="btn-new">+ Submit New Request</a>
+        </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Sample Code</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in requests %}
-            <tr>
-                <td><strong>{{ r.sample_code }}</strong></td>
-                <td>
-                    <span class="status-badge status-{{ r.status }}">
-                        {{ r.get_status_display }}
-                    </span>
-                </td>
-                <td>
-                    {# UPDATED LOGIC: Checking for 'in_review' AND 'pending' #}
-                    {% if r.status == 'in_review' or r.status == 'pending' %}
-                        <a href="{% url 'approve_request' r.pk %}" class="btn btn-approve">Approve</a>
-                        <a href="{% url 'reject_request' r.pk %}" class="btn btn-reject">Reject</a>
-                    {% else %}
-                        <span style="color: #666; font-style: italic;">Action Completed</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" style="text-align: center;">No requests found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <br>
-    <a href="{% url 'uplc_form' %}" style="color: #007bff;">+ Submit New Request</a>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID / Code</th>
+                    <th>Sample Name</th>
+                    <th>Submitted By</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td>
+                        <a href="{% url 'request_detail' r.pk %}" style="text-decoration: none; color: var(--primary); font-weight: bold;">
+                            #{{ r.id }} - {{ r.sample_code|default:"View Details" }}
+                        </a>
+                        <br>
+                        <small style="color: var(--slate)">{{ r.created_at|date:"M d, Y" }}</small>
+                    </td>
+                    <td><strong>{{ r.sample_name }}</strong></td>
+                    <td>{{ r.user.username }}</td>
+                    <td>
+                        {% if r.status == 'approved' or r.approved_at %}
+                            <span class="badge status-approved">Approved</span>
+                        {% else %}
+                            <span class="badge status-pending">Pending Approval</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not r.approved_at and r.status != 'approved' %}
+                        <form method="POST" action="{% url 'approve_request' r.id %}" class="action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="action-btn btn-approve">Approve</button>
+                        </form>
+                        <form method="POST" action="{% url 'reject_request' r.id %}" class="action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="action-btn btn-reject">Reject</button>
+                        </form>
+                        {% else %}
+                        <span style="color: var(--slate); font-size: 0.85rem; font-style: italic;">Finalized</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--slate);">
+                        No requests found in the system.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 </body>
 </html>
