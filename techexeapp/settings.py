@@ -187,7 +187,8 @@ CKEDITOR_CONFIGS = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = '/'  # Redirect after successful login
+#LOGIN_REDIRECT_URL = '/'  # Redirect after successful login
+LOGIN_REDIRECT_URL = 'lab_workflow:post_login_redirect'
 LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
 
 

@@ -12,6 +12,7 @@ from .forms import UpdateUserForm, UpdateProfileForm
 
 
 
+
 # Base Page View
 def iccbs_base(request):
     """Render the base template (home page)."""
@@ -69,19 +70,31 @@ class RegisterView(View):
 
 
 # Login View
+
 def login_view(request):
-    """Handle user login."""
+    """Handle user login with role-based redirect."""
+
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
+
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+
             messages.success(request, f'Welcome, {user.username}!')
+
+            # ✅ ROLE-BASED REDIRECT
+            if user.groups.filter(name__in=['uplc_student', 'uplc_supervisor', 'nmr_student', 'nmr_supervisor']).exists():
+                return redirect('lab_workflow:lab_dashboard')  # use URL name, not hardcoded path
+
             return redirect('iccbs:profile')
+
         else:
             messages.error(request, 'Invalid credentials. Please try again.')
+
     else:
         form = AuthenticationForm()
+
     return render(request, 'iccbs/login.html', {'form': form})
 
 
@@ -113,3 +126,4 @@ def public_profile(request, username):
 
 def contact_me(request):
     return render(request, 'iccbs/contact_me.html')
+

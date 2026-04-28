@@ -38,10 +38,7 @@ class UPLCRequest(models.Model):
     ]
 
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uplc_requests")
-    
-    # ADDED THIS: This allows your form to work as you wrote it!
     supervisor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="supervised_requests")
-    
     workflow = models.ForeignKey(Workflow, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Basic Info
@@ -61,7 +58,7 @@ class UPLCRequest(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    approved_at = models.DateTimeField(null=True, blank=True) # Useful for tracking
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -70,7 +67,73 @@ class UPLCRequest(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.sample_code} ({self.status})"
+        return f"UPLC: {self.sample_code} ({self.status})"
+
+
+# =========================
+# MAIN NMR REQUEST
+# =========================
+
+class NMRRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    student_name = models.CharField(max_length=255)
+    supervisor = models.CharField(max_length=255) # Text field as per form
+    thesis_title = models.CharField(max_length=500, blank=True, null=True)
+    date_submitted = models.DateField(auto_now_add=True)
+    lab_no = models.CharField(max_length=50, blank=True, null=True)
+    extension_no = models.CharField(max_length=50, blank=True, null=True)
+
+    # Sample Details
+    sample_code = models.CharField(max_length=100)
+    solvent = models.CharField(max_length=100, blank=True, null=True)
+    solubility = models.CharField(max_length=100, blank=True, null=True)
+    molecular_weight = models.CharField(max_length=100, blank=True, null=True)
+    amount = models.CharField(max_length=100, blank=True, null=True)
+    concentration = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Optional NMR Status Fields (The ones that caused the error)
+    status_h_nmr = models.CharField(max_length=255, verbose_name="Status of 1H NMR", blank=True, null=True)
+    status_c_nmr = models.CharField(max_length=255, verbose_name="Status of 13C NMR", blank=True, null=True)
+
+    # Techniques (Checkboxes)
+    # 2D-Homonuclear
+    cosy = models.BooleanField(default=False)
+    noesy = models.BooleanField(default=False)
+    roesy = models.BooleanField(default=False)
+    j_resolved = models.BooleanField(default=False)
+    tocsy = models.BooleanField(default=False)
+    dosy = models.BooleanField(default=False)
+    dipsi = models.BooleanField(default=False)
+
+    # 2D-Heteronuclear
+    hsqc = models.BooleanField(default=False)
+    hmbc = models.BooleanField(default=False)
+    x_j_resolved = models.BooleanField(default=False)
+    hmqc_cosy = models.BooleanField(default=False)
+
+    # Concatenated
+    dept_hqqc = models.BooleanField(default=False)
+    hsqc_tocsy = models.BooleanField(default=False)
+    hsqc_noesy = models.BooleanField(default=False)
+
+    # Requirements
+    data_format = models.CharField(
+        max_length=20, 
+        choices=[('Hard Copy', 'Hard Copy'), ('Soft Copy', 'Soft Copy')],
+        blank=True, null=True
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"NMR: {self.sample_code} ({self.status})"
 
 
 # =========================
@@ -83,8 +146,8 @@ class Approval(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-
-    request = models.ForeignKey(UPLCRequest, on_delete=models.CASCADE, related_name="approvals")
+    uplc_request = models.ForeignKey(UPLCRequest, on_delete=models.CASCADE, related_name="approvals", null=True, blank=True)
+    nmr_request = models.ForeignKey(NMRRequest, on_delete=models.CASCADE, related_name="approvals", null=True, blank=True)
     step = models.ForeignKey(WorkflowStep, on_delete=models.CASCADE)
     approver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="approvals")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -93,12 +156,16 @@ class Approval(models.Model):
 
     class Meta:
         ordering = ['step__step_order']
-        unique_together = ('request', 'step')
+        # Removed unique_together because it only allowed UPLC requests
 
     def __str__(self):
-        return f"{self.request.sample_code} - Step {self.step.step_order} - {self.status}"
-
-
+        if self.uplc_request:
+            sample = self.uplc_request.sample_code
+        elif self.nmr_request:
+            sample = self.nmr_request.sample_code
+        else:
+            sample = "Unknown"
+        return f"{sample} - {self.action}"
 # =========================
 # AUDIT LOG
 # =========================
@@ -111,9 +178,10 @@ class AuditLog(models.Model):
         ('rejected', 'Rejected'),
         ('updated', 'Updated'),
     ]
-
+    
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    request = models.ForeignKey(UPLCRequest, on_delete=models.CASCADE, related_name="logs")
+    uplc_request = models.ForeignKey(UPLCRequest, on_delete=models.CASCADE, related_name="logs", null=True, blank=True)
+    nmr_request = models.ForeignKey(NMRRequest, on_delete=models.CASCADE, related_name="logs", null=True, blank=True)
     action = models.CharField(max_length=50, choices=ACTION_CHOICES)
     message = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -122,4 +190,6 @@ class AuditLog(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"{self.request.sample_code} - {self.action}"
+        # Improved __str__ to handle both types of requests
+        sample = self.request.sample_code if self.request else self.nmr_request.sample_code if self.nmr_request else "Unknown"
+        return f"{sample} - {self.action}"
