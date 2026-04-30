@@ -1,20 +1,20 @@
 # lab_workflow/urls.py
 from django.urls import path
-from .views import nmr_form_view, uplc_form_view, dashboard, approve_request, reject_request, request_detail, nmr_detail
-from lab_workflow.views import post_login_redirect
+from . import views
 
 app_name = 'lab_workflow'
 
 urlpatterns = [
     # This is techexe.net/lab_workflow/ 
-    path('post-login-redirect/', post_login_redirect, name='post_login_redirect'),
-    path('dashboard/', dashboard, name='lab_dashboard'),
+    path('post-login-redirect/', views.post_login_redirect, name='post_login_redirect'),
+    path('dashboard/', views.dashboard, name='lab_dashboard'),
     # This is techexe.net/lab_workflow/uplc-form/
-    path("uplc-form/", uplc_form_view, name="uplc_form"),
-    path('nmr-form/', nmr_form_view, name='nmr_form'),
-    path('request/<int:pk>/', request_detail, name='request_detail'),
-    path('nmr/<int:pk>/', nmr_detail, name='nmr_detail'),
+    path("uplc-form/", views.uplc_form_view, name="uplc_form"),
+    path('nmr-form/', views.nmr_form_view, name='nmr_form'),
+    path('request/<int:pk>/', views.request_detail, name='request_detail'),
+    path('nmr/<int:pk>/', views.nmr_detail, name='nmr_detail'),
     # Approval actions
-    path("approve/<int:pk>/", approve_request, name="approve_request"),
-    path("reject/<int:pk>/", reject_request, name="reject_request"),
+    path("approve/<int:pk>/", views.approve_request, name="approve_request"),
+    path("reject/<int:pk>/", views.reject_request, name="reject_request"),
+    path('print/<str:request_type>/<int:pk>/', views.print_form, name='print_form'),
 ]

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 # =========================
 # WORKFLOW TEMPLATE
@@ -165,7 +166,13 @@ class Approval(models.Model):
             sample = self.nmr_request.sample_code
         else:
             sample = "Unknown"
-        return f"{sample} - {self.action}"
+        return f"{sample} - {self.status}"
+    def clean(self):
+        if not self.uplc_request and not self.nmr_request:
+            raise ValidationError("Approval must be linked to either UPLC or NMR request")
+
+        if self.uplc_request and self.nmr_request:
+            raise ValidationError("Approval cannot be linked to both UPLC and NMR")
 # =========================
 # AUDIT LOG
 # =========================
@@ -192,4 +199,4 @@ class AuditLog(models.Model):
     def __str__(self):
         # Improved __str__ to handle both types of requests
         sample = self.request.sample_code if self.request else self.nmr_request.sample_code if self.nmr_request else "Unknown"
-        return f"{sample} - {self.action}"
+        return f"{sample} - {self.status}"

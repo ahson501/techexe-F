@@ -2,59 +2,85 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import WorkflowStep, Workflow 
 from django.contrib.auth.decorators import login_required
 
-from .models import UPLCRequest, NMRRequest, AuditLog, Approval, WorkflowStep
+from .models import UPLCRequest, NMRRequest, AuditLog, Approval, Workflow
 from .forms import UPLCRequestForm, NMRRequestForm
-
+from django.http import HttpResponseForbidden
 
 # =========================
-# LOGIN REDIRECT
+# LOGIN REDIRECT ✅ REQUIRED FOR URLS.PY
 # =========================
 @login_required
 def post_login_redirect(request):
-    user = request.user
-    
-    # Using a list of groups that should see the lab dashboard
-    lab_groups = {'uplc_student', 'nmr_student', 'uplc_supervisor', 'nmr_supervisor'}
-    
-    # Check if user has ANY of the lab groups
-    if user.groups.filter(name__in=lab_groups).exists():
+
+    lab_groups = {
+        'uplc_student',
+        'nmr_student',
+        'uplc_supervisor',
+        'nmr_supervisor',
+        'supervisor'
+    }
+
+    if request.user.groups.filter(name__in=lab_groups).exists():
         return redirect('lab_workflow:lab_dashboard')
 
-    # Fallback for staff/admin not in specific lab groups
     return redirect('/iccbs/profile/')
+
+
 # =========================
 # DASHBOARD
 # =========================
 @login_required
 def dashboard(request):
-    # 1. Requests submitted by the user (Personal History)
-    uplc_requests = UPLCRequest.objects.filter(applicant=request.user)
-    nmr_requests = NMRRequest.objects.filter(user=request.user)
+    user = request.user
+    
+    # 1. Identify Roles
+    is_nmr_sup = user.groups.filter(name='nmr_supervisor').exists()
+    is_uplc_sup = user.groups.filter(name='uplc_supervisor').exists()
+    is_final_approver = user.groups.filter(name='supervisor').exists()
 
-    # 2. Check if the user is a supervisor
-    is_nmr_sup = request.user.groups.filter(name='nmr_supervisor').exists()
-    is_uplc_sup = request.user.groups.filter(name='uplc_supervisor').exists()
+    # 2. Student's Own History (Personal)
+    uplc_requests = UPLCRequest.objects.filter(applicant=user)
+    nmr_requests = NMRRequest.objects.filter(user=user)
 
-    # 3. Fetch Tasks
-    if is_nmr_sup or is_uplc_sup:
-        # Fetch ALL pending approvals regardless of who the 'approver' field points to
-        # OR fetch tasks where the 'approver' is the current user
-        pending_approvals = Approval.objects.filter(status='pending').select_related(
-            'uplc_request', 'nmr_request', 'uplc_request__applicant', 'nmr_request__user'
-        )
-    else:
-        pending_approvals = None
+    # 3. Supervisor's Master View (Departmental)
+    # This fetches ALL forms for the department regardless of who submitted them
+    master_nmr_list = None
+    master_uplc_list = None
+
+    if is_nmr_sup or is_final_approver:
+        master_nmr_list = NMRRequest.objects.all().order_by('-id')
+    
+    if is_uplc_sup or is_final_approver:
+        master_uplc_list = UPLCRequest.objects.all().order_by('-id')
+
+    # 4. Pending Tasks Logic (Your existing working logic)
+    approvals = Approval.objects.filter(
+        approver=user, 
+        status='pending'
+    ).select_related('uplc_request', 'nmr_request', 'step')
+    
+    valid_approvals = []
+    for approval in approvals:
+        request_obj = approval.uplc_request or approval.nmr_request
+        prev_step_orders = request_obj.approvals.filter(
+            step__step_order__lt=approval.step.step_order
+        ).values_list('step__step_order', flat=True).distinct()
+        
+        if not any(not request_obj.approvals.filter(step__step_order=order, status='approved').exists() for order in prev_step_orders):
+            valid_approvals.append(approval)
 
     return render(request, "lab_workflow/dashboard.html", {
         "uplc_requests": uplc_requests,
         "nmr_requests": nmr_requests,
-        "pending_approvals": pending_approvals,
+        "master_nmr_list": master_nmr_list,   # Use these in template
+        "master_uplc_list": master_uplc_list, # Use these in template
+        "pending_approvals": valid_approvals,
+        "is_any_supervisor": (is_nmr_sup or is_uplc_sup or is_final_approver)
     })
 # =========================
-# UPLC FORM SUBMISSION
+# UPLC FORM
 # =========================
 @login_required
 def uplc_form_view(request):
@@ -64,40 +90,36 @@ def uplc_form_view(request):
 
         if form.is_valid():
             obj = form.save(commit=False)
-
-            # Assign logged-in user
             obj.applicant = request.user
-
-            # Handle solubility (multi-select)
-            solubility_list = request.POST.getlist('solubility')
-            obj.solubility = ",".join(solubility_list)
-
             obj.status = 'in_review'
+
+            workflow = Workflow.objects.filter(name="UPLC Workflow").first()
+            if workflow:
+                obj.workflow = workflow
+
             obj.save()
 
-            # ✅ Create Approval Workflow
-            if obj.workflow:
-                steps = obj.workflow.steps.all()
+            # assign ALL users in role
+            for step in obj.workflow.steps.all().order_by('step_order'):
 
-                for step in steps:
-                    approver = User.objects.filter(groups__name=step.role).first()
+                approvers = User.objects.filter(groups__name=step.role)
 
-                    if approver:
-                        Approval.objects.create(
-                            uplc_request=obj,
-                            step=step,
-                            approver=approver
-                        )
+                for approver in approvers:
+                    Approval.objects.create(
+                        uplc_request=obj,
+                        step=step,
+                        approver=approver,
+                        status='pending'
+                    )
 
-            # Audit log
             AuditLog.objects.create(
                 user=request.user,
-                uplc_request=obj,
+                request=obj,
                 action='submitted',
-                message="UPLC form submitted"
+                message="UPLC submitted"
             )
 
-            messages.success(request, "Request submitted successfully!")
+            messages.success(request, "UPLC submitted")
             return redirect('lab_workflow:lab_dashboard')
 
     else:
@@ -107,12 +129,13 @@ def uplc_form_view(request):
 
 
 # =========================
-# NMR FORM SUBMISSION
+# NMR FORM
 # =========================
 @login_required
 def nmr_form_view(request):
+
     if request.method == "POST":
-        # 1. Create the NMR Object (Your existing code is fine here)
+
         obj = NMRRequest.objects.create(
             user=request.user,
             student_name=request.POST.get('student_name'),
@@ -126,58 +149,123 @@ def nmr_form_view(request):
             molecular_weight=request.POST.get('molecular_weight'),
             amount=request.POST.get('amount'),
             concentration=request.POST.get('concentration'),
-            status_h_nmr=request.POST.get('status_h_nmr'),
-            status_c_nmr=request.POST.get('status_c_nmr'),
             cosy='cosy' in request.POST,
             noesy='noesy' in request.POST,
             data_format=request.POST.get('data_format'),
+            status='pending'
         )
 
-        # 2. Find Supervisor
-        nmr_supervisor = User.objects.filter(groups__name='nmr_supervisor').first()
+        workflow = Workflow.objects.filter(name="NMR Workflow").first()
 
-        if nmr_supervisor:
-            # 3. Get the Step (More robust check)
-            step = None
-            
-            # Try to get the specific NMR Workflow
-            workflow = Workflow.objects.filter(name="NMR Workflow").first()
-            if workflow:
-                step = workflow.steps.first()
-            
-            # If still None, try to get ANY available step
-            if not step:
-                step = WorkflowStep.objects.first()
+        if workflow:
+            obj.workflow = workflow
+            obj.save()
 
-            # CRITICAL: Only create approval if we actually found a step
-            if step:
-                Approval.objects.create(
-                    nmr_request=obj,
-                    approver=nmr_supervisor,
-                    step=step
-                )
-                
-                AuditLog.objects.create(
-                    user=request.user,
-                    nmr_request=obj,
-                    action='submitted',
-                    message=f"NMR form submitted: {obj.sample_code}"
-                )
-                messages.success(request, "NMR Request submitted successfully!")
-            else:
-                # This happens if your WorkflowStep table is empty
-                messages.error(request, "System Error: No Workflow Steps defined in Admin. Please contact Admin.")
-                
-            return redirect('lab_workflow:lab_dashboard')
-        
+            for step in workflow.steps.all().order_by('step_order'):
+
+                approvers = User.objects.filter(groups__name=step.role)
+
+                for approver in approvers:
+                    Approval.objects.create(
+                        nmr_request=obj,
+                        step=step,
+                        approver=approver,
+                        status='pending'
+                    )
+
+            messages.success(request, "NMR submitted")
         else:
-            messages.warning(request, "Request saved, but no NMR Supervisor was found.")
-            return redirect('lab_workflow:lab_dashboard')
+            messages.error(request, "Workflow missing")
+
+        return redirect('lab_workflow:lab_dashboard')
 
     form = NMRRequestForm()
     return render(request, 'lab_workflow/nmr_form.html', {'form': form})
+
+
 # =========================
-# REQUEST DETAIL
+# APPROVE
+# =========================
+@login_required
+def approve_request(request, pk):
+    approval = get_object_or_404(Approval, pk=pk)
+
+    if request.user != approval.approver:
+        messages.error(request, "Not allowed")
+        return redirect('lab_workflow:lab_dashboard')
+
+    approval.status = 'approved'
+    approval.action_at = now()
+    approval.save()
+
+    request_obj = approval.uplc_request or approval.nmr_request
+    
+    # Check if there are any HIGHER step orders left
+    remaining_steps = request_obj.approvals.filter(
+        step__step_order__gt=approval.step.step_order,
+        status='pending'
+    )
+
+    if not remaining_steps.exists():
+        request_obj.status = 'approved'
+        request_obj.approved_at = now()
+    else:
+        request_obj.status = 'in_review'
+
+    request_obj.save()
+    messages.success(request, "Approved")
+    return redirect('lab_workflow:lab_dashboard')
+
+
+# =========================
+# REJECT
+# =========================
+@login_required
+def reject_request(request, pk):
+
+    approval = get_object_or_404(Approval, pk=pk)
+
+    if request.user != approval.approver:
+        messages.error(request, "Not allowed")
+        return redirect('lab_workflow:lab_dashboard')
+
+    approval.status = 'rejected'
+    approval.action_at = now()
+    approval.save()
+
+    request_obj = approval.uplc_request or approval.nmr_request
+    request_obj.status = 'rejected'
+    request_obj.save()
+
+    messages.error(request, "Rejected")
+    return redirect('lab_workflow:lab_dashboard')
+
+
+# =========================
+# PRINT
+# =========================
+@login_required
+def print_form(request, request_type, pk):
+    # Force lowercase to avoid matching errors
+    rtype = request_type.lower() 
+    
+    if rtype == 'nmr':
+        obj = get_object_or_404(NMRRequest, pk=pk)
+        template = 'lab_workflow/print_nmr.html'
+    elif rtype == 'uplc':
+        obj = get_object_or_404(UPLCRequest, pk=pk)
+        template = 'lab_workflow/print_uplc.html'
+    else:
+        return HttpResponseForbidden("Invalid Request Type")
+
+    if obj.status != 'approved':
+        return HttpResponseForbidden("Only approved forms can be printed.")
+    # Add this line to create a universal 'owner' variable
+    obj.owner = obj.user if hasattr(obj, 'user') else obj.applicant
+    return render(request, template, {'r': obj})
+
+# =========================
+# DETAILS
 # =========================
 @login_required
 def request_detail(request, pk):
@@ -189,73 +277,3 @@ def request_detail(request, pk):
 def nmr_detail(request, pk):
     nmr_request = get_object_or_404(NMRRequest, pk=pk)
     return render(request, 'lab_workflow/nmr_detail.html', {'r': nmr_request})
-
-
-# =========================
-# APPROVE STEP (CORE LOGIC)
-# =========================
-@login_required
-def approve_request(request, pk):
-    approval = get_object_or_404(Approval, pk=pk)
-
-    # Security: Only the assigned supervisor can approve
-    if request.user != approval.approver:
-        messages.error(request, "Not authorized")
-        return redirect('lab_workflow:lab_dashboard')
-
-    # Identify if we are approving UPLC or NMR
-    target_obj = approval.uplc_request if approval.uplc_request else approval.nmr_request
-
-    # Update Approval Step
-    approval.status = 'approved'
-    approval.action_at = now()
-    approval.save()
-
-    # Update the actual Sample Request status
-    target_obj.status = 'approved'
-    target_obj.approved_at = now()
-    target_obj.save()
-
-    # Create correct Audit Log entry
-    AuditLog.objects.create(
-        user=request.user,
-        uplc_request=approval.uplc_request, # Will be None if it's NMR
-        nmr_request=approval.nmr_request,   # Will be None if it's UPLC
-        action='approved',
-        message=f"Request {target_obj.sample_code} approved by {request.user.username}"
-    )
-
-    messages.success(request, "Approved successfully")
-    return redirect('lab_workflow:lab_dashboard')
-
-
-# =========================
-# REJECT STEP
-# =========================
-@login_required
-def reject_request(request, pk):
-    approval = get_object_or_404(Approval, pk=pk)
-
-    if request.user != approval.approver:
-        messages.error(request, "Not authorized")
-        return redirect('lab_workflow:lab_dashboard')
-
-    approval.status = 'rejected'
-    approval.action_at = now()
-    approval.save()
-
-    # Identify the target (UPLC or NMR)
-    target_obj = approval.uplc_request if approval.uplc_request else approval.nmr_request
-    target_obj.status = 'rejected'
-    target_obj.save()
-
-    AuditLog.objects.create(
-        user=request.user,
-        uplc_request=approval.uplc_request,
-        nmr_request=approval.nmr_request,
-        action='rejected',
-        message="Request rejected by supervisor"
-    )
-
-    messages.error(request, "Request rejected")
-    return redirect('lab_workflow:lab_dashboard')
