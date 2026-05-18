@@ -28,10 +28,13 @@ class UPLCRequestForm(forms.ModelForm):
     class Meta:
         model = UPLCRequest
         fields = [
-            'supervisor', 'intercom', 'sample_code', 'sample_type', 
+            'supervisor', 'appointment_date', 'intercom', 'sample_code', 'sample_type', 
             'solubility', 'wavelength', 'flow_rate', 'solvent_a', 
             'solvent_b', 'column',
         ]
+        widgets = {
+            'appointment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,17 +44,23 @@ class UPLCRequestForm(forms.ModelForm):
                 self.fields[field].widget.attrs.update({'class': 'form-control'})
 
 
-# --- 2. NMR FORM (Separated and Fixed Indentation) ---
+# --- 2. NMR FORM ---
 class NMRRequestForm(forms.ModelForm):
     class Meta:
         model = NMRRequest
-        # Note: exclude must be inside Meta
         exclude = ['user', 'date_submitted', 'status']
         
         widgets = {
+            'appointment_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'student_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
             'supervisor': forms.TextInput(attrs={'class': 'form-control'}),
-            'thesis_title': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            
+            # RESTORED: thesis_title is back to a text box for typing
+            'thesis_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter title of thesis'}),
+            
+            # ADDED/UPDATED: If your model field is named thesis_document or similar, map it here:
+            'thesis_document': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf, .jpg, .jpeg, .png'}),
+            
             'lab_no': forms.TextInput(attrs={'class': 'form-control'}),
             'extension_no': forms.TextInput(attrs={'class': 'form-control'}),
             'sample_code': forms.TextInput(attrs={'class': 'form-control'}),
@@ -67,7 +76,6 @@ class NMRRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Custom labels for NMR specifics
         if 'status_h_nmr' in self.fields:
             self.fields['status_h_nmr'].label = "Status of 1H NMR"
         if 'status_c_nmr' in self.fields:

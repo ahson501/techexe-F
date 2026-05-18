@@ -123,25 +123,60 @@
                     <td>#{{ n.id }} - <strong>{{ n.sample_code }}</strong></td>
                     <td>{{ n.user.username }}</td>
                     <td><span class="badge" style="background: #fef3c7; color: #92400e;">NMR</span></td>
-                    <td><span class="badge {% if n.status == 'approved' %}status-approved{% elif n.status == 'rejected' %}status-danger{% else %}status-pending{% endif %}">{{ n.status|title }}</span></td>
+                    <td>
+                        <span class="badge {% if n.status == 'approved' %}status-approved{% elif n.status == 'rejected' %}status-danger{% else %}status-pending{% endif %}">
+                            {{ n.status|title }}
+                        </span>
+                        {% if n.rejection_reason %}
+                            <small style="display:block; color:var(--danger); font-weight:600; margin-top:2px;">Reason: {{ n.rejection_reason }}</small>
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{% url 'lab_workflow:nmr_detail' n.pk %}" class="action-btn" style="background: var(--primary); color: white; text-decoration:none;">View</a>
+                        
+                        {% if is_mediate_sup and n.status == 'pending' or is_mediate_sup and n.status == 'in_review' %}
+                            <form method="POST" action="{% url 'lab_workflow:reject_tlc' 'nmr' n.pk %}" style="display:inline; margin-left: 5px;">
+                                {% csrf_token %}
+                                <button type="submit" class="action-btn btn-reject" style="background: #991b1b; color: white;">
+                                    Reject: Invalid TLC
+                                </button>
+                            </form>
+                        {% endif %}
+
                         {% if n.status == 'approved' %}
-                        <a href="{% url 'lab_workflow:print_form' 'nmr' n.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none;">Print</a>
+                            <a href="{% url 'lab_workflow:print_form' 'nmr' n.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none; margin-left:5px;">Print</a>
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
+
                 {% for u in master_uplc_list %}
                 <tr>
                     <td>#{{ u.id }} - <strong>{{ u.sample_code }}</strong></td>
                     <td>{{ u.applicant.username }}</td>
                     <td><span class="badge" style="background: #e0e7ff; color: #4338ca;">UPLC</span></td>
-                    <td><span class="badge {% if u.status == 'approved' %}status-approved{% elif u.status == 'rejected' %}status-danger{% else %}status-pending{% endif %}">{{ u.status|title }}</span></td>
+                    <td>
+                        <span class="badge {% if u.status == 'approved' %}status-approved{% elif u.status == 'rejected' %}status-danger{% else %}status-pending{% endif %}">
+                            {{ u.status|title }}
+                        </span>
+                        {% if u.rejection_reason %}
+                            <small style="display:block; color:var(--danger); font-weight:600; margin-top:2px;">Reason: {{ u.rejection_reason }}</small>
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{% url 'lab_workflow:request_detail' u.pk %}" class="action-btn" style="background: var(--primary); color: white; text-decoration:none;">View</a>
+                        
+                        {% if is_mediate_sup and u.status == 'pending' or is_mediate_sup and u.status == 'in_review' %}
+                            <form method="POST" action="{% url 'lab_workflow:reject_tlc' 'uplc' u.pk %}" style="display:inline; margin-left: 5px;">
+                                {% csrf_token %}
+                                <button type="submit" class="action-btn btn-reject" style="background: #991b1b; color: white;">
+                                    Reject: Invalid TLC
+                                </button>
+                            </form>
+                        {% endif %}
+
                         {% if u.status == 'approved' %}
-                        <a href="{% url 'lab_workflow:print_form' 'uplc' u.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none;">Print</a>
+                            <a href="{% url 'lab_workflow:print_form' 'uplc' u.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none; margin-left:5px;">Print</a>
                         {% endif %}
                     </td>
                 </tr>

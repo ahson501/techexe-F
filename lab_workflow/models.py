@@ -1,6 +1,15 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils.timezone import localdate
+from django.core.validators import FileExtensionValidator
+
+# ===============================================
+# DATE VALIDATOR (NO BACKDATED ENTRIES ALLOWED)
+# ===============================================
+def validate_not_past(value):
+    if value < localdate():
+        raise ValidationError("Backdated entries are not allowed. Please select the current date or a future date.")
 
 # =========================
 # WORKFLOW TEMPLATE
@@ -42,6 +51,9 @@ class UPLCRequest(models.Model):
     supervisor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="supervised_requests")
     workflow = models.ForeignKey(Workflow, on_delete=models.SET_NULL, null=True, blank=True)
 
+    # ADDED: Appointment Date Field with validation rule
+    appointment_date = models.DateField(validators=[validate_not_past], help_text="Select current or future date")
+    
     # Basic Info
     sample_code = models.CharField(max_length=100)
     intercom = models.CharField(max_length=50, blank=True)
@@ -60,6 +72,8 @@ class UPLCRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approved_at = models.DateTimeField(null=True, blank=True)
+    
+    rejection_reason = models.TextField(blank=True, null=True)
 
     class Meta:
         indexes = [
@@ -70,7 +84,7 @@ class UPLCRequest(models.Model):
     def __str__(self):
         return f"UPLC: {self.sample_code} ({self.status})"
 
-
+    
 # =========================
 # MAIN NMR REQUEST
 # =========================
@@ -85,8 +99,26 @@ class NMRRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     student_name = models.CharField(max_length=255)
     supervisor = models.CharField(max_length=255) # Text field as per form
-    thesis_title = models.CharField(max_length=500, blank=True, null=True)
+    thesis_title = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        help_text="Enter the text title of your thesis"
+    )
+
+    # ADDED: Separate dedicated file upload field for the supporting image/PDF scan
+    thesis_document = models.FileField(
+        upload_to='thesis_documents/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True,
+        help_text="Upload your supporting thesis title document verification scan (PDF or Image only)"
+    )
     date_submitted = models.DateField(auto_now_add=True)
+    
+     # ADDED: Appointment Date Field with validation rule
+    appointment_date = models.DateField(validators=[validate_not_past], help_text="Select current or future date")
+
     lab_no = models.CharField(max_length=50, blank=True, null=True)
     extension_no = models.CharField(max_length=50, blank=True, null=True)
 
@@ -132,6 +164,8 @@ class NMRRequest(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(null=True, blank=True)
+
+    rejection_reason = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"NMR: {self.sample_code} ({self.status})"

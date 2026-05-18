@@ -15,6 +15,7 @@ urlpatterns = [
     path('nmr/<int:pk>/', views.nmr_detail, name='nmr_detail'),
     # Approval actions
     path("approve/<int:pk>/", views.approve_request, name="approve_request"),
+    path('reject-tlc/<str:request_type>/<int:pk>/', views.reject_invalid_tlc, name='reject_tlc'),
     path("reject/<int:pk>/", views.reject_request, name="reject_request"),
     path('print/<str:request_type>/<int:pk>/', views.print_form, name='print_form'),
 ]

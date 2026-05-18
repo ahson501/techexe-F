@@ -10,90 +10,168 @@
         .section-title { background: #eee; padding: 5px 10px; font-weight: bold; margin: 20px 0 10px 0; border: 1px solid #000; text-align: center; }
         .row { display: flex; gap: 20px; margin-bottom: 15px; }
         .field { flex: 1; display: flex; flex-direction: column; }
-        input[type="text"], input[type="date"] { border: none; border-bottom: 1px solid #000; padding: 5px; outline: none; }
+        input[type="text"], input[type="date"], input[type="file"], textarea { border: none; border-bottom: 1px solid #000; padding: 5px; outline: none; background: transparent; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .checkbox-group { border: 1px solid #000; padding: 15px; margin-top: 10px; }
         .btn-submit { background: #2563eb; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 20px; width: 100%; }
+        .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <form method="POST">
-        {% csrf_token %}
-        
-        <div class="section-title">Student Info</div>
-        {{ form.student_name.label_tag }} {{ form.student_name }}
-        {{ form.supervisor.label_tag }} {{ form.supervisor }}
-    
-        <div class="section-title">Techniques</div>
-        <div class="checkbox-grid">
-            <label>{{ form.cosy }} COSY</label>
-            <label>{{ form.noesy }} NOESY</label>
-            <label>{{ form.hsqc }} HSQC</label>
-            </div>
-    
-        <button type="submit" class="btn-submit">Submit Request</button>
-    </form>
+
 <div class="form-container">
     <div class="header">
         <h3>Sample Requisition Form for Multi-Dimensional NMR Spectroscopy</h3>
         <p><strong>FOR ICCBS STUDENTS</strong></p>
     </div>
 
-    <form method="POST">
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <div style="padding: 10px; margin-bottom: 15px; border-radius: 4px; background-color: #dcfce7; color: #166534; font-weight: bold;">
+                    {{ message }}
+                </div>
+            {% else %}
+                <div style="padding: 10px; margin-bottom: 15px; border-radius: 4px; background-color: #fee2e2; color: #991b1b; font-weight: bold;">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         
+        <div class="section-title">STUDENT INFO</div>
         <div class="row">
             <div class="field">
                 <label>Name of Student:</label>
-                <input type="text" name="student_name" required>
+                {{ form.student_name }}
+                {% if form.student_name.errors %}<div class="error-msg">{{ form.student_name.errors.0 }}</div>{% endif %}
             </div>
             <div class="field">
                 <label>Supervisor:</label>
-                <input type="text" name="supervisor" required>
+                {{ form.supervisor }}
+                {% if form.supervisor.errors %}<div class="error-msg">{{ form.supervisor.errors.0 }}</div>{% endif %}
             </div>
         </div>
 
-        <div class="field" style="margin-bottom: 15px;">
-            <label>Title of Thesis:</label>
-            <input type="text" name="thesis_title">
+        <div class="row">
+            <div class="field">
+                <label>Title of Thesis:</label>
+                {{ form.thesis_title }}
+                {% if form.thesis_title.errors %}<div class="error-msg">{{ form.thesis_title.errors.0 }}</div>{% endif %}
+            </div>
         </div>
 
         <div class="row">
-            <div class="field"><label>Lab No:</label><input type="text" name="lab_no"></div>
-            <div class="field"><label>Extension No:</label><input type="text" name="extension_no"></div>
+            <div class="field">
+                <label style="font-weight: bold; color: #2563eb;">Appointment Date (Required):</label>
+                {{ form.appointment_date }}
+                {% if form.appointment_date.errors %}
+                    <div class="error-msg">{{ form.appointment_date.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label style="font-weight: bold; color: #2563eb;">Thesis Document (PDF / Image):</label>
+                {{ form.thesis_document }}
+                {% if form.thesis_document.errors %}<div class="error-msg">{{ form.thesis_document.errors.0 }}</div>{% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label>Lab No:</label>
+                {{ form.lab_no }}
+                {% if form.lab_no.errors %}<div class="error-msg">{{ form.lab_no.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+                <label>Extension No:</label>
+                {{ form.extension_no }}
+                {% if form.extension_no.errors %}<div class="error-msg">{{ form.extension_no.errors.0 }}</div>{% endif %}
+            </div>
         </div>
 
         <div class="section-title">SAMPLE DETAIL</div>
         <div class="grid-3">
-            <div class="field"><label>Sample Code:</label><input type="text" name="sample_code"></div>
-            <div class="field"><label>Solvent for NMR:</label><input type="text" name="solvent"></div>
-            <div class="field"><label>Solubility:</label><input type="text" name="solubility"></div>
+            <div class="field">
+                <label>Sample Code:</label>
+                {{ form.sample_code }}
+                {% if form.sample_code.errors %}<div class="error-msg">{{ form.sample_code.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+                <label>Solvent for NMR:</label>
+                {{ form.solvent }}
+                {% if form.solvent.errors %}<div class="error-msg">{{ form.solvent.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+                <label>Solubility:</label>
+                {{ form.solubility }}
+                {% if form.solubility.errors %}<div class="error-msg">{{ form.solubility.errors.0 }}</div>{% endif %}
+            </div>
         </div>
+        
         <div class="grid-3" style="margin-top: 15px;">
-            <div class="field"><label>Mol. Weight:</label><input type="text" name="molecular_weight"></div>
-            <div class="field"><label>Amount:</label><input type="text" name="amount"></div>
-            <div class="field"><label>Conc. in 600μL:</label><input type="text" name="concentration"></div>
+            <div class="field">
+                <label>Mol. Weight:</label>
+                {{ form.molecular_weight }}
+                {% if form.molecular_weight.errors %}<div class="error-msg">{{ form.molecular_weight.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+                <label>Amount:</label>
+                {{ form.amount }}
+                {% if form.amount.errors %}<div class="error-msg">{{ form.amount.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+                <label>Conc. in 600μL:</label>
+                {{ form.concentration }}
+                {% if form.concentration.errors %}<div class="error-msg">{{ form.concentration.errors.0 }}</div>{% endif %}
+            </div>
         </div>
 
-        <div class="section-title">Techniques</div>
+        <div class="section-title">Optional Status Fields</div>
+        <div class="row">
+            <div class="field">
+                <label>Status of 1H NMR:</label>
+                {{ form.status_h_nmr }}
+            </div>
+            <div class="field">
+                <label>Status of 13C NMR:</label>
+                {{ form.status_c_nmr }}
+            </div>
+        </div>
+
+        <div class="section-title">TECHNIQUES</div>
         <div class="row checkbox-group">
             <div style="flex: 1;">
                 <strong>2D-Homonuclear</strong><br>
-                <input type="checkbox" name="cosy"> COSY<br>
-                <input type="checkbox" name="noesy"> NOESY<br>
-                <input type="checkbox" name="roesy"> ROESY<br>
-                <input type="checkbox" name="tocsy"> TOCSY
+                <label>{{ form.cosy }} COSY</label><br>
+                <label>{{ form.noesy }} NOESY</label><br>
+                <label>{{ form.roesy }} ROESY</label><br>
+                <label>{{ form.tocsy }} TOCSY</label><br>
+                <label>{{ form.j_resolved }} J-Resolved</label><br>
+                <label>{{ form.dosy }} DOSY</label><br>
+                <label>{{ form.dipsi }} DIPSI</label>
             </div>
             <div style="flex: 1;">
                 <strong>2D-Heteronuclear</strong><br>
-                <input type="checkbox" name="hsqc"> HSQC<br>
-                <input type="checkbox" name="hmbc"> HMBC<br>
-                <input type="checkbox" name="hmqc_cosy"> HMQC-COSY
+                <label>{{ form.hsqc }} HSQC</label><br>
+                <label>{{ form.hmbc }} HMBC</label><br>
+                <label>{{ form.x_j_resolved }} X-J-Resolved</label><br>
+                <label>{{ form.hmqc_cosy }} HMQC-COSY</label>
             </div>
             <div style="flex: 1;">
-                <strong>NMR Data in:</strong><br>
-                <input type="radio" name="data_format" value="Hard Copy"> Hard Copy<br>
-                <input type="radio" name="data_format" value="Soft Copy"> Soft Copy
+                <strong>Concatenated / Formats</strong><br>
+                <label>{{ form.dept_hqqc }} DEPT-HSQC</label><br>
+                <label>{{ form.hsqc_tocsy }} HSQC-TOCSY</label><br>
+                <label>{{ form.hsqc_noesy }} HSQC-NOESY</label><br><br>
+                
+                <strong>NMR Data delivery format:</strong><br>
+                {% for radio in form.data_format %}
+                    <label style="display: block; margin-top: 4px;">
+                        {{ radio.tag }} {{ radio.choice_label }}
+                    </label>
+                {% endfor %}
             </div>
         </div>
 
