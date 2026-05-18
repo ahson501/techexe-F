@@ -91,8 +91,7 @@ def dashboard(request):
 def uplc_form_view(request):
 
     if request.method == "POST":
-        form = UPLCRequestForm(request.POST)
-
+        form = UPLCRequestForm(request.POST, request.FILES)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.applicant = request.user
@@ -140,7 +139,7 @@ def uplc_form_view(request):
 def nmr_form_view(request):
     if request.method == "POST":
         # 1. Bind incoming POST data to the Django Form Engine
-        form = NMRRequestForm(request.POST)
+        form = NMRRequestForm(request.POST, request.FILES)
 
         # 2. Check validation (triggers the "no backdated entries" rule from models.py)
         if form.is_valid():

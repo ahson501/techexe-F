@@ -95,6 +95,26 @@
         .dot-active { background-color: #22c55e; }
         .dot-inactive { background-color: #cbd5e1; }
 
+        .document-box {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+        }
+        .doc-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-top: 5px;
+        }
+        .doc-link:hover {
+            text-decoration: underline;
+        }
+
         .footer-actions {
             margin-top: 50px;
             padding-top: 20px;
@@ -115,7 +135,7 @@
         .btn-print { background: var(--primary); color: white; border: none; }
 
         @media print {
-            .footer-actions { display: none; }
+            .footer-actions, .document-box { display: none; }
             body { padding: 0; background: white; }
             .report-container { box-shadow: none; border: 1px solid #000; width: 100%; max-width: 100%; }
         }
@@ -139,6 +159,30 @@
         <div class="info-item"><span class="label">Supervisor</span><span class="value">{{ r.supervisor }}</span></div>
         <div class="info-item"><span class="label">Date Submitted</span><span class="value">{{ r.date_submitted|date:"F d, Y" }}</span></div>
         <div class="info-item"><span class="label">Sample Code</span><span class="value">{{ r.sample_code }}</span></div>
+    </div>
+
+    <div class="section-title">Academic & Project Framework</div>
+    <div style="margin-bottom: 25px;">
+        <div class="info-item" style="border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+            <span class="label">Title of Thesis</span>
+            <span class="value" style="display: block; margin-top: 4px; font-style: italic;">
+                {{ r.thesis_title|default:"No description title supplied by applicant" }}
+            </span>
+        </div>
+        
+        <div class="document-box">
+            <span class="label" style="margin-bottom: 4px;">Verification Attachment (Image/PDF)</span>
+            {% if r.thesis_document %}
+                <span class="value" style="font-size: 0.85rem; color: #475569;">Verified Scan File Available:</span><br>
+                <a href="{{ r.thesis_document.url }}" target="_blank" class="doc-link">
+                    📄 View/Download Attached Thesis Document &rarr;
+                </a>
+            {% else %}
+                <span class="value" style="color: #dc2626; font-size: 0.9rem; font-weight: 600;">
+                    ⚠️ No document file attachment was provided for this application request.
+                </span>
+            {% endif %}
+        </div>
     </div>
 
     <div class="section-title">Sample Characteristics</div>

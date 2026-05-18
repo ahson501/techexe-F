@@ -146,6 +146,14 @@
                         {% if n.status == 'approved' %}
                             <a href="{% url 'lab_workflow:print_form' 'nmr' n.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none; margin-left:5px;">Print</a>
                         {% endif %}
+
+                        {% if n.thesis_document %}
+                            <a href="{{ n.thesis_document.url }}" target="_blank" class="action-btn" style="background: #059669; color: white; text-decoration:none; margin-left:5px;" title="View Attached File">
+                                📄 File
+                            </a>
+                        {% else %}
+                            <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-left: 5px;">No File</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -177,6 +185,14 @@
 
                         {% if u.status == 'approved' %}
                             <a href="{% url 'lab_workflow:print_form' 'uplc' u.pk %}" target="_blank" class="action-btn" style="background: var(--dark); color: white; text-decoration:none; margin-left:5px;">Print</a>
+                        {% endif %}
+
+                        {% if u.thesis_document %}
+                            <a href="{{ u.thesis_document.url }}" target="_blank" class="action-btn" style="background: #059669; color: white; text-decoration:none; margin-left:5px;" title="View Attached File">
+                                📄 File
+                            </a>
+                        {% else %}
+                            <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-left: 5px;">No File</span>
                         {% endif %}
                     </td>
                 </tr>
