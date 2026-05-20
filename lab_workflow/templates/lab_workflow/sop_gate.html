@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standard Operating Procedure (SOP) | ICCBS</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background: #f1f5f9; padding: 40px 20px; margin: 0; color: #1e293b; }
+        .sop-container { background: white; max-width: 800px; margin: auto; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 6px solid #2563eb; }
+        .header { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h2 { margin: 0; color: #1e3a8a; font-size: 1.6rem; }
+        .header p { margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem; font-weight: bold; }
+        .sop-content { font-size: 0.95rem; line-height: 1.6; }
+        .section-title { font-size: 1.1rem; color: #1e3a8a; font-weight: bold; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+        ol, ul { padding-left: 20px; margin-top: 5px; }
+        li { margin-bottom: 8px; }
+        .warning-box { background-color: #fffbeb; border-left: 4px solid #d97706; padding: 15px; border-radius: 4px; margin: 25px 0; font-size: 0.9rem; color: #78350f; }
+        .action-block { text-align: center; margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 25px; }
+        .btn-accept { background: #2563eb; color: white; padding: 14px 40px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s; width: 100%; max-width: 300px; }
+        .btn-accept:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+<div class="sop-container">
+    <div class="header">
+        <h2>INTERNATIONAL CENTER FOR CHEMICAL AND BIOLOGICAL SCIENCES</h2>
+        <p>Standard Operating Procedure (SOP) for Analytical Instrument Access</p>
+    </div>
+
+    <div class="sop-content">
+        <p>Welcome, <strong>{{ request.user.username }}</strong>. Before logging into your dashboard and submitting requisition requests for UPLC or Multi-Dimensional NMR Spectroscopy, you must read and agree to the following institutional guidelines:</p>
+
+        <div class="section-title">1. Pre-Submission Requirements</div>
+        <ol>
+            <li><strong>Verification Attachment:</strong> Students must upload a valid proof of registration or supervisor authorization sheet as a PDF or high-resolution image during form creation.</li>
+            <li><strong>Sample Solubilities:</strong> Ensure samples prepared for NMR analysis are perfectly dissolved in exactly 600&mu;L of the designated deuterated solvent. No suspended particles should be present.</li>
+        </ol>
+
+        <div class="section-title">2. Appointment & Scheduling Discipline</div>
+        <ul>
+            <li>Appointments are bound strictly to the selected calendar execution date. Missed appointments without a 24-hour supervisor notice will require form resubmission.</li>
+            <li>Turnaround times for raw target data matrix exports vary based on multi-dimensional complexity arrays selected.</li>
+        </ul>
+
+        <div class="section-title">3. Data Integrity & Delivery Format</div>
+        <ul>
+            <li>Data files will be packaged based on your selection (Raw Data / PDF Print / Online Link) and remain stored securely on institutional servers for a finite retention window.</li>
+        </ul>
+
+        <div class="warning-box">
+            <strong>⚠️ CRITICAL COMPLIANCE NOTICE:</strong> Any submission containing falsified information, invalid attachment formats, or broken chemical pre-processing protocols will be flagged for immediate rejection by the designated lab supervisors.
+        </div>
+    </div>
+
+    <div class="action-block">
+        <form method="POST">
+            {% csrf_token %}
+            <button type="submit" name="accept_sop" class="btn-accept">I Accept & Proceed</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

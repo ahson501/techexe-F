@@ -9,26 +9,58 @@ from .forms import UPLCRequestForm, NMRRequestForm
 from django.http import HttpResponseForbidden
 
 # =========================
-# LOGIN REDIRECT ✅ REQUIRED FOR URLS.PY
+# SOP GATE
+# =========================
+@login_required
+def sop_gate(request):
+
+    user_groups = list(request.user.groups.values_list('name', flat=True))
+
+    # Only students can access SOP page
+    if not (
+        'nmr_student' in user_groups or
+        'uplc_student' in user_groups
+    ):
+        return redirect('lab_workflow:lab_dashboard')
+
+    # Accept SOP
+    if request.method == "POST":
+        request.session['sop_accepted'] = True
+        return redirect('lab_workflow:lab_dashboard')
+
+    return render(request, 'lab_workflow/sop_gate.html')
+
+
+# =========================
+# LOGIN REDIRECT
 # =========================
 @login_required
 def post_login_redirect(request):
 
-    lab_groups = {
-        'uplc_student',
-        'nmr_student',
+    user_groups = list(request.user.groups.values_list('name', flat=True))
+
+    # 1. Students → SOP first
+    if 'nmr_student' in user_groups or 'uplc_student' in user_groups:
+        return redirect('lab_workflow:sop_gate')
+
+    # 2. Supervisors/admins → dashboard
+    supervisor_roles = {
         'uplc_supervisor',
         'nmr_supervisor',
         'mediate_supervisor',
-        'supervisor'
+        'supervisor',
+        'final_approvar'
     }
 
-    if request.user.groups.filter(name__in=lab_groups).exists():
+    if (
+        any(role in user_groups for role in supervisor_roles)
+        or request.user.is_superuser
+        or request.user.is_staff
+    ):
         return redirect('lab_workflow:lab_dashboard')
 
+    # 3. Fallback → ICCBS profile
     return redirect('/iccbs/profile/')
-
-
 # =========================
 # DASHBOARD
 # =========================

@@ -85,7 +85,7 @@ def login_view(request):
 
             # ✅ ROLE-BASED REDIRECT
             if user.groups.filter(name__in=['uplc_student', 'uplc_supervisor', 'nmr_student', 'nmr_supervisor', 'mediate_supervisor', 'final_approvar']).exists():
-                return redirect('lab_workflow:lab_dashboard')  # use URL name, not hardcoded path
+                return redirect('lab_workflow:post_login_redirect')  # use URL name, not hardcoded path
 
             return redirect('iccbs:profile')
 
