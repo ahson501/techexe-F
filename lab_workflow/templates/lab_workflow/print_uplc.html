@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Approved UPLC Form - {{ r.sample_code }}</title>
+    <style>
+        /* General Page Setup */
+        body { font-family: "Times New Roman", serif; padding: 40px; color: #333; line-height: 1.5; }
+        
+        /* The Blue Button - Only visible on screen */
+        .no-print { 
+            background: #2563eb; color: white; padding: 12px 24px; 
+            border: none; border-radius: 6px; cursor: pointer; 
+            font-weight: bold; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media print {
+            .no-print { display: none !important; } 
+            body { padding: 0; margin: 0; }
+            @page { margin: 2cm; }
+        }
+
+        /* Branding Header */
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
+        .header h2 { margin: 0; font-size: 1.4rem; text-transform: uppercase; }
+        .header h3 { margin: 5px 0; font-size: 1.1rem; color: #444; }
+
+        /* Status Stamp */
+        .status-stamp { 
+            border: 3px solid #166534; color: #166534; display: inline-block;
+            padding: 8px 15px; transform: rotate(-3deg); font-weight: bold; 
+            font-size: 1.2rem; margin-bottom: 30px; border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Data Grid */
+        .info-section { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .info-section td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+        .label { font-weight: bold; width: 30%; color: #555; background-color: #fcfcfc; }
+
+        /* Dynamic Checklist Tags */
+        .pill-badge {
+            background-color: #f1f5f9;
+            color: #334155;
+            padding: 3px 10px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Footer / Digital Seal */
+        .verification-footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            page-break-inside: avoid;
+        }
+
+        .seal-box {
+            float: right;
+            text-align: center;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: #f9f9f9;
+            min-width: 250px;
+        }
+
+        .seal-text { font-size: 0.9rem; color: #222; margin: 0; }
+
+        .digital-signature {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <button class="no-print" onclick="window.print()">Print Approved Report / Save PDF</button>
+
+    <div class="header">
+        <h2>International Center for Chemical and Biological Sciences</h2>
+        <h3>Analytical Chemistry Workflow Portal</h3>
+    </div>
+
+    <div class="status-stamp">Official Approval Granted</div>
+
+    <table class="info-section">
+        <tr>
+            <td class="label">Sample Code:</td>
+            <td><strong>{{ r.sample_code }}</strong></td>
+        </tr>
+        <tr>
+            <td class="label">Applicant Name:</td>
+            <td>{{ r.owner.get_full_name|default:r.owner.username }}</td>
+        </tr>
+        <tr>
+            <td class="label">Appointment Date:</td>
+            <td>{{ r.appointment_date|date:"F d, Y"|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Intercom # / Lab #:</td>
+            <td>{{ r.intercom|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Approval Completion Date:</td>
+            <td>{{ r.approved_at|date:"F d, Y" }}</td>
+        </tr>
+    </table>
+
+    <h4 style="margin-top: 30px; border-left: 4px solid #2563eb; padding-left: 10px; color:#1e293b;">Sample Specifications</h4>
+    <table class="info-section">
+        <tr>
+            <td class="label">Type of Sample:</td>
+            <td>
+                {% if r.sample_type %}{{ r.sample_type }}
+                {% elif r.type_of_sample %}{{ r.type_of_sample }}
+                {% else %}N/A{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td class="label">Solubility Context:</td>
+            <td>
+                {% if r.solubility.all %}
+                    {% for item in r.solubility.all %}
+                        <span class="pill-badge">{{ item.name|title }}</span>
+                    {% endfor %}
+                {% elif r.solubility %}
+                    {{ r.solubility|title }}
+                {% else %}
+                    <span style="color:#94a3b8; font-style:italic;">Not Specified</span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <h4 style="margin-top: 30px; border-left: 4px solid #2563eb; padding-left: 10px; color:#1e293b;">UPLC Method Details</h4>
+    <table class="info-section">
+        <tr>
+            <td class="label">Wavelength (nm):</td>
+            <td>{{ r.wavelength|default:"N/A" }} nm</td>
+        </tr>
+        <tr>
+            <td class="label">Flow Rate:</td>
+            <td>{{ r.flow_rate|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Solvent System A:</td>
+            <td>{{ r.solvent_system_a|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Solvent System B:</td>
+            <td>{{ r.solvent_system_b|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Column Selection:</td>
+            <td>
+                {% if r.column_selection %}{{ r.column_selection }}
+                {% elif r.column %}{{ r.column }}
+                {% else %}N/A{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin-top: 35px; background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; font-size: 0.85rem; color:#475569;">
+        <strong style="color:#0f172a; display:block; margin-bottom:5px;">Important Precautions Checklist Met:</strong>
+        1. Filter all aqueous buffer and all Samples through an appropriate 0.2 µm filter before use.<br>
+        2. Replace bottles of mobile phase buffers every 24–48 hours.<br>
+        3. Make entry and provide necessary details in the log book of UPLC.
+    </div>
+
+    <div class="verification-footer">
+        <div class="seal-box">
+            <p class="seal-text"><strong>DIGITALLY VERIFIED</strong></p>
+            <p class="seal-text" style="color: #166534;">ICCBS UPLC PORTAL - AUTHENTIC</p>
+            <span class="digital-signature">
+                Ref ID: ICCBS-UPLC-{{ r.id }}-{{ r.approved_at|date:"Ymd" }}<br>
+                Generated Trace: {% now "Y-m-d H:i:s" %}
+            </span>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+</body>
+</html>

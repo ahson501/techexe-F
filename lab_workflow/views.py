@@ -3,24 +3,21 @@ from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 
 from .models import UPLCRequest, NMRRequest, AuditLog, Approval, Workflow
 from .forms import UPLCRequestForm, NMRRequestForm
-from django.http import HttpResponseForbidden
+
 
 # =========================
 # SOP GATE
 # =========================
 @login_required
 def sop_gate(request):
-
     user_groups = list(request.user.groups.values_list('name', flat=True))
 
     # Only students can access SOP page
-    if not (
-        'nmr_student' in user_groups or
-        'uplc_student' in user_groups
-    ):
+    if not ('nmr_student' in user_groups or 'uplc_student' in user_groups):
         return redirect('lab_workflow:lab_dashboard')
 
     # Accept SOP
@@ -36,7 +33,6 @@ def sop_gate(request):
 # =========================
 @login_required
 def post_login_redirect(request):
-
     user_groups = list(request.user.groups.values_list('name', flat=True))
 
     # 1. Students → SOP first
@@ -61,6 +57,8 @@ def post_login_redirect(request):
 
     # 3. Fallback → ICCBS profile
     return redirect('/iccbs/profile/')
+
+
 # =========================
 # DASHBOARD
 # =========================
@@ -71,27 +69,24 @@ def dashboard(request):
     # 1. Identify Roles
     is_nmr_sup = user.groups.filter(name='nmr_supervisor').exists()
     is_uplc_sup = user.groups.filter(name='uplc_supervisor').exists()
-    is_final_approver = user.groups.filter(name='supervisor').exists()
+    is_final_approver = user.groups.filter(name='final_approvar').exists() or user.groups.filter(name='supervisor').exists()
     is_mediate_sup = user.groups.filter(name='mediate_supervisor').exists()
 
-    
     # 2. Student's Own History (Personal)
     uplc_requests = UPLCRequest.objects.filter(applicant=user)
     nmr_requests = NMRRequest.objects.filter(user=user)
 
     # 3. Supervisor's Master View (Departmental)
-    # This fetches ALL forms for the department regardless of who submitted them
     master_nmr_list = None
     master_uplc_list = None
 
-    # Consolidated logic: One clean query per table
     if is_nmr_sup or is_final_approver or is_mediate_sup:
         master_nmr_list = NMRRequest.objects.all().order_by('-id')
     
     if is_uplc_sup or is_final_approver or is_mediate_sup:
         master_uplc_list = UPLCRequest.objects.all().order_by('-id')
 
-    # 4. Pending Tasks Logic (Your existing working logic)
+    # 4. Pending Tasks Logic (Fixed Sequence Dependency Engine)
     approvals = Approval.objects.filter(
         approver=user, 
         status='pending'
@@ -100,64 +95,77 @@ def dashboard(request):
     valid_approvals = []
     for approval in approvals:
         request_obj = approval.uplc_request or approval.nmr_request
+        
+        # Get all distinct lower tier step orders that exist for this specific record form
         prev_step_orders = request_obj.approvals.filter(
             step__step_order__lt=approval.step.step_order
         ).values_list('step__step_order', flat=True).distinct()
         
-        if not any(not request_obj.approvals.filter(step__step_order=order, status='approved').exists() for order in prev_step_orders):
+        # Verify that EVERY preceding tier step contains at least one approved action entry row
+        can_show = True
+        for order in prev_step_orders:
+            tier_approved = request_obj.approvals.filter(step__step_order=order, status='approved').exists()
+            if not tier_approved:
+                can_show = False
+                break
+                
+        if can_show:
             valid_approvals.append(approval)
 
     return render(request, "lab_workflow/dashboard.html", {
         "uplc_requests": uplc_requests,
         "nmr_requests": nmr_requests,
-        "master_nmr_list": master_nmr_list,   # Use these in template
-        "master_uplc_list": master_uplc_list, # Use these in template
+        "master_nmr_list": master_nmr_list,   
+        "master_uplc_list": master_uplc_list, 
         "pending_approvals": valid_approvals,
         "is_mediate_sup": is_mediate_sup,
         "is_any_supervisor": (is_nmr_sup or is_uplc_sup or is_final_approver or is_mediate_sup)
-         })
+    })
+
+
 # =========================
 # UPLC FORM
 # =========================
 @login_required
 def uplc_form_view(request):
-
     if request.method == "POST":
         form = UPLCRequestForm(request.POST, request.FILES)
+
         if form.is_valid():
             obj = form.save(commit=False)
             obj.applicant = request.user
-            obj.status = 'in_review'
-
+            obj.status = 'pending'  
+            
             workflow = Workflow.objects.filter(name="UPLC Workflow").first()
             if workflow:
                 obj.workflow = workflow
-
+            
             obj.save()
 
-            # assign ALL users in role
-            for step in obj.workflow.steps.all().order_by('step_order'):
+            if workflow:
+                for step in workflow.steps.all().order_by('step_order'):
+                    approvers = User.objects.filter(groups__name=step.role)
+                    for approver in approvers:
+                        Approval.objects.create(
+                            uplc_request=obj,
+                            step=step,
+                            approver=approver,
+                            status='pending'
+                        )
+                
+                AuditLog.objects.create(
+                    user=request.user,
+                    uplc_request=obj,
+                    action='submitted',
+                    message="UPLC requisition request submitted successfully."
+                )
+                messages.success(request, "UPLC submitted successfully.")
+            else:
+                messages.error(request, "Workflow template configuration missing.")
 
-                approvers = User.objects.filter(groups__name=step.role)
-
-                for approver in approvers:
-                    Approval.objects.create(
-                        uplc_request=obj,
-                        step=step,
-                        approver=approver,
-                        status='pending'
-                    )
-
-            AuditLog.objects.create(
-                user=request.user,
-                uplc_request=obj,
-                action='submitted',
-                message="UPLC submitted"
-            )
-
-            messages.success(request, "UPLC submitted")
             return redirect('lab_workflow:lab_dashboard')
-
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = UPLCRequestForm()
 
@@ -170,25 +178,20 @@ def uplc_form_view(request):
 @login_required
 def nmr_form_view(request):
     if request.method == "POST":
-        # 1. Bind incoming POST data to the Django Form Engine
         form = NMRRequestForm(request.POST, request.FILES)
 
-        # 2. Check validation (triggers the "no backdated entries" rule from models.py)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.user = request.user
             obj.status = 'pending'
             
-            # Fetch the workflow setup configuration
             workflow = Workflow.objects.filter(name="NMR Workflow").first()
             if workflow:
                 obj.workflow = workflow
             
-            # Save the main request instance (saves appointment_date and all checkbox fields automatically)
             obj.save()
 
             if workflow:
-                # 3. Create structural routing stages for sequential approvals
                 for step in workflow.steps.all().order_by('step_order'):
                     approvers = User.objects.filter(groups__name=step.role)
                     for approver in approvers:
@@ -203,17 +206,13 @@ def nmr_form_view(request):
                 messages.error(request, "Workflow template configuration missing.")
 
             return redirect('lab_workflow:lab_dashboard')
-            
         else:
-            # If form fails validation (e.g., student chose a backdated entry), 
-            # it falls through here to re-render the form page with specific error hints.
             messages.error(request, "Please correct the errors below.")
-            
     else:
-        # If it's a normal browser visit (GET), initialize a clean, empty form block
         form = NMRRequestForm()
 
     return render(request, 'lab_workflow/nmr_form.html', {'form': form})
+
 
 # =========================
 # APPROVE
@@ -230,10 +229,9 @@ def approve_request(request, pk):
     approval.action_at = now()
     approval.save()
 
-
     request_obj = approval.uplc_request or approval.nmr_request
     
-    # Check if there are any HIGHER step orders left
+    # Check if there are any HIGHER step orders left that haven't been completed yet
     remaining_steps = request_obj.approvals.filter(
         step__step_order__gt=approval.step.step_order,
         status='pending'
@@ -246,7 +244,7 @@ def approve_request(request, pk):
         request_obj.status = 'in_review'
 
     request_obj.save()
-    messages.success(request, "Approved")
+    messages.success(request, "Approved successfully.")
     return redirect('lab_workflow:lab_dashboard')
 
 
@@ -255,7 +253,6 @@ def approve_request(request, pk):
 # =========================
 @login_required
 def reject_request(request, pk):
-
     approval = get_object_or_404(Approval, pk=pk)
 
     if request.user != approval.approver:
@@ -270,7 +267,10 @@ def reject_request(request, pk):
     request_obj.status = 'rejected'
     request_obj.save()
 
-    messages.error(request, "Rejected")
+    # Cancel any remaining pending approvals for this workflow path
+    request_obj.approvals.filter(status='pending').update(status='rejected', action_at=now())
+
+    messages.error(request, "Request has been rejected.")
     return redirect('lab_workflow:lab_dashboard')
 
 
@@ -279,7 +279,6 @@ def reject_request(request, pk):
 # =========================
 @login_required
 def print_form(request, request_type, pk):
-    # Force lowercase to avoid matching errors
     rtype = request_type.lower() 
     
     if rtype == 'nmr':
@@ -293,17 +292,18 @@ def print_form(request, request_type, pk):
 
     if obj.status != 'approved':
         return HttpResponseForbidden("Only approved forms can be printed.")
-    # Add this line to create a universal 'owner' variable
+
     obj.owner = obj.user if hasattr(obj, 'user') else obj.applicant
     return render(request, template, {'r': obj})
+
 
 # =========================
 # DETAILS
 # =========================
 @login_required
-def request_detail(request, pk):
+def uplc_detail(request, pk):
     uplc_request = get_object_or_404(UPLCRequest, pk=pk)
-    return render(request, 'lab_workflow/request_detail.html', {'r': uplc_request})
+    return render(request, 'lab_workflow/uplc_detail.html', {'r': uplc_request})
 
 
 @login_required
@@ -311,12 +311,12 @@ def nmr_detail(request, pk):
     nmr_request = get_object_or_404(NMRRequest, pk=pk)
     return render(request, 'lab_workflow/nmr_detail.html', {'r': nmr_request})
 
+
 # ===============================================
-# STEP 3 NEW VIEW: MEDIATE SUPERVISOR REJECTION
+# MEDIATE SUPERVISOR INVALID TLC REJECTION
 # ===============================================
 @login_required
 def reject_invalid_tlc(request, request_type, pk):
-    # Security: Ensure only users in the mediate_supervisor group can hit this view
     if not request.user.groups.filter(name='mediate_supervisor').exists():
        return HttpResponseForbidden("Access Denied: Only Mediate Supervisors can execute this action.")
 
@@ -328,12 +328,10 @@ def reject_invalid_tlc(request, request_type, pk):
     else:
        return HttpResponseForbidden("Invalid Request Type")
 
-    # Change overall form status and stamp the specific reason
     obj.status = 'rejected'
     obj.rejection_reason = "INVALID TLC"
     obj.save()
 
-    # Also dynamically mark any associated open approvals as rejected/resolved
     obj.approvals.filter(status='pending').update(status='rejected', action_at=now())
 
     messages.error(request, f"Form {obj.sample_code} rejected due to INVALID TLC.")

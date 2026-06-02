@@ -12,7 +12,7 @@ urlpatterns = [
     # This is techexe.net/lab_workflow/uplc-form/
     path("uplc-form/", views.uplc_form_view, name="uplc_form"),
     path('nmr-form/', views.nmr_form_view, name='nmr_form'),
-    path('request/<int:pk>/', views.request_detail, name='request_detail'),
+    path('request/<int:pk>/', views.uplc_detail, name='uplc_detail'),
     path('nmr/<int:pk>/', views.nmr_detail, name='nmr_detail'),
     # Approval actions
     path("approve/<int:pk>/", views.approve_request, name="approve_request"),

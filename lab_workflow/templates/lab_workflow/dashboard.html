@@ -62,7 +62,7 @@
                         </td>
                         <td>
                             <strong>
-                                {% if appval.uplc_request %}<a href="{% url 'lab_workflow:request_detail' appval.uplc_request.pk %}" style="text-decoration: none; color: var(--primary);">{{ appval.uplc_request.sample_code }}</a>
+                                {% if appval.uplc_request %}<a href="{% url 'lab_workflow:uplc_detail' appval.uplc_request.pk %}" style="text-decoration: none; color: var(--primary);">{{ appval.uplc_request.sample_code }}</a>
                                 {% else %}<a href="{% url 'lab_workflow:nmr_detail' appval.nmr_request.pk %}" style="text-decoration: none; color: var(--primary);">{{ appval.nmr_request.sample_code }}</a>{% endif %}
                             </strong>
                         </td>
@@ -88,7 +88,7 @@
             <tbody>
                 {% for r in uplc_requests %}
                 <tr>
-                    <td><a href="{% url 'lab_workflow:request_detail' r.pk %}" style="text-decoration: none; color: var(--primary); font-weight: bold;">#{{ r.id }} - {{ r.sample_code }}</a></td>
+                    <td><a href="{% url 'lab_workflow:uplc_detail' r.pk %}" style="text-decoration: none; color: var(--primary); font-weight: bold;">#{{ r.id }} - {{ r.sample_code }}</a></td>
                     <td><span class="badge" style="background: #e0e7ff; color: #4338ca;">UPLC</span></td>
                     <td><span class="badge {% if r.status == 'approved' %}status-approved{% elif r.status == 'rejected' %}status-danger{% else %}status-pending{% endif %}">{{ r.status|title }}</span></td>
                     <td>
@@ -172,7 +172,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'lab_workflow:request_detail' u.pk %}" class="action-btn" style="background: var(--primary); color: white; text-decoration:none;">View</a>
+                        <a href="{% url 'lab_workflow:uplc_detail' u.pk %}" class="action-btn" style="background: var(--primary); color: white; text-decoration:none;">View</a>
                         
                         {% if is_mediate_sup and u.status == 'pending' or is_mediate_sup and u.status == 'in_review' %}
                             <form method="POST" action="{% url 'lab_workflow:reject_tlc' 'uplc' u.pk %}" style="display:inline; margin-left: 5px;">

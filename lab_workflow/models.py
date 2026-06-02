@@ -34,45 +34,56 @@ class WorkflowStep(models.Model):
     def __str__(self):
         return f"{self.workflow.name} - Step {self.step_order} ({self.role})"
 
-
-# =========================
-# MAIN UPLC REQUEST
-# =========================
+# ===============================================
+# MAIN UPLC REQUEST 
+# ===============================================
 
 class UPLCRequest(models.Model):
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
 
+    # binding architecture
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uplc_requests")
-    supervisor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="supervised_requests")
+    name = models.CharField(max_length=255, blank=True, null=True, help_text="Applicant Name")
+    supervisor = models.CharField(max_length=255) # Text field style matching NMR
     workflow = models.ForeignKey(Workflow, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # ADDED: Appointment Date Field with validation rule
+    # upload schema configuration
+    thesis_document = models.FileField(
+        upload_to='uplc_thesis_documents/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True,
+        help_text="Upload your supporting thesis title document verification scan (PDF or Image only)"
+    )
+    
+    # Matching appointment and submission dates
+    date_submitted = models.DateField(auto_now_add=True)
     appointment_date = models.DateField(validators=[validate_not_past], help_text="Select current or future date")
     
-    # Basic Info
+    # Operational Identification Info
     sample_code = models.CharField(max_length=100)
-    intercom = models.CharField(max_length=50, blank=True)
+    intercom = models.CharField(max_length=50, blank=True, null=True)
 
-    # Form Fields
+    # Form Core Parameter Fields
     sample_type = models.TextField()
-    solubility = models.CharField(max_length=200)
-    wavelength = models.FloatField()
-    flow_rate = models.FloatField()
-    solvent_a = models.CharField(max_length=100, blank=True)
-    solvent_b = models.CharField(max_length=100, blank=True)
-    column = models.CharField(max_length=200, blank=True)
+    solubility = models.CharField(max_length=200, blank=True, null=True)
+    wavelength = models.CharField(max_length=100, blank=True, null=True) # Swapped to CharField for flexible input text validation safely
+    flow_rate = models.CharField(max_length=100, blank=True, null=True)  # Swapped to CharField for flexible input text validation safely
+    solvent_a = models.CharField(max_length=100, blank=True, null=True)
+    solvent_b = models.CharField(max_length=100, blank=True, null=True)
+    column = models.CharField(max_length=255, blank=True, null=True)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    # Compliance checkboxes matching form logic validation
+    precautions_ack = models.BooleanField(default=False, verbose_name="Precautions Acknowledged")
 
+    # Tracking Statuses
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     approved_at = models.DateTimeField(null=True, blank=True)
-    
     rejection_reason = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -83,8 +94,6 @@ class UPLCRequest(models.Model):
 
     def __str__(self):
         return f"UPLC: {self.sample_code} ({self.status})"
-
-    
 # =========================
 # MAIN NMR REQUEST
 # =========================
