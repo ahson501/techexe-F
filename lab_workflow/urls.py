@@ -5,7 +5,8 @@ from . import views
 app_name = 'lab_workflow'
 
 urlpatterns = [
-    # This is techexe.net/lab_workflow/ 
+    # Landing page service hub route
+    path('service-hub/', views.service_hub, name='service_hub'),
     path('post-login-redirect/', views.post_login_redirect, name='post_login_redirect'),
     path('sop/', views.sop_gate, name='sop_gate'),
     path('dashboard/', views.dashboard, name='lab_dashboard'),

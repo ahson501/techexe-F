@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICCBS - Analytical Workflows Hub</title>
+    <style>
+        /* Modern University Core CSS Palette */
+        :root {
+            --primary-oxford: #1a365d;   /* Deep Academic Blue */
+            --primary-accent: #2b6cb0;   /* Slate Institutional Blue */
+            --success-emerald: #166534;  /* Approved / Active Green */
+            --bg-canvas: #f8fafc;        /* Off-white smooth canvas */
+            --text-dark: #0f172a;        /* High-contrast slate text */
+            --text-muted: #475569;       /* Secondary neutral text */
+            --card-border: #e2e8f0;      /* Clean structural dividing line */
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-canvas); 
+            margin: 0; 
+            padding: 0;
+            color: var(--text-dark);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Campus Identity Bar */
+        .campus-top-bar {
+            background: var(--primary-oxford);
+            padding: 10px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #b7791f; /* Premium Gold Accent Line */
+        }
+
+        .campus-badge-text {
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .logout-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .logout-link:hover {
+            color: #feb2b2;
+        }
+
+        /* Responsive Main Container */
+        .hub-container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 40px 20px;
+        }
+        
+        /* Styled Academic Layout Header */
+        .hub-header { 
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            padding: 30px 40px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hub-header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 6px;
+            background: var(--primary-oxford);
+        }
+
+        .hub-header h1 { 
+            font-family: "Georgia", Times, serif; /* Academic Editorial Touch */
+            color: var(--primary-oxford);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            line-height: 1.2;
+        }
+
+        .hub-header p { 
+            margin: 0; 
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Cleaned Up Integrated User Greeting Badge */
+        .user-welcome-badge {
+            background: #f1f5f9;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            text-align: right;
+        }
+
+        .user-welcome-badge .user-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        .user-welcome-badge .user-name {
+            font-size: 1.05rem;
+            color: var(--primary-oxford);
+            font-weight: 600;
+        }
+
+        .section-title {
+            color: var(--text-dark);
+            margin: 0 0 30px 0;
+            font-weight: 600;
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::after {
+            content: "";
+            flex-grow: 1;
+            height: 1px;
+            background: var(--card-border);
+        }
+
+        /* Dynamic CSS Grid Layout */
+        .grid-layout { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 30px; 
+        }
+        
+        /* Elegant Academic Cards */
+        .form-card { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            border: 1px solid var(--card-border); 
+            padding: 35px 25px; 
+            text-align: center; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease; 
+            position: relative; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .form-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: var(--primary-accent);
+        }
+        
+        .form-icon { 
+            font-size: 2.8rem; 
+            margin-bottom: 20px; 
+            display: inline-block; 
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+        }
+        
+        .form-name { 
+            font-size: 1.1rem; 
+            font-weight: 600; 
+            color: var(--primary-oxford); 
+            margin-bottom: 25px; 
+            min-height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            line-height: 1.4;
+        }
+        
+        /* Modernized Interactive Buttons */
+        .hub-btn { 
+            display: block; 
+            width: 100%; 
+            box-sizing: border-box;
+            padding: 12px 0; 
+            background: var(--primary-oxford); 
+            color: #ffffff; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+            transition: background-color 0.15s ease; 
+            border: none;
+        }
+        
+        .form-card:hover .hub-btn {
+            background: var(--primary-accent);
+        }
+        
+        /* Inactive Module Styling Rules */
+        .disabled-card { 
+            background: #f8fafc; 
+            border-color: #e2e8f0;
+        }
+        .disabled-card:hover {
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            border-color: #e2e8f0;
+        }
+        
+        .coming-soon-tag { 
+            font-size: 0.7rem; 
+            background: #edd87f; 
+            color: #744210; 
+            padding: 4px 10px; 
+            border-radius: 50px; 
+            position: absolute; 
+            top: 15px; 
+            right: 15px; 
+            font-weight: 700; 
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+            .campus-top-bar { padding: 10px 20px; }
+            .hub-header { flex-direction: column; text-align: center; gap: 20px; padding: 30px 20px; }
+            .hub-header::before { width: 0; height: 6px; left: 0; right: 0; top: 0; }
+            .user-welcome-badge { text-align: center; width: 100%; box-sizing: border-box; }
+            .grid-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="campus-top-bar">
+    <div class="campus-badge-text">ICCBS Central Research Facility</div>
+    <div>
+        <a href="/iccbs/logout/" class="logout-link">
+            <span>Sign Out</span> ➡️
+        </a>
+    </div>
+</div>
+
+<div class="hub-container">
+    
+    <div class="hub-header">
+        <div>
+            <h1>International Center for Chemical and Biological Sciences</h1>
+            <p>Analytical Instrumentation Workflow & Requisition Portal</p>
+        </div>
+        <div>
+            <div class="user-welcome-badge">
+                <span class="user-label">Authenticated User</span>
+                <span class="user-name">{{ request.user.username }}</span>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Select Analytical Instrument Workspace</h2>
+
+    <div class="grid-layout">
+        {% for form in available_forms %}
+            {% if form.active %}
+                <div class="form-card">
+                    <div>
+                        <span class="form-icon">{{ form.icon }}</span>
+                        <div class="form-name">{{ form.name }}</div>
+                    </div>
+                    <a href="{% url 'lab_workflow:lab_dashboard' %}" class="hub-btn">Open Instrument Dashboard</a>
+                </div>
+            {% else %}
+                <div class="form-card disabled-card">
+                    <span class="coming-soon-tag">Coming Soon</span>
+                    <div>
+                        <span class="form-icon" style="filter: grayscale(100%); opacity: 0.5;">{{ form.icon }}</span>
+                        <div class="form-name" style="color: #94a3b8;">{{ form.name }}</div>
+                    </div>
+                    <button class="hub-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled>Module Setup Pending</button>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

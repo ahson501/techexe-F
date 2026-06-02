@@ -8,6 +8,37 @@ from django.http import HttpResponseForbidden
 from .models import UPLCRequest, NMRRequest, AuditLog, Approval, Workflow
 from .forms import UPLCRequestForm, NMRRequestForm
 
+# =========================
+# LANDING PAGE
+# =========================
+
+@login_required
+def service_hub(request):
+    user = request.user
+    user_groups = list(request.user.groups.values_list('name', flat=True))
+    
+    # Identify Roles
+    is_supervisor = user.groups.filter(name__in=[
+        'uplc_supervisor', 'nmr_supervisor', 'mediate_supervisor', 'supervisor', 'final_approvar'
+    ]).exists() or user.is_superuser or user.is_staff
+
+    # Force students to pass the SOP gate first before they can see the hub
+    if not is_supervisor and not request.session.get('sop_accepted', False):
+        return redirect('lab_workflow:sop_gate')
+
+    # Define your upcoming forms list programmatically
+    available_forms = [
+        {"id": "nmr", "name": "Nuclear Magnetic Resonance (NMR)", "icon": "⚛️", "active": True},
+        {"id": "uplc", "name": "Ultra Performance Liquid Chromatography (UPLC)", "icon": "🧪", "active": True},
+        {"id": "gcms", "name": "Gas Chromatography-Mass Spectrometry (GC-MS)", "icon": "📊", "active": False},
+        {"id": "hplc", "name": "High-Performance Liquid Chromatography (HPLC)", "icon": "💧", "active": False},
+        # Add the remaining 18 placeholder forms here...
+    ]
+
+    return render(request, 'lab_workflow/service_hub.html', {
+        'available_forms': available_forms,
+        'is_supervisor': is_supervisor
+    })
 
 # =========================
 # SOP GATE
@@ -18,15 +49,14 @@ def sop_gate(request):
 
     # Only students can access SOP page
     if not ('nmr_student' in user_groups or 'uplc_student' in user_groups):
-        return redirect('lab_workflow:lab_dashboard')
+        return redirect('lab_workflow:service_hub')
 
     # Accept SOP
     if request.method == "POST":
         request.session['sop_accepted'] = True
-        return redirect('lab_workflow:lab_dashboard')
+        return redirect('lab_workflow:service_hub')
 
     return render(request, 'lab_workflow/sop_gate.html')
-
 
 # =========================
 # LOGIN REDIRECT
@@ -53,7 +83,7 @@ def post_login_redirect(request):
         or request.user.is_superuser
         or request.user.is_staff
     ):
-        return redirect('lab_workflow:lab_dashboard')
+        return redirect('lab_workflow:service_hub')
 
     # 3. Fallback → ICCBS profile
     return redirect('/iccbs/profile/')
