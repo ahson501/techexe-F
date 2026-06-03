@@ -7,7 +7,7 @@ from django.http import HttpResponseForbidden
 
 from .models import UPLCRequest, NMRRequest, AuditLog, Approval, Workflow
 from .forms import UPLCRequestForm, NMRRequestForm
-
+import random
 # =========================
 # LANDING PAGE
 # =========================
@@ -26,17 +26,49 @@ def service_hub(request):
     if not is_supervisor and not request.session.get('sop_accepted', False):
         return redirect('lab_workflow:sop_gate')
 
-    # Define your upcoming forms list programmatically
     available_forms = [
+        # LIVE INSTRUMENTS (Active)
         {"id": "nmr", "name": "Nuclear Magnetic Resonance (NMR)", "icon": "⚛️", "active": True},
         {"id": "uplc", "name": "Ultra Performance Liquid Chromatography (UPLC)", "icon": "🧪", "active": True},
-        {"id": "gcms", "name": "Gas Chromatography-Mass Spectrometry (GC-MS)", "icon": "📊", "active": False},
+       
+        # INACTIVE INSTRUMENTS (Placeholders)
+        {"id": "one_d_nmr", "name": "One-Dimensional NMR Spectroscopy", "icon": "🧲", "active": False},
         {"id": "hplc", "name": "High-Performance Liquid Chromatography (HPLC)", "icon": "💧", "active": False},
+        {"id": "prep_hplc", "name": "Preparative HPLC", "icon": "💎", "active": False},
+        
+        {"id": "pxrd", "name": "Powder X-ray Diffraction (PXRD)", "icon": "📐", "active": False},
+        {"id": "sxrd", "name": "Single-Crystal X-ray Diffraction (SXRD)", "icon": "🎯", "active": False},
+        
+        {"id": "ir", "name": "Infrared Spectroscopy (IR)", "icon": "〰️", "active": False},
+        {"id": "uv", "name": "UV-Visible Spectrophotometry (UV)", "icon": "🌈", "active": False},
+        
+        {"id": "sams", "name": "Nanotechnology Self-Assembled Monolayers (SAMs)", "icon": "🛡️", "active": False},
+        {"id": "afm", "name": "Atomic Force Microscopy (AFM)", "icon": "📍", "active": False},
+        
+        {"id": "gcms", "name": "Gas Chromatography-Mass Spectrometry (GC-MS)", "icon": "📊", "active": False},
+        {"id": "hej_ms", "name": "HEJ Mass Spectroscopy Sample", "icon": "🧬", "active": False},
+        {"id": "esi_ms", "name": "Mass Spectroscopy for ESI-MS", "icon": "⚡", "active": False},
+        {"id": "icp_ms", "name": "Mass Spectroscopy for ICP-MS", "icon": "🔥", "active": False},
+    
         # Add the remaining 18 placeholder forms here...
     ]
 
+    # 2. Dynamic Failover Load-Balancing for NodePorts
+    k8s_nodes = ["172.16.2.13", "172.16.2.38", "172.16.2.35", "172.16.2.39"]
+    selected_node = random.choice(k8s_nodes)
+
+    # 3. Explicit High-Performance Computing Context Object
+    hpc_cluster = {
+        "id": "jupyter_gpu",
+        "name": "ICCBS GPU Jupyter Notebook Workspace",
+        "hardware_spec": "NVIDIA RTX 5000 Shared Cluster Infrastructure",
+        "icon": "🎛️",
+        "cluster_url": f"http://{selected_node}:32372/hub/spawn"
+    }
+
     return render(request, 'lab_workflow/service_hub.html', {
         'available_forms': available_forms,
+        'hpc_cluster': hpc_cluster,
         'is_supervisor': is_supervisor
     })
 
