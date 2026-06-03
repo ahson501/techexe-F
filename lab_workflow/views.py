@@ -1,13 +1,15 @@
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.contrib import messages
+import random
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-
+from .models import SopModule, StudentSopCertification, InventoryItem, ThesisPipeline
 from .models import UPLCRequest, NMRRequest, AuditLog, Approval, Workflow
 from .forms import UPLCRequestForm, NMRRequestForm
-import random
+
 # =========================
 # LANDING PAGE
 # =========================
@@ -15,9 +17,8 @@ import random
 @login_required
 def service_hub(request):
     user = request.user
-    user_groups = list(request.user.groups.values_list('name', flat=True))
     
-    # Identify Roles
+    # 1. Identity & Permissions Verification Gateway
     is_supervisor = user.groups.filter(name__in=[
         'uplc_supervisor', 'nmr_supervisor', 'mediate_supervisor', 'supervisor', 'final_approvar'
     ]).exists() or user.is_superuser or user.is_staff
@@ -26,6 +27,7 @@ def service_hub(request):
     if not is_supervisor and not request.session.get('sop_accepted', False):
         return redirect('lab_workflow:sop_gate')
 
+    # 2. Central Instrumentation Definitions Map
     available_forms = [
         # LIVE INSTRUMENTS (Active)
         {"id": "nmr", "name": "Nuclear Magnetic Resonance (NMR)", "icon": "⚛️", "active": True},
@@ -35,29 +37,23 @@ def service_hub(request):
         {"id": "one_d_nmr", "name": "One-Dimensional NMR Spectroscopy", "icon": "🧲", "active": False},
         {"id": "hplc", "name": "High-Performance Liquid Chromatography (HPLC)", "icon": "💧", "active": False},
         {"id": "prep_hplc", "name": "Preparative HPLC", "icon": "💎", "active": False},
-        
         {"id": "pxrd", "name": "Powder X-ray Diffraction (PXRD)", "icon": "📐", "active": False},
         {"id": "sxrd", "name": "Single-Crystal X-ray Diffraction (SXRD)", "icon": "🎯", "active": False},
-        
         {"id": "ir", "name": "Infrared Spectroscopy (IR)", "icon": "〰️", "active": False},
         {"id": "uv", "name": "UV-Visible Spectrophotometry (UV)", "icon": "🌈", "active": False},
-        
         {"id": "sams", "name": "Nanotechnology Self-Assembled Monolayers (SAMs)", "icon": "🛡️", "active": False},
         {"id": "afm", "name": "Atomic Force Microscopy (AFM)", "icon": "📍", "active": False},
-        
         {"id": "gcms", "name": "Gas Chromatography-Mass Spectrometry (GC-MS)", "icon": "📊", "active": False},
         {"id": "hej_ms", "name": "HEJ Mass Spectroscopy Sample", "icon": "🧬", "active": False},
         {"id": "esi_ms", "name": "Mass Spectroscopy for ESI-MS", "icon": "⚡", "active": False},
         {"id": "icp_ms", "name": "Mass Spectroscopy for ICP-MS", "icon": "🔥", "active": False},
-    
-        # Add the remaining 18 placeholder forms here...
     ]
 
-    # 2. Dynamic Failover Load-Balancing for NodePorts
+    # 3. Dynamic Failover Load-Balancing for NodePorts
     k8s_nodes = ["172.16.2.13", "172.16.2.38", "172.16.2.35", "172.16.2.39"]
     selected_node = random.choice(k8s_nodes)
 
-    # 3. Explicit High-Performance Computing Context Object
+    # 4. High-Performance Computing Context Configuration Object
     hpc_cluster = {
         "id": "jupyter_gpu",
         "name": "ICCBS GPU Jupyter Notebook Workspace",
@@ -66,12 +62,132 @@ def service_hub(request):
         "cluster_url": f"http://{selected_node}:32372/hub/spawn"
     }
 
+    # ==========================================
+    # EXTRACT DATA FOR ACADEMIC & SERVICES TABS
+    # ==========================================
+    
+    # Fetch student's custom certified SOP instruments
+    certified_module_ids = list(StudentSopCertification.objects.filter(
+        student=user
+    ).values_list('module__instrument_id', flat=True))
+    
+    # Fetch all baseline SOP training modules available
+    sop_modules = SopModule.objects.all()
+
+    # Fetch snapshot of critical stock levels from Central Inventory Store
+    critical_inventory = InventoryItem.objects.all()[:6] 
+
+    # PERFORMANCE OPTIMIZATION: Check existing pipeline records in ONE single database query
+    existing_stages = set(ThesisPipeline.objects.filter(student=user).values_list('stage', flat=True))
+    stages_pool = ['1_synopsis', '2_coursework', '3_data', '4_pub_gate', '5_writing', '6_defense']
+    
+    # Bulk-create missing milestone stages ONLY if they do not exist yet (e.g., first-time user login)
+    missing_stages = [stage for stage in stages_pool if stage not in existing_stages]
+    if missing_stages:
+        bulk_milestones = [ThesisPipeline(student=user, stage=stage) for stage in missing_stages]
+        ThesisPipeline.objects.bulk_create(bulk_milestones)
+    
+    # Query final ordered pipeline dataset for context rendering
+    student_milestones = ThesisPipeline.objects.filter(student=user).order_by('stage')
+
+    # SINGLE COMPREHENSIVE OUTPUT LAYER
     return render(request, 'lab_workflow/service_hub.html', {
         'available_forms': available_forms,
         'hpc_cluster': hpc_cluster,
-        'is_supervisor': is_supervisor
+        'is_supervisor': is_supervisor,
+        'sop_modules': sop_modules,
+        'certified_module_ids': certified_module_ids,
+        'critical_inventory': critical_inventory,
+        'student_milestones': student_milestones,
     })
 
+import requests
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_protect
+from .models import AiResearchSession
+
+@login_required
+@csrf_protect
+def route_ai_query(request):
+    """Routes student workspace prompts straight to localized LLM endpoints."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request handle"}, status=400)
+        
+    selected_model = request.POST.get("model_type")
+    user_prompt = request.POST.get("prompt")
+    
+    if not user_prompt:
+        return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
+        
+    # Administrative control gate for your scaled-down deployments (0/0 Replicas)
+    if selected_model == "deepseek":
+        return JsonResponse({
+            "reply": "⚠️ <strong>Node Offline:</strong> DeepSeek Coder is currently scaled down by the system administrator. Please use Qwen or Mistral."
+        })
+
+    # Define internal API target endpoints running inside your cluster network
+    LLM_CLUSTER_URLS = {
+        "qwen": "http://qwen-7b-svc.ai-models.svc.cluster.local:8000/v1/chat/completions",
+        "mistral": "http://mistral-7b-svc.ai-models.svc.cluster.local:8000/v1/chat/completions",
+        #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
+    }
+    
+    target_api = LLM_CLUSTER_URLS.get(selected_model)
+    if not target_api:
+        return JsonResponse({"error": f"Model configuration path '{selected_model}' not found"}, status=400)
+    
+    # Map incoming frontend IDs to exact model names hosted inside your vLLM processes
+    # If your vLLM startup flags set an alias, you can change these to match.
+    VLLM_MODEL_NAMES = {
+        "qwen": "Qwen/Qwen2.5-3B-Instruct",             # <--- UPDATED EXACT MATCH
+        "mistral": "mistralai/Mistral-7B-Instruct-v0.2", # <--- UPDATED EXACT MATCH
+        "deepseek": "deepseek-ai/deepseek-coder-6.7b-instruct"
+    }
+    vllm_model_string = VLLM_MODEL_NAMES.get(selected_model, selected_model)
+    
+    # Inject standard institutional system instructions to prime the models
+    system_instruction = (
+        "You are an expert institutional research assistant at ICCBS. "
+        "Provide accurate, highly technical, graduate-level chemistry and biology insights."
+    )
+    
+    payload = {
+        "model": vllm_model_string,
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.3
+    }
+    
+    try:
+        # Set a strict timeout to avoid hang-ups on heavy node loads
+        response = requests.post(target_api, json=payload, timeout=30)
+        
+        # Guard clause against malformed cluster responses or container errors
+        if response.status_code != 200:
+            return JsonResponse({
+                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM cluster returned standard error code {response.status_code}."
+            }, status=500)
+            
+        response_data = response.json()
+        ai_reply = response_data['choices'][0]['message']['content']
+        
+        # Persist transaction logs asynchronously to the database
+        AiResearchSession.objects.create(
+            student=request.user,
+            model_used=selected_model,
+            prompt_text=user_prompt,
+            response_text=ai_reply
+        )
+        
+        return JsonResponse({"reply": ai_reply})
+        
+    except requests.exceptions.Timeout:
+        return JsonResponse({"reply": "⏳ <strong>Connection Interrupted:</strong> The compute pod took too long to compile token arrays. Cluster under heavy load."}, status=504)
+    except Exception as e:
+        return JsonResponse({"reply": f"Internal Compute Node Error: Unable to resolve stream. Details: {str(e)}"}, status=500)
 # =========================
 # SOP GATE
 # =========================

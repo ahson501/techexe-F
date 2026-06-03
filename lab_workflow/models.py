@@ -243,3 +243,99 @@ class AuditLog(models.Model):
         # Improved __str__ to handle both types of requests
         sample = self.request.sample_code if self.request else self.nmr_request.sample_code if self.nmr_request else "Unknown"
         return f"{sample} - {self.status}"
+    
+    
+
+# --- 1. LMS & SOP TRAINING MODELS ---
+class SopModule(models.Model):
+    """Specific lab instrument training courses required before form access."""
+    title = models.CharField(max_length=255)
+    instrument_id = models.CharField(max_length=50, help_text="Matches form array ID e.g., 'nmr' or 'uplc'")
+    video_url = models.URLField(blank=True, null=True)
+    document_file = models.FileField(upload_to='sop_docs/', blank=True, null=True)
+    is_mandatory = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"SOP: {self.title}"
+
+class StudentSopCertification(models.Model):
+    """Tracks which PhD/MPhil researchers have unlocked specific hardware permissions."""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sop_certs')
+    module = models.ForeignKey(SopModule, on_delete=models.CASCADE)
+    certified_on = models.DateTimeField(auto_now_add=True)
+    quiz_score = models.IntegerField(help_text="Percentage grade achieved")
+    expires_on = models.DateField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('student', 'module')
+
+    def __str__(self):
+        return f"{self.student.username} - {self.module.title} (Passed)"
+
+
+# --- 2. INVENTORY & CENTRAL STORE MODELS ---
+class InventoryItem(models.Model):
+    """Live ledger for tracking laboratory reagents, solvents, and consumables."""
+    CATEGORY_CHOICES = [
+        ('chemical', 'Chemicals & Reagents'),
+        ('solvent', 'Deuterated / HPLC Solvents'),
+        ('glassware', 'Specialized Glassware'),
+        ('consumable', 'Lab Consumables'),
+    ]
+    name = models.CharField(max_length=255)
+    catalog_number = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    stock_quantity = models.DecimalField(max_digits=10, decimal_places=2, help_text="Current balance in store")
+    unit = models.CharField(max_length=20, help_text="e.g., Liters, Grams, Vials, Boxes")
+    location_rack = models.CharField(max_length=50, blank=True, null=True, help_text="Warehouse location storage index")
+
+    def __str__(self):
+        return f"{self.name} ({self.stock_quantity} {self.unit} remaining)"
+
+
+# --- 3. POSTGRADUATE THESIS MILESTONES ---
+class ThesisPipeline(models.Model):
+    """Tracks individual MPhil/PhD candidate research progression milestones."""
+    STAGE_CHOICES = [
+        ('1_synopsis', 'Synopsis Submission & Defence'),
+        ('2_coursework', 'Mandatory PhD Coursework Credit Hours'),
+        ('3_data', 'Data Collection & Instrumentation Analysis'),
+        ('4_pub_gate', 'First Author International Publication Gate'),
+        ('5_writing', 'Thesis Compiling & Formatting Review'),
+        ('6_defense', 'External Evaluation & Final Public Viva-Voce'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Not Started'),
+        ('active', 'In Progress / Processing'),
+        ('approved', 'Verified & Completed'),
+    ]
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='thesis_milestones')
+    stage = models.CharField(max_length=20, choices=STAGE_CHOICES)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    updated_at = models.DateTimeField(auto_now=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_milestones')
+    remarks = models.TextField(blank=True, null=True, help_text="Supervisor comments or requirements adjustments")
+
+    class Meta:
+        unique_together = ('student', 'stage')
+        ordering = ['stage']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.get_stage_display()} ({self.status})"
+    
+    # AI Research section
+class AiResearchSession(models.Model):
+    """Logs internal AI interactions for research compliance and token metrics."""
+    MODEL_CHOICES = [
+        ('deepseek', 'DeepSeek (Thesis & Analysis Co-Pilot)'),
+        ('mistral', 'Mistral (Instrument SOP Tutor)'),
+        ('qwen', 'Qwen (Chemical Synthesis Oracle)'),
+    ]
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_queries')
+    model_used = models.CharField(max_length=20, choices=MODEL_CHOICES)
+    prompt_text = models.TextField()
+    response_text = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.username} - {self.model_used} [{self.timestamp.strftime('%Y-%m-%d')}]"

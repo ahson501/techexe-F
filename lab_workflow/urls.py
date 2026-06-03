@@ -20,4 +20,5 @@ urlpatterns = [
     path('reject-tlc/<str:request_type>/<int:pk>/', views.reject_invalid_tlc, name='reject_tlc'),
     path("reject/<int:pk>/", views.reject_request, name="reject_request"),
     path('print/<str:request_type>/<int:pk>/', views.print_form, name='print_form'),
+    path('ajax/ai-query/', views.route_ai_query, name='ai_query_route'),
 ]

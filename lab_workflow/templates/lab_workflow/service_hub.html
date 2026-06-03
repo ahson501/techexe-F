@@ -487,3 +487,386 @@
 
 </body>
 </html>
+
+
+<style>
+    .dark-infrastructure-footer {
+        margin-top: 40px;
+        background: linear-gradient(135deg, #0b1528 0%, #050b14 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 30px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+        color: #f1f5f9;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Subtle technological background grid texture overlay */
+    .dark-infrastructure-footer::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 20px 20px;
+        pointer-events: none;
+    }
+
+    /* Premium Dark Mode Tab Header Bar */
+    .dark-tabs-nav {
+        display: flex;
+        gap: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0;
+        margin-bottom: 25px;
+        position: relative;
+        z-index: 1;
+        overflow-x: auto;
+    }
+
+    .dark-tab-trigger {
+        background: none;
+        border: none;
+        padding: 14px 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #94a3b8;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .dark-tab-trigger:hover {
+        color: #38bdf8;
+    }
+
+    .dark-tab-trigger.active-dark-tab {
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Animated neon blue tracking line underneath the active tab */
+    .dark-tab-trigger.active-dark-tab::after {
+        content: "";
+        position: absolute;
+        bottom: -1px; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #38bdf8, #2563eb);
+        border-radius: 3px 3px 0 0;
+        box-shadow: 0 -2px 10px rgba(56, 189, 248, 0.8);
+    }
+
+    .dark-tab-content {
+        display: none;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .dark-tab-content.active-dark-panel {
+        display: block;
+        animation: fadeInNode 0.25s ease-out;
+    }
+
+    @keyframes fadeInNode {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Content Cards for Tab A (SOP & Training) */
+    .dark-sop-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+    }
+    .dark-sop-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: border-color 0.2s;
+    }
+    .dark-sop-card:hover {
+        border-color: rgba(56, 189, 248, 0.2);
+    }
+    .badge-dark-passed {
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+        border: 1px solid rgba(74, 222, 128, 0.3);
+        padding: 4px 10px; border-radius: 4px; font-size: 0.78rem; font-weight: 700;
+    }
+    .badge-dark-locked {
+        background: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 4px 10px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;
+    }
+
+    /* Content Layout for Tab B (Inventory Table) */
+    .dark-table-wrapper {
+        border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .dark-table {
+        width: 100%; border-collapse: collapse; text-align: left; background: rgba(15, 23, 42, 0.4);
+    }
+    .dark-table th {
+        background: rgba(15, 23, 42, 0.8); color: #38bdf8; padding: 12px 16px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .dark-table td {
+        padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 0.9rem; color: #cbd5e1;
+    }
+
+    /* Content Layout for Tab C (Thesis Roadmap Pipeline) */
+    .dark-timeline { position: relative; padding-left: 26px; }
+    .dark-timeline::before {
+        content: ""; position: absolute; top: 5px; bottom: 5px; left: 7px; width: 2px; background: rgba(255, 255, 255, 0.08);
+    }
+    .dark-timeline-step { position: relative; margin-bottom: 20px; }
+    .dark-timeline-dot {
+        position: absolute; left: -26px; top: 5px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0b1528;
+    }
+    .dark-timeline-dot.approved { background-color: #4ade80; box-shadow: 0 0 8px #22c55e; }
+    .dark-timeline-dot.active { background-color: #fbbf24; box-shadow: 0 0 8px #f59e0b; }
+    .dark-timeline-dot.pending { background-color: #475569; }
+    
+    .dark-timeline-body {
+        background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Content Layout for Tab D (AI Co-Pilot Workspace) */
+    .dark-ai-layout {
+        display: grid; grid-template-columns: 260px 1fr; gap: 20px;
+    }
+    @media(max-width: 850px){ .dark-ai-layout { grid-template-columns: 1fr; } }
+    .dark-ai-sidebar { display: flex; flex-direction: column; gap: 10px; }
+    .dark-model-card {
+        background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .dark-model-card.selected-dark-model {
+        border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.05);
+    }
+    .dark-model-card label { font-weight: 600; color: #ffffff; display: block; margin-bottom: 3px; font-size: 0.9rem; cursor: pointer; }
+    .dark-model-card p { margin: 0; font-size: 0.78rem; color: #94a3b8; line-height: 1.4; }
+    .dark-chat-container {
+        background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; display: flex; flex-direction: column; min-height: 320px; justify-content: space-between;
+    }
+    .dark-chat-logs { padding: 20px; font-size: 0.92rem; color: #e2e8f0; line-height: 1.5; }
+    .dark-welcome-text { color: #94a3b8; font-style: italic; background: rgba(255, 255, 255, 0.03); padding: 12px 16px; border-radius: 6px; border-left: 3px solid #38bdf8; margin: 0; }
+    .dark-chat-input-bar {
+        display: flex; border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; gap: 10px; background: rgba(10, 15, 30, 0.6); border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
+    }
+    .dark-chat-input-bar textarea {
+        flex-grow: 1; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; font-size: 0.9rem; color: #ffffff; resize: none; height: 38px; box-sizing: border-box; font-family: inherit;
+    }
+    .dark-chat-input-bar textarea:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.2); }
+    .dark-ai-btn {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; border: none; padding: 0 18px; height: 38px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .dark-ai-btn:hover { opacity: 0.9; }
+</style>
+
+<div class="dark-infrastructure-footer">
+    
+    <div class="dark-tabs-nav">
+        <button class="dark-tab-trigger active-dark-tab" onclick="switchDarkTab(event, 'dk-lms')">📚 LMS & SOP Training</button>
+        <button class="dark-tab-trigger" onclick="switchDarkTab(event, 'dk-inventory')">📦 Inventory & Central Store</button>
+        <button class="dark-tab-trigger" onclick="switchDarkTab(event, 'dk-milestones')">📝 Thesis Milestones</button>
+        <button class="dark-tab-trigger" onclick="switchDarkTab(event, 'dk-ai')" style="color: #f59e0b;">⚡ AI Research Co-Pilot (Qwen)</button>
+    </div>
+
+    <div id="dk-lms" class="dark-tab-content active-dark-panel">
+        <h4 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.1rem;">Instrument SOP Compliance Engine</h4>
+        <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 0.88rem;">Before submitting biological or synthetic chemical samples to central processing queues, candidates must clear safety certifications.</p>
+        <div class="dark-sop-grid">
+            {% for sop in sop_modules %}
+            <div class="dark-sop-card">
+                <div>
+                    <span style="color: #e2e8f0; font-weight: 600; display: block; font-size: 0.92rem;">{{ sop.title }}</span>
+                    <span style="font-size: 0.78rem; color: #64748b;">System Identifier Tag: {{ sop.instrument_id|upper }}</span>
+                </div>
+                <div>
+                    {% if sop.instrument_id in certified_module_ids %}
+                        <span class="badge-dark-passed">✓ Certified Clear</span>
+                    {% else %}
+                        <span class="badge-dark-locked">🔒 Locked</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+                <p style="color: #64748b; font-size: 0.88rem;">No custom hardware baseline tracking records linked to this account profile.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="dk-inventory" class="dark-tab-content">
+        <h4 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.1rem;">Central Chemical Warehouse Ledger Readings</h4>
+        <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 0.88rem;">Real-time inventory readings of analytical materials and specialized reagents currently stored in physical vaults.</p>
+        <div class="dark-table-wrapper">
+            <table class="dark-table">
+                <thead>
+                    <tr>
+                        <th>Material Description</th>
+                        <th>Catalog Index</th>
+                        <th>Resource Classification</th>
+                        <th>Available Stock Balance</th>
+                        <th>Warehouse Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in critical_inventory %}
+                    <tr>
+                        <td><strong style="color: #ffffff;">{{ item.name }}</strong></td>
+                        <td><code style="color: #38bdf8; background: rgba(56,189,248,0.08); padding: 2px 6px; border-radius: 4px;">{{ item.catalog_number }}</code></td>
+                        <td>{{ item.get_category_display }}</td>
+                        <td style="font-weight: 600; color: #f1f5f9;">{{ item.stock_quantity }} {{ item.unit }}</td>
+                        <td><span style="color: #64748b; font-size: 0.82rem;">{{ item.location_rack|default:"Central Vault" }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No materials cataloged inside the local warehouse model context.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="dk-milestones" class="dark-tab-content">
+        <h4 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.1rem;">Postgraduate Research Degree Pipeline</h4>
+        <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 0.88rem;">Administrative status pipeline mapping requirements leading up to thesis defenses and formal graduation clearance checks.</p>
+        <div class="dark-timeline">
+            {% for milestone in student_milestones %}
+            <div class="dark-timeline-step">
+                <span class="dark-timeline-dot {{ milestone.status }}"></span>
+                <div class="dark-timeline-body">
+                    <div>
+                        <span style="font-weight: 600; color: #ffffff; display: block; font-size: 0.92rem;">{{ milestone.get_stage_display }}</span>
+                        {% if milestone.remarks %} <span style="font-size: 0.8rem; color: #94a3b8; display: block; margin-top: 2px;">📝 Note: {{ milestone.remarks }}</span> {% endif %}
+                    </div>
+                    <div>
+                        {% if milestone.status == 'approved' %}
+                            <span style="color: #4ade80; font-size: 0.78rem; font-weight: 700; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); padding: 3px 10px; border-radius: 4px;">Verified Clear</span>
+                        {% elif milestone.status == 'active' %}
+                            <span style="color: #fbbf24; font-size: 0.78rem; font-weight: 700; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); padding: 3px 10px; border-radius: 4px;">Under Review</span>
+                        {% else %}
+                            <span style="color: #64748b; font-size: 0.78rem; font-weight: 500;">Locked</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="dk-ai" class="dark-tab-content">
+        <h4 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.1rem;">ICCBS Secure Local Compute LLM Interface</h4>
+        <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 0.88rem;">Securely query models running directly on internal Kubernetes node control planes without data escaping public channels.</p>
+        
+        <div class="dark-ai-layout">
+            <div class="dark-ai-sidebar">
+                <div class="dark-model-card" style="opacity: 0.5;" onclick="toggleDarkModelSelect(this, 'deepseek')">
+                    <input type="radio" name="dk_model" id="dk_m_ds" value="deepseek" style="position: absolute; right: 12px; top:14px;">
+                    <label for="dk_m_ds">DeepSeek Coder</label>
+                    <p>Thesis compilation & code verification metrics. (0/0 Replicas)</p>
+                </div>
+                <div class="dark-model-card" onclick="toggleDarkModelSelect(this, 'mistral')">
+                    <input type="radio" name="dk_model" id="dk_m_mis" value="mistral" style="position: absolute; right: 12px; top:14px;">
+                    <label for="dk_m_mis" style="color: #ffffff; font-weight: 600;">Mistral vLLM</label>
+                    <p>Institutional lab equipment training and SOP guides. <span style="color: #4ade80; font-weight: 600;">(1/1 Active)</span></p>
+                </div>
+                <div class="dark-model-card selected-dark-model" onclick="toggleDarkModelSelect(this, 'qwen')">
+                    <input type="radio" name="dk_model" id="dk_m_qwn" value="qwen" checked style="position: absolute; right: 12px; top:14px;">
+                    <label for="dk_m_qwn" style="color: #38bdf8;">Qwen Core Engine</label>
+                    <p>Highly effective for chemical synthesis formulas and computations.<span style="color: #4ade80; font-weight: 600;">(1/1 Active)</span></p>
+                </div>
+            </div>
+
+            <div class="dark-chat-container">
+                <div class="dark-chat-logs" id="dark-chat-scroller">
+                    <p class="dark-welcome-text" id="dark-response-area">
+                        System Core Router Active. Enter a complex research calculation problem or chemical compound request array parameter below.
+                    </p>
+                </div>
+                
+                <div class="dark-chat-input-bar">
+                    {% csrf_token %}
+                    <textarea id="dark-user-prompt" placeholder="Ask a targeted research question... (Ctrl + Enter to send)"></textarea>
+                    <button type="button" class="dark-ai-btn" onclick="executeDarkClusterQuery()">Send Prompt ⚡</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchDarkTab(evt, panelId) {
+        document.querySelectorAll('.dark-tab-content').forEach(p => p.classList.remove('active-dark-panel'));
+        document.querySelectorAll('.dark-tab-trigger').forEach(t => t.classList.remove('active-dark-tab'));
+        document.getElementById(panelId).classList.add('active-dark-panel');
+        evt.currentTarget.classList.add('active-dark-tab');
+    }
+
+    function toggleDarkModelSelect(element, val) {
+        document.querySelectorAll('.dark-model-card').forEach(c => c.classList.remove('selected-dark-model'));
+        element.classList.add('selected-dark-model');
+        const radio = element.querySelector('input[type="radio"]');
+        if(radio) radio.checked = true;
+    }
+
+    function executeDarkClusterQuery() {
+        const textarea = document.getElementById("dark-user-prompt");
+        const promptVal = textarea.value.trim();
+        const activeModel = document.querySelector('input[name="dk_model"]:checked').value;
+        const responseArea = document.getElementById("dark-response-area");
+        
+        // Use a generic lookup strategy to fetch the CSRF cookie securely
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || "{{ csrf_token }}";
+        
+        if (!promptVal) return;
+
+        responseArea.innerHTML = `<span style="color:#38bdf8; font-weight:600;">[K8s Cluster Routing]</span> Streaming processing matrices for execution via ${activeModel.toUpperCase()}... Please standby.`;
+        textarea.value = "";
+
+        const formData = new FormData();
+        formData.append("model_type", activeModel);
+        formData.append("prompt", promptVal);
+
+        // ✅ FETCH WAS BROUGHT INSIDE THE EXECUTION CONTEXT SO IT OWNS ACCESS TO VARIABLES
+        fetch("{% url 'lab_workflow:ai_query_route' %}", {
+            method: "POST",
+            headers: { 
+                "X-CSRFToken": csrftoken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`Server returned HTTP Status Code: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => {
+            // Update UI with the returned model content payload string response
+            responseArea.innerHTML = `<strong style="color:#38bdf8; display:block; margin-bottom:8px;">Query Input: "${promptVal}"</strong>` + data.reply.replace(/\n/g, "<br>");
+        })
+        .catch(err => {
+            responseArea.innerHTML = `<span style="color:#ef4444; font-weight:600;">[Cluster Fault]</span> Execution stream interrupted: Unable to complete sequence matrix. Details: ${err.message}`;
+        });
+    }
+
+    // Capture standard keyboard shortcuts inside the workspace portal terminal shell
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputField = document.getElementById("dark-user-prompt");
+        if (inputField) {
+            inputField.addEventListener("keydown", function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                    e.preventDefault(); // Stop standard line break insertion behaviour
+                    executeDarkClusterQuery();
+                }
+            });
+        }
+    });
+</script>
