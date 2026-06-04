@@ -128,7 +128,7 @@ def route_ai_query(request):
 
     # Define internal API target endpoints running inside your cluster network
     LLM_CLUSTER_URLS = {
-        "qwen": "http://qwen-7b-svc.ai-models.svc.cluster.local:8000/v1/chat/completions",
+        "qwen": "http://10.100.111.217:8000/v1/chat/completions",
         "mistral": "http://mistral-7b-svc.ai-models.svc.cluster.local:8000/v1/chat/completions",
         #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
     }
@@ -166,28 +166,32 @@ def route_ai_query(request):
         response = requests.post(target_api, json=payload, timeout=30)
         
         # Guard clause against malformed cluster responses or container errors
+        
         if response.status_code != 200:
             return JsonResponse({
-                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM cluster returned standard error code {response.status_code}."
-            }, status=500)
-            
-        response_data = response.json()
-        ai_reply = response_data['choices'][0]['message']['content']
+                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM cluster returned code {response.status_code}. Raw Body: {response.text}"
+            }) # Removed ", status=500" so it prints on the screen instead of crashing
         
+        response_data = response.json()
+        
+        if 'choices' in response_data and len(response_data['choices']) > 0:
+            ai_reply = response_data['choices'][0]['message']['content']
+        else:
+            ai_reply = f"🚨 <strong>Malformed API Response:</strong> JSON structure missing 'choices'. Received: {str(response_data)}"
         # Persist transaction logs asynchronously to the database
-        AiResearchSession.objects.create(
-            student=request.user,
-            model_used=selected_model,
-            prompt_text=user_prompt,
-            response_text=ai_reply
-        )
+        #AiResearchSession.objects.create(
+            #student=request.user,
+            #model_used=selected_model,
+            #prompt_text=user_prompt,
+            #response_text=ai_reply
+        #)
         
         return JsonResponse({"reply": ai_reply})
         
     except requests.exceptions.Timeout:
         return JsonResponse({"reply": "⏳ <strong>Connection Interrupted:</strong> The compute pod took too long to compile token arrays. Cluster under heavy load."}, status=504)
     except Exception as e:
-        return JsonResponse({"reply": f"Internal Compute Node Error: Unable to resolve stream. Details: {str(e)}"}, status=500)
+        return JsonResponse({"reply": f"Internal Compute Node Error: Unable to resolve stream. Details: {str(e)}"})
 # =========================
 # SOP GATE
 # =========================
