@@ -129,7 +129,7 @@ def route_ai_query(request):
     # Define internal API target endpoints running inside your cluster network
     LLM_CLUSTER_URLS = {
         "qwen": "http://10.100.111.217:8000/v1/chat/completions",
-        "mistral": "http://mistral-7b-svc.ai-models.svc.cluster.local:8000/v1/chat/completions",
+        "mistral": "http://10.99.243.70:8000/v1/chat/completions",
         #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
     }
     
@@ -163,7 +163,7 @@ def route_ai_query(request):
     
     try:
         # Set a strict timeout to avoid hang-ups on heavy node loads
-        response = requests.post(target_api, json=payload, timeout=30)
+        response = requests.post(target_api, json=payload, timeout=120)
         
         # Guard clause against malformed cluster responses or container errors
         

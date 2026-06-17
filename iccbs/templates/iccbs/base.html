@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ICCBS Login Portal{% endblock %}</title>
-    <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-s10eGJHO.css' %}">
+
+    <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CDR8rDBf.css' %}">
 </head>
 <body>
+
     <header>
         <h1>Welcome ICCBS Login Portal</h1>
         <nav>
@@ -18,12 +19,19 @@
             </ul>
         </nav>
     </header>
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
+
+    <div class="portal-hero-wrapper">
+        <img src="{% static 'images/services/LEJ.jpeg' %}" alt="ICCBS Portal Backdrop" class="portal-hero-bg">
+        
+        <main>
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
     <footer>
-        <p>&copy; 2025 My Site</p>
+        <p>&copy; 2026 ICCBS</p>
     </footer>
+
 </body>
 </html>
