@@ -119,18 +119,14 @@ def route_ai_query(request):
     
     if not user_prompt:
         return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
-        
-    # Administrative control gate for your scaled-down deployments (0/0 Replicas)
-    if selected_model == "deepseek":
-        return JsonResponse({
-            "reply": "⚠️ <strong>Node Offline:</strong> DeepSeek Coder is currently scaled down by the system administrator. Please use Qwen or Mistral."
-        })
 
     # Define internal API target endpoints running inside your cluster network
     LLM_CLUSTER_URLS = {
-        "qwen": "http://10.100.111.217:8000/v1/chat/completions",
-        "mistral": "http://10.99.243.70:8000/v1/chat/completions",
+        "qwen": "http://192.168.224.160:8000/v1/chat/completions",
+        "mistral": "http://192.168.166.136:8000/v1/chat/completions",
+        "deepseek": "http://192.168.160.22:8000/v1/chat/completions",
         #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
+        
     }
     
     target_api = LLM_CLUSTER_URLS.get(selected_model)
