@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICCBS - Zoom Link Registration Approval Form</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans py-10 px-4">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden">
+        <!-- Document Header Profile -->
+        <div class="p-6 bg-slate-50 border-b-2 border-[#0A2540] text-center md:text-left">
+            <h1 class="text-md font-black uppercase text-[#0A2540] tracking-tight">International Center for Chemical and Biological Sciences (ICCBS)</h1>
+            <h2 class="text-base font-bold text-slate-600 mt-0.5">Approval Request for Registration of Zoom Meeting / Webinar Link</h2>
+        </div>
+
+        <form method="post" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            <!-- Unit Header Assignment -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold uppercase text-slate-600">Institutional Unit</label>
+                </div>
+                <div class="md:col-span-2">
+                    <select name="unit" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm">
+                        <option value="HEJ">H.E.J.</option>
+                        <option value="PCMD">PCMD</option>
+                        <option value="LEJ">L.E.J.</option>
+                        <option value="TWC">TWC</option>
+                        <option value="OTHERS">OTHERS</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Meeting Title -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold uppercase text-slate-600">Meeting / Event Title</label>
+                </div>
+                <div class="md:col-span-2">
+                    <input type="text" name="meeting_title" required placeholder="e.g., Ph.D. Defense Seminar / Board Meeting" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm">
+                </div>
+            </div>
+
+            <!-- Date & Timing Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold uppercase text-slate-600 mt-2">Scheduled Date & Time</label>
+                </div>
+                <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="datetime-local" name="scheduled_datetime" required class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <input type="number" name="duration_minutes" required min="15" step="15" value="60" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm">
+                        <span class="text-xs font-bold text-slate-500 uppercase">Minutes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meeting Agenda -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold uppercase text-slate-600 mt-2">Event Agenda / Description</label>
+                </div>
+                <div class="md:col-span-2">
+                    <textarea name="agenda" rows="3" placeholder="Brief context of the digital event..." class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm"></textarea>
+                </div>
+            </div>
+
+            <!-- Actions Pad -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                <a href="{% url 'workflow_dashboard' %}" class="bg-slate-200 text-slate-700 text-sm font-bold py-2 px-5 rounded-md transition">Cancel</a>
+                <button type="submit" class="bg-[#0A2540] hover:bg-blue-900 text-white text-sm font-bold py-2 px-6 rounded-md shadow-xs transition">Request Provisioning Link</button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

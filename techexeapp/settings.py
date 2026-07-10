@@ -58,7 +58,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'iccbs',
-    'lab_workflow',       
+    'lab_workflow',
+    'core_workflow',
+    'it_services'       
 ]
 
 MIDDLEWARE = [

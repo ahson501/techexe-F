@@ -122,9 +122,9 @@ def route_ai_query(request):
 
     # Define internal API target endpoints running inside your cluster network
     LLM_CLUSTER_URLS = {
-        "qwen": "http://192.168.224.160:8000/v1/chat/completions",
-        "mistral": "http://192.168.166.136:8000/v1/chat/completions",
-        "deepseek": "http://192.168.160.22:8000/v1/chat/completions",
+        "qwen": "http://192.168.224.155:8000/v1/chat/completions",
+        "mistral": "http://192.168.166.172:8000/v1/chat/completions",
+        "deepseek": "http://192.168.160.20:8000/v1/chat/completions",
         #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
         
     }

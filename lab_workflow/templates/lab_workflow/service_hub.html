@@ -833,28 +833,79 @@
         formData.append("model_type", activeModel);
         formData.append("prompt", promptVal);
 
-        // ✅ FETCH WAS BROUGHT INSIDE THE EXECUTION CONTEXT SO IT OWNS ACCESS TO VARIABLES
-        fetch("{% url 'lab_workflow:ai_query_route' %}", {
-            method: "POST",
-            headers: { 
-                "X-CSRFToken": csrftoken,
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: formData
-        })
-        .then(res => {
-            if (!res.ok) {
-                throw new Error(`Server returned HTTP Status Code: ${res.status}`);
-            }
-            return res.json();
-        })
-        .then(data => {
-            // Update UI with the returned model content payload string response
-            responseArea.innerHTML = `<strong style="color:#38bdf8; display:block; margin-bottom:8px;">Query Input: "${promptVal}"</strong>` + data.reply.replace(/\n/g, "<br>");
-        })
-        .catch(err => {
-            responseArea.innerHTML = `<span style="color:#ef4444; font-weight:600;">[Cluster Fault]</span> Execution stream interrupted: Unable to complete sequence matrix. Details: ${err.message}`;
-        });
+    fetch("{% url 'lab_workflow:ai_query_route' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrftoken,
+            "X-Requested-With": "XMLHttpRequest"
+        },
+    body: formData
+})
+.then(async (res) => {
+
+    let data;
+
+    try {
+        data = await res.json();
+    } catch (e) {
+        throw new Error("Invalid response received from the AI server.");
+    }
+
+    if (data.reply) {
+
+        responseArea.innerHTML =
+            `<strong style="color:#38bdf8; display:block; margin-bottom:8px;">
+                Query Input: "${promptVal}"
+            </strong>` +
+            data.reply.replace(/\n/g, "<br>");
+
+    } else if (data.error) {
+
+        responseArea.innerHTML =
+            `<div style="
+                background:#3b0a0a;
+                border:1px solid #ef4444;
+                border-radius:8px;
+                padding:14px;
+                color:#ffffff;">
+                <strong style="color:#ef4444;">⚠️ Error</strong><br><br>
+                ${data.error}
+            </div>`;
+
+    } else {
+
+        responseArea.innerHTML =
+            `<div style="
+                background:#3b0a0a;
+                border:1px solid #ef4444;
+                border-radius:8px;
+                padding:14px;
+                color:#ffffff;">
+                <strong style="color:#ef4444;">⚠️ Unexpected Response</strong><br><br>
+                The AI service returned an unexpected response.
+            </div>`;
+    }
+
+})
+.catch((err) => {
+
+    responseArea.innerHTML =
+        `<div style="
+            background:#3b0a0a;
+            border:1px solid #ef4444;
+            border-radius:8px;
+            padding:14px;
+            color:#ffffff;">
+            <strong style="color:#ef4444;">⚠️ AI Service Temporarily Unavailable</strong><br><br>
+
+            The selected AI model is currently unavailable due to scheduled maintenance<br><br>
+
+            Please select another available AI model or try again later..
+        </div>`;
+
+    console.error(err);
+
+});
     }
 
     // Capture standard keyboard shortcuts inside the workspace portal terminal shell
