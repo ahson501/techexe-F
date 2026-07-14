@@ -1,8 +1,13 @@
 # core_workflow/urls.py
 from django.urls import path
-from . import views
+from .views import WorkflowDashboardView, ProcessWorkflowActionView, WorkflowPrintView
 
 urlpatterns = [
-    # We will build your central unified "My Approvals Dashboard" here soon!
-    path('dashboard/', views.WorkflowDashboardView.as_view(), name='workflow_dashboard'),
+    path('dashboard/', WorkflowDashboardView.as_view(), name='workflow_dashboard'),
+    
+    # 1. Put the print view FIRST so Django matches "/print/" before checking for dynamic action strings
+    path('task/<int:instance_id>/print/', WorkflowPrintView.as_view(), name='print_workflow_task'),
+    
+    # 2. Put the action processor SECOND
+    path('task/<int:instance_id>/action/<str:action_type>/', ProcessWorkflowActionView.as_view(), name='process_workflow_action'),
 ]

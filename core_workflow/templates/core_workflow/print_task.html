@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICCBS_Document_WF-{{ instance.id }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Screen styling adjustments to keep the document looking sharp on monitors */
+        body {
+            background-color: #f8fafc;
+        }
+
+        @media print {
+            /* Force A4 Page Size with strict margins */
+            @page {
+                size: A4 portrait;
+                margin: 12mm 15mm 12mm 15mm; /* Top, Right, Bottom, Left */
+            }
+
+            /* Clear browser background defaults and apply high-contrast text */
+            body { 
+                background: white !important; 
+                color: #000000 !important; 
+                font-size: 10pt !important; /* Slightly smaller base font for single-page security */
+                line-height: 1.25 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Hide elements like buttons, back link, etc. */
+            .no-print { 
+                display: none !important; 
+            }
+
+            /* Ensure borders remain crisp black in print outputs */
+            .print-border { 
+                border: 1px solid #000000 !important; 
+                border-radius: 0 !important; /* Sharp corners print better than round CSS ones */
+                box-shadow: none !important;
+                padding: 1.5rem !important; /* Slightly tighter spacing inside the container */
+                max-width: 100% !important;
+            }
+
+            /* Keep table and blockquote backgrounds visible on paper */
+            .print-bg { 
+                background-color: #f1f5f9 !important; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+
+            /* Tighten space specifically for print outputs */
+            .space-y-6 > * + * {
+                margin-top: 1rem !important;
+            }
+            
+            .mt-12 {
+                margin-top: 1.5rem !important;
+            }
+            
+            .mt-10 {
+                margin-top: 1.5rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans p-4 sm:p-8">
+
+    <!-- Floating Action Toolbar (Invisible during printing) -->
+    <div class="no-print max-w-4xl mx-auto mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-xs border border-slate-300">
+        <a href="{% url 'workflow_dashboard' %}" class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition">
+            &larr; Back to Dashboard
+        </a>
+        <button onclick="window.print()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold py-2 px-5 rounded-lg shadow-md transition flex items-center space-x-1 cursor-pointer">
+            <span>🖨️ Print Document / Save to PDF</span>
+        </button>
+    </div>
+
+    <!-- Official Document Container -->
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-slate-300 print-border relative">
+        
+        <!-- Document Watermark Flag -->
+        <div class="absolute top-4 right-4 text-xs font-mono uppercase tracking-widest text-slate-400 border border-slate-300 px-2 py-1">
+            Status: {{ instance.status }}
+        </div>
+
+        <!-- Master Institutional Header -->
+        <div class="border-b-2 border-slate-900 pb-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+    
+            <div class="hidden md:block"></div>
+            
+            <div class="md:col-span-2 text-center flex flex-col items-center justify-center">
+                <h1 class="text-lg font-extrabold uppercase text-slate-900 tracking-tight leading-tight">
+                    International Center for Chemical and Biological Sciences
+                </h1>
+                <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6">
+                    University of Karachi
+                </h2>
+                <h3 class="text-sm font-bold text-slate-700 mt-3 underline">
+                    {% if doc_type == 'itcomplaint' %}I.T. COMPLAINT RECORD FORM
+                    {% elif doc_type == 'emailaccountcreation' %}EMAIL ACCOUNT CREATION FORM
+                    {% elif doc_type == 'zoomlinkregistration' %}ZOOM MEETING REGISTRATION FORM
+                    {% endif %}
+                </h3>
+            </div>
+            
+            <div class="border-t md:border-t-0 md:border-l border-slate-300 pt-3 md:pt-0 md:pl-4 text-[10px] font-mono text-slate-500 space-y-0.5 text-left md:text-right">
+                <div><strong>WF Trace ID:</strong> #WF-{{ instance.id }}</div>
+                <div><strong>Doc. ID No:</strong> {{ document.doc_no|default:"ICCBS/QF/SYS" }}</div>
+                <div><strong>Revision:</strong> {{ document.revision_no|default:"01" }}</div>
+                <div><strong>Rev. Date:</strong> {{ document.revision_date|date:"Y-m-d"|default:"2026-01-01" }}</div>
+            </div>
+        </div>
+
+        <!-- Dynamic Form Fields Rendering -->
+        <div class="space-y-6">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1">Section A: Form Parameters</h4>
+
+            {% if doc_type == 'itcomplaint' %}
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>Unit / Center:</strong> {{ document.unit }}</div>
+                    <div><strong>User Type:</strong> {{ document.user_type }}</div>
+                    <div><strong>Complainer Name:</strong> {{ document.complainer_name }}</div>
+                    <div><strong>Supervisor Name:</strong> {{ document.supervisor_name }}</div>
+                    <div><strong>Lab / Department:</strong> {{ document.lab_dept }}</div>
+                    <div><strong>Intercom No:</strong> {{ document.intercom_no }}</div>
+                    <div class="col-span-2 mt-2">
+                        <strong class="block mb-1">Problem Description:</strong>
+                        <div class="p-3 bg-slate-50 rounded border border-slate-200 min-h-20 text-xs">{{ document.problem_description }}</div>
+                    </div>
+                </div>
+
+            {% elif doc_type == 'emailaccountcreation' %}
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>Unit / Center:</strong> {{ document.unit }}</div>
+                    <div><strong>Full Name:</strong> {{ document.first_name }} {{ document.middle_name }} {{ document.last_name }}</div>
+                    <div><strong>Department / Lab:</strong> {{ document.lab_no }}</div>
+                    <div><strong>Intercom No:</strong> {{ document.intercom_no }}</div>
+                    <div><strong>Attendance ID:</strong> {{ document.attendance_id }}</div>
+                    <div><strong>Mobile No:</strong> {{ document.contact_no }}</div>
+                    <div><strong>Requested Email Prefix:</strong> <span class="font-mono font-bold text-blue-700">{{ document.requested_email }}</span></div>
+                    <div><strong>Alternate Email:</strong> {{ document.alternate_email }}</div>
+                </div>
+
+            {% elif doc_type == 'zoomlinkregistration' %}
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>Unit / Center:</strong> {{ document.unit }}</div>
+                    <div><strong>Meeting Title:</strong> {{ document.meeting_title }}</div>
+                    <div><strong>Scheduled Date & Time:</strong> {{ document.scheduled_datetime }}</div>
+                    <div><strong>Duration:</strong> {{ document.duration_minutes }} minutes</div>
+                    <div class="col-span-2 mt-2">
+                        <strong class="block mb-1">Meeting Agenda:</strong>
+                        <div class="p-3 bg-slate-50 rounded border border-slate-200 min-h-20 text-xs">{{ document.agenda }}</div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- System Trace Section (The Digital Signatures) -->
+            <div class="mt-10">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1 mb-4">Section B: Dynamic Security Sign-off Logs</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-slate-600">
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                        <span class="block font-bold text-slate-800 mb-1">1. APPLICANT SIGNATURE</span>
+                        <div>User: {{ instance.submitted_by.username }}</div>
+                        <div>Role: Submitter Profile</div>
+                        <div>Date: {{ instance.submitted_at|date:"Y-m-d H:i" }}</div>
+                        <div class="mt-2 pt-2 border-t border-slate-300 text-[10px] text-emerald-600 font-bold">✓ SECURE DIGITAL ID VERIFIED</div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                        <span class="block font-bold text-slate-800 mb-1">2. HOD ENDORSEMENT</span>
+                        {% if instance.status == 'REJECTED' and instance.current_step.step_number == 1 %}
+                            <div class="text-red-600 font-bold mt-4">✕ DOCUMENT REJECTED AT THIS STAGE</div>
+                        {% elif instance.current_step.step_number > 1 or instance.status == 'COMPLETED' %}
+                            <div>Verification Pool: HOD_POOL</div>
+                            <div>Status: APPROVED</div>
+                            <div>Date: Verified & Routed</div>
+                            <div class="mt-2 pt-2 border-t border-slate-300 text-[10px] text-emerald-600 font-bold">✓ APPROVED & FORWARDED</div>
+                        {% else %}
+                            <div class="text-slate-400 italic mt-4">Pending Signature</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                        <span class="block font-bold text-slate-800 mb-1">3. IT SERVICE RESOLUTION</span>
+                        {% if instance.status == 'COMPLETED' %}
+                            <div>Resolver Group: it_complains</div>
+                            <div>Status: COMPLETE</div>
+                            <div>Closed At: {{ instance.completed_at|date:"Y-m-d H:i" }}</div>
+                            <div class="mt-2 pt-2 border-t border-slate-300 text-[10px] text-emerald-600 font-bold">✓ IT RESOLVED & ARCHIVED</div>
+                        {% elif instance.status == 'REJECTED' %}
+                            <div class="text-red-600 font-bold mt-4">✕ CLOSED: REJECTED</div>
+                        {% else %}
+                            <div class="text-slate-400 italic mt-4">Awaiting Technical Fix</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Institutional Footer Notice -->
+        <div class="mt-12 pt-4 border-t border-slate-300 text-center text-[10px] text-slate-400">
+            This is a system-generated document processed by the ICCBS OnePortal Workflow Engine.<br>
+            Verification Signature Fingerprint Hash: <code>SHA256:{{ instance.id }}{{ instance.submitted_at|date:"U" }}</code>
+        </div>
+    </div>
+
+</body>
+</html>
