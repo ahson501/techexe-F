@@ -83,3 +83,25 @@ class NMRRequestForm(forms.ModelForm):
             self.fields['status_h_nmr'].label = "Status of 1H NMR"
         if 'status_c_nmr' in self.fields:
             self.fields['status_c_nmr'].label = "Status of 13C NMR"
+
+# --- LAST. AIAgent FORM ---
+
+from django import forms
+
+class AIAgentDataForm(forms.Form):
+    # Form field matching your thesis/research document pattern
+    research_document = forms.FileField(
+        label="Upload Research Document / Spectrum / Data File",
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff',
+            'id': 'ai-agent-file-input'
+        })
+    )
+    prompt_message = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ask something about this file...'
+        })
+    )

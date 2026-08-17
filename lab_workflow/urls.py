@@ -21,4 +21,8 @@ urlpatterns = [
     path("reject/<int:pk>/", views.reject_request, name="reject_request"),
     path('print/<str:request_type>/<int:pk>/', views.print_form, name='print_form'),
     path('ajax/ai-query/', views.route_ai_query, name='ai_query_route'),
+    # AI-agent
+    path("api/ai-query/", views.route_ai_query, name="route_ai_query"),
+    path("api/agents-query/", views.route_agents_query, name="route_agents_query"),
+    path('uploads', views.proxy_uploads, name='proxy_uploads'),
 ]

@@ -101,93 +101,380 @@ def service_hub(request):
         'student_milestones': student_milestones,
     })
 
+import logging
+import re
 import requests
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
 from .models import AiResearchSession
 
+logger = logging.getLogger(__name__)
+
+# ── Cluster Endpoints ──────────────────────────────────────────────
+BGE_EMBED_URL = "http://192.168.224.177:80/embed"        # embedding-bge pod IP
+QDRANT_URL    = "http://192.168.224.180:6333"            # qdrant pod IP
+
+LLM_CLUSTER_URLS = {
+    "qwen":     "http://192.168.224.155:8000/v1/chat/completions",
+    "mistral":  "http://192.168.166.187:8000/v1/chat/completions",
+    "deepseek": "http://192.168.160.15:8000/v1/chat/completions",
+}
+
+VLLM_MODEL_NAMES = {
+    "qwen":     "Qwen/Qwen2.5-3B-Instruct",
+    "mistral":  "mistralai/Mistral-7B-Instruct-v0.2",
+    "deepseek": "deepseek-ai/deepseek-coder-6.7b-instruct",
+}
+
+SYSTEM_PROMPTS = {
+    "qwen":     "You are an expert Medical & Biological Research Assistant at ICCBS, backed by PubMed literature.",
+    "mistral":  "You are an expert Computational Chemist at ICCBS, backed by PubChem molecular data.",
+    "deepseek": "You are an expert Systems Biology Scientist at ICCBS, backed by BioModels repositories.",
+}
+
+SCIENTIFIC_KEYWORDS = [
+    "molecule", "compound", "pubmed", "pubchem", "protein", "dna", "rna",
+    "drug", "inhibitor", "kinase", "cancer", "mutation", "gene", "egfr",
+    "synthesis", "reaction", "toxicity", "formula", "pathway", "signaling",
+    "biomodel", "clinical", "genomic", "snp", "enzyme", "receptor", "antibody",
+    "cell", "tumor", "therapy", "chemotherapy", "pharmacokinetics", "molecular",
+    "isl1", "kmh-1", "sclc", "smiles", "cid", "pmid", "sbml",
+]
+
+COLLECTION_MAP = {
+    "qwen":     "pubmed",
+    "mistral":  "pubchem",
+    "deepseek": "biomodels",
+}
+
+# Matches explicit paths (/data/, /uploads/) or specific research file extensions
+FILE_PATH_REGEX = re.compile(
+    r'(/data/|/uploads/|[\w\-]+\.(fasta|fastq|vcf|gff|bed|pdb|mol2?|sdf|smiles|'
+    r'docx|txt|csv|xlsx|md|pdf|json|bam|sam|ab1|gbk|genbank|cif|mmcif)\b)',
+    re.IGNORECASE
+)
+
+
+def detect_rag_collection(prompt, selected_model):
+    """Choose Qdrant collection based on prompt keywords."""
+    p = prompt.lower()
+    
+    # Check BioModels keywords
+    if any(k in p for k in ["biomodel", "model2", "biomd", "pathway", "simulate", "sbml", "signaling", "equation", "pharmacokinetics"]):
+        return "biomodels"
+        
+    # Check PubChem keywords
+    if any(k in p for k in ["molecule", "compound", "drug", "inhibitor", "smiles", "docking", "pubchem", "cid"]):
+        return "pubchem"
+        
+    # Check PubMed keywords
+    if any(k in p for k in ["pubmed", "dna", "rna", "protein", "gene", "cancer", "clinical", "disease", "pmid", "sclc", "isl1", "kmh-1"]):
+        return "pubmed"
+        
+    return COLLECTION_MAP.get(selected_model, "pubmed")
+
+
+def rag_search(prompt, collection):
+    """Embed query and search Qdrant. Returns context string or None."""
+    try:
+        # Step 1: Embed via BGE (Safe parsing for lists or dict response formats)
+        embed_resp = requests.post(
+            BGE_EMBED_URL,
+            json={"inputs": prompt[:512]},
+            timeout=15
+        ).json()
+
+        if isinstance(embed_resp, list):
+            vec = embed_resp[0]
+            if isinstance(vec, dict) and "embedding" in vec:
+                vec = vec["embedding"]
+        elif isinstance(embed_resp, dict) and "embeddings" in embed_resp:
+            vec = embed_resp["embeddings"][0]
+        else:
+            logger.warning("Unknown BGE embedding response structure")
+            return None
+
+        # Step 2: Search Qdrant (Increased limit to 5 for complete context extraction)
+        qdrant_resp = requests.post(
+            f"{QDRANT_URL}/collections/{collection}/points/search",
+            json={"vector": vec, "limit": 5, "with_payload": True},
+            timeout=10
+        ).json()
+
+        hits = qdrant_resp.get("result", [])
+        if not hits:
+            return None
+
+        # Step 3: Join contexts safely
+        contexts = []
+        for h in hits:
+            payload = h.get("payload", {})
+            # Checks common context field names
+            ctx_text = payload.get("context") or payload.get("text") or payload.get("document")
+            if ctx_text:
+                contexts.append(str(ctx_text))
+
+        return "\n\n".join(contexts) if contexts else None
+
+    except Exception as e:
+        logger.warning(f"RAG search failed: {e}")
+        return None
+
+
 @login_required
 @csrf_protect
 def route_ai_query(request):
-    """Routes student workspace prompts straight to localized LLM endpoints."""
+    """Routes student prompts — RAG-enhanced for scientific queries."""
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid request handle"}, status=400)
-        
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
     selected_model = request.POST.get("model_type")
-    user_prompt = request.POST.get("prompt")
-    
+    user_prompt    = request.POST.get("prompt")
+
     if not user_prompt:
         return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
 
-    # Define internal API target endpoints running inside your cluster network
-    LLM_CLUSTER_URLS = {
-        "qwen": "http://192.168.224.155:8000/v1/chat/completions",
-        "mistral": "http://192.168.166.172:8000/v1/chat/completions",
-        "deepseek": "http://192.168.160.20:8000/v1/chat/completions",
-        #"deepseek": "http://deepseek-coder-svc.ai-models.svc.cluster.local:8000/v1/chat/completions"
-        
-    }
-    
+    # ── Guard: Short-Circuit Local File References ───────────────────
+    if FILE_PATH_REGEX.search(user_prompt):
+        return JsonResponse({
+            "reply": (
+                "📁 <strong>File Access Required</strong><br><br>"
+                "This query references a local file path or specific attachment. "
+                "Direct file analysis requires the <strong>AI Agent service</strong>.<br><br>"
+                "Please switch to the <strong>Agent tab</strong> to upload and parse files, "
+                "or copy and paste the file content directly into this prompt."
+            )
+        })
+
     target_api = LLM_CLUSTER_URLS.get(selected_model)
     if not target_api:
-        return JsonResponse({"error": f"Model configuration path '{selected_model}' not found"}, status=400)
-    
-    # Map incoming frontend IDs to exact model names hosted inside your vLLM processes
-    # If your vLLM startup flags set an alias, you can change these to match.
-    VLLM_MODEL_NAMES = {
-        "qwen": "Qwen/Qwen2.5-3B-Instruct",             # <--- UPDATED EXACT MATCH
-        "mistral": "mistralai/Mistral-7B-Instruct-v0.2", # <--- UPDATED EXACT MATCH
-        "deepseek": "deepseek-ai/deepseek-coder-6.7b-instruct"
-    }
-    vllm_model_string = VLLM_MODEL_NAMES.get(selected_model, selected_model)
-    
-    # Inject standard institutional system instructions to prime the models
-    system_instruction = (
-        "You are an expert institutional research assistant at ICCBS. "
-        "Provide accurate, highly technical, graduate-level chemistry and biology insights."
+        return JsonResponse({"error": f"Unknown model: {selected_model}"}, status=400)
+
+    # ── RAG Context Evaluation ──────────────────────────────────────
+    is_scientific = any(k in user_prompt.lower() for k in SCIENTIFIC_KEYWORDS)
+    rag_context   = None
+    rag_used      = False
+    collection    = detect_rag_collection(user_prompt, selected_model)
+
+    if is_scientific:
+        rag_context = rag_search(user_prompt, collection)
+        if rag_context:
+            rag_used = True
+            logger.info(f"RAG context retrieved from '{collection}' for model '{selected_model}'")
+        else:
+            logger.info(f"RAG search returned no context for collection '{collection}'")
+
+    # ── Build Prompt Payload ────────────────────────────────────────
+    system_instruction = SYSTEM_PROMPTS.get(
+        selected_model,
+        "You are an expert institutional research assistant at ICCBS."
     )
-    
+
+    if rag_used:
+        user_content = (
+            f"Use the following context retrieved from the ICCBS institutional "
+            f"database to answer the question accurately.\n\n"
+            f"--- CONTEXT ---\n{rag_context}\n--- END CONTEXT ---\n\n"
+            f"Question: {user_prompt}"
+        )
+    else:
+        user_content = user_prompt
+
     payload = {
-        "model": vllm_model_string,
+        "model": VLLM_MODEL_NAMES[selected_model],
         "messages": [
             {"role": "system", "content": system_instruction},
-            {"role": "user", "content": user_prompt}
+            {"role": "user",   "content": user_content},
         ],
-        "temperature": 0.3
+        "temperature": 0.3,
     }
-    
+
     try:
-        # Set a strict timeout to avoid hang-ups on heavy node loads
         response = requests.post(target_api, json=payload, timeout=120)
-        
-        # Guard clause against malformed cluster responses or container errors
-        
+
         if response.status_code != 200:
             return JsonResponse({
-                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM cluster returned code {response.status_code}. Raw Body: {response.text}"
-            }) # Removed ", status=500" so it prints on the screen instead of crashing
-        
+                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM returned {response.status_code}. {response.text}"
+            }, status=response.status_code)
+
         response_data = response.json()
-        
-        if 'choices' in response_data and len(response_data['choices']) > 0:
-            ai_reply = response_data['choices'][0]['message']['content']
+
+        if "choices" in response_data and response_data["choices"]:
+            ai_reply = response_data["choices"][0]["message"]["content"]
+            if rag_used:
+                ai_reply += (
+                    "<br><br><small style='color:#64748b;'>"
+                    f"📚 <em>Response grounded in ICCBS institutional database ({collection} collection)</em>"
+                    "</small>"
+                )
         else:
-            ai_reply = f"🚨 <strong>Malformed API Response:</strong> JSON structure missing 'choices'. Received: {str(response_data)}"
-        # Persist transaction logs asynchronously to the database
-        #AiResearchSession.objects.create(
-            #student=request.user,
-            #model_used=selected_model,
-            #prompt_text=user_prompt,
-            #response_text=ai_reply
-        #)
-        
+            ai_reply = f"🚨 <strong>Malformed Response:</strong> {str(response_data)}"
+
         return JsonResponse({"reply": ai_reply})
-        
+
     except requests.exceptions.Timeout:
-        return JsonResponse({"reply": "⏳ <strong>Connection Interrupted:</strong> The compute pod took too long to compile token arrays. Cluster under heavy load."}, status=504)
+        return JsonResponse({
+            "reply": "⏳ <strong>Connection Interrupted:</strong> Compute pod timeout. Cluster under heavy load."
+        })  # Defaults to status=200
+
     except Exception as e:
-        return JsonResponse({"reply": f"Internal Compute Node Error: Unable to resolve stream. Details: {str(e)}"})
+        logger.error(f"Error in route_ai_query: {str(e)}")
+        return JsonResponse({
+            "reply": f"⚠️ <strong>Internal Error:</strong> {str(e)}"
+        })  # Defaults to status=200
+
+# ICCBS ai-agent
+
+import json
+import logging
+import requests
+
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.contrib.auth.decorators import login_required
+
+# Ensure models are imported correctly (Adjust module path if necessary)
+# from .models import AiResearchSession
+
+logger = logging.getLogger(__name__)
+
+# Direct Pod IP reachability (Matches working setup for Qwen/Mistral/DeepSeek)
+AGENTS_SVC_URL = "http://192.168.107.16:8080"
+
+
+@login_required
+@csrf_protect
+def route_agents_query(request):
+    """
+    Dedicated endpoint for the Agents microservice (agents-svc).
+    Routes requests directly to http://192.168.107.16:8080/query
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
+
+    # 1. Parse prompt from JSON body or FormData
+    if request.content_type == "application/json":
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            user_prompt = body.get("prompt")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON payload"}, status=400)
+    else:
+        user_prompt = request.POST.get("prompt")
+
+    if not user_prompt:
+        return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
+
+    # 2. Prepare payload for the Agents microservice
+    payload = {
+        "prompt": user_prompt,
+        "user_id": request.user.username,
+    }
+
+    # 3. Forward to agents-svc
+    try:
+        response = requests.post(
+            f"{AGENTS_SVC_URL}/query",
+            json=payload,
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            return JsonResponse({
+                "reply": f"⚠️ <strong>Agents Service Error:</strong> Code {response.status_code}. Response: {response.text}"
+            }, status=response.status_code)
+
+        data = response.json()
+        ai_reply = data.get("reply") or data.get("answer") or str(data)
+
+        # 4. Save session log
+        try:
+            AiResearchSession.objects.create(
+                student=request.user,
+                model_used="agents-service",
+                prompt_text=user_prompt,
+                response_text=ai_reply,
+            )
+        except Exception as db_err:
+            logger.error(f"Failed to log AiResearchSession: {db_err}")
+
+        return JsonResponse({"reply": ai_reply})
+
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            "reply": "⚠️ <strong>Timeout:</strong> The agents service took longer than 120s to respond."
+        }, status=504)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            "reply": f"⚠️ <strong>Connection Error:</strong> Cannot reach agents service at <code>{AGENTS_SVC_URL}</code>. Check pod status."
+        }, status=502)
+    except Exception as e:
+        return JsonResponse({"reply": f"⚠️ <strong>Error:</strong> {str(e)}"}, status=500)
+
+
+@login_required
+@csrf_exempt
+def proxy_uploads(request):
+    """
+    Handles POST (file upload), GET (list files), and DELETE operations 
+    by forwarding them directly to the Kubernetes agents service.
+    """
+    target_url = f"{AGENTS_SVC_URL}/uploads"
+
+    try:
+        # --- GET: Retrieve list of uploaded files ---
+        if request.method == "GET":
+            resp = requests.get(target_url, timeout=10)
+            return HttpResponse(
+                resp.content, 
+                status=resp.status_code, 
+                content_type="application/json"
+            )
+
+        # --- POST: Process File Upload from JavaScript / Form ---
+        elif request.method == "POST":
+            if not request.FILES:
+                return JsonResponse({"error": "No files provided"}, status=400)
+
+            # Build file dict for multipart forwarding
+            files_to_forward = []
+            for field_name, file_obj in request.FILES.items():
+                file_obj.seek(0)  # Reset buffer position before reading
+                files_to_forward.append(
+                    ('file', (file_obj.name, file_obj.read(), file_obj.content_type))
+                )
+
+            resp = requests.post(target_url, files=files_to_forward, timeout=300)
+            return HttpResponse(
+                resp.content, 
+                status=resp.status_code, 
+                content_type="application/json"
+            )
+
+        # --- DELETE: Remove file from storage ---
+        elif request.method == "DELETE":
+            filename = request.GET.get('filename')
+            if not filename:
+                return JsonResponse({"error": "Filename parameter required"}, status=400)
+
+            resp = requests.delete(f"{target_url}?filename={filename}", timeout=10)
+            return HttpResponse(
+                resp.content, 
+                status=resp.status_code, 
+                content_type="application/json"
+            )
+
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Gateway timeout connecting to agents service"}, status=504)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({"error": f"Cannot reach agents service at {AGENTS_SVC_URL}"}, status=502)
+    except Exception as e:
+        logger.error(f"Error in proxy_uploads: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
 # =========================
 # SOP GATE
 # =========================

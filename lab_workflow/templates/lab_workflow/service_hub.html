@@ -766,20 +766,20 @@
         
         <div class="dark-ai-layout">
             <div class="dark-ai-sidebar">
-                <div class="dark-model-card" style="opacity: 0.5;" onclick="toggleDarkModelSelect(this, 'deepseek')">
+                <div class="dark-model-card" onclick="toggleDarkModelSelect(this, 'deepseek')">
                     <input type="radio" name="dk_model" id="dk_m_ds" value="deepseek" style="position: absolute; right: 12px; top:14px;">
-                    <label for="dk_m_ds">DeepSeek Coder</label>
-                    <p>Thesis compilation & code verification metrics. <span style="color: #4ade80; font-weight: 600;">(1/1 Active)</span></p>
+                    <label for="dk_m_ds"<span style="color: #4ade80; font-weight: 600;">🧬 Mathematical Systems Biology</span></label>
+                    <p>Kinetic modeling, ODE/PDE systems biology, pathway simulations, metabolic flux analysis, and population dynamics.</p>
                 </div>
                 <div class="dark-model-card" onclick="toggleDarkModelSelect(this, 'mistral')">
                     <input type="radio" name="dk_model" id="dk_m_mis" value="mistral" style="position: absolute; right: 12px; top:14px;">
-                    <label for="dk_m_mis" style="color: #ffffff; font-weight: 600;">Mistral vLLM</label>
-                    <p>Institutional lab equipment training and SOP guides. <span style="color: #4ade80; font-weight: 600;">(1/1 Active)</span></p>
+                    <label for="dk_m_mis" <span style="color: #4ade80; font-weight: 600;">🧪 Molecular Chemistry & QM</span></label>
+                    <p>SMILES/InChI processing, quantum mechanical property prediction, drug-target docking simulations, and thermodynamic property analysis.</p>
                 </div>
-                <div class="dark-model-card selected-dark-model" onclick="toggleDarkModelSelect(this, 'qwen')">
+                <div class="dark-model-card" onclick="toggleDarkModelSelect(this, 'qwen')">
                     <input type="radio" name="dk_model" id="dk_m_qwn" value="qwen" checked style="position: absolute; right: 12px; top:14px;">
-                    <label for="dk_m_qwn" style="color: #38bdf8;">Qwen Core Engine</label>
-                    <p>Highly effective for chemical synthesis formulas and computations.<span style="color: #4ade80; font-weight: 600;">(1/1 Active)</span></p>
+                    <label for="dk_m_qwn" <span style="color: #4ade80; font-weight: 600;">🔍 Medical & Genomics</span></label>
+                    <p>Clinical trial parsing, genomic sequence analysis, protein folding summaries, and cross-referencing medical literature.</p>
                 </div>
             </div>
 
@@ -921,3 +921,358 @@
         }
     });
 </script>
+
+
+
+
+
+ICCBS AI-Agent 
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Data Upload — AI Copilot</title>
+    <style>
+      :root {
+        --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+        --border: #30363d; --text: #e6edf3; --muted: #7d8590;
+        --blue: #388bfd; --green: #3fb950; --red: #f85149;
+        --amber: #d29922; --purple: #a371f7; --teal: #39d353;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+             background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
+    
+      .container { max-width: 900px; margin: 0 auto; }
+    
+      /* ── Dropzone ── */
+      .dropzone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px 24px;
+                  text-align: center; background: var(--bg2); cursor: pointer;
+                  transition: border-color 0.2s, background 0.2s; margin-bottom: 20px; }
+      .dropzone:hover, .dropzone.dragover { border-color: var(--blue); background: rgba(56,139,253,0.05); }
+      .dropzone-icon { font-size: 32px; margin-bottom: 12px; }
+      .dropzone-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+      .dropzone-subtext { font-size: 13px; color: var(--muted); }
+      .browse-btn { margin-top: 14px; padding: 8px 16px; background: var(--bg3);
+                    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+                    font-size: 13px; cursor: pointer; }
+      .browse-btn:hover { border-color: var(--muted); }
+    
+      /* ── Destination Box ── */
+      .dest-box { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+                  background: var(--bg2); border: 1px solid var(--border);
+                  border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+      .dest-box code { font-family: monospace; font-size: 12px;
+                       background: var(--bg3); padding: 2px 8px; border-radius: 4px; color: var(--teal); }
+      .dest-box .muted { color: var(--muted); margin-left: auto; }
+    
+      /* ── Formats Grid ── */
+      .section-label { font-size: 11px; font-weight: 600; color: var(--muted);
+                       text-transform: uppercase; letter-spacing: 0.06em; margin: 24px 0 10px; }
+      .fmt-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+      .fmt { display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+             border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid; }
+      .fmt-doc  { background: rgba(56,139,253,.12); color: #79c0ff; border-color: rgba(56,139,253,.3); }
+      .fmt-data { background: rgba(63,185,80,.12);  color: #7ee787; border-color: rgba(63,185,80,.3); }
+      .fmt-bio  { background: rgba(57,211,83,.1);   color: #39d353; border-color: rgba(57,211,83,.3); }
+      .fmt-chem { background: rgba(163,113,247,.12);color: #d2a8ff; border-color: rgba(163,113,247,.3); }
+      .fmt-img  { background: rgba(210,153,34,.12); color: #e3b341; border-color: rgba(210,153,34,.3); }
+    
+      /* ── File queue ── */
+      .file-queue { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+      .file-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+      .file-item { display: flex; align-items: center; gap: 12px; }
+      .file-ext { font-size: 10px; font-weight: 700; padding: 3px 7px;
+                  border-radius: 4px; letter-spacing: 0.04em; background: var(--bg3); color: var(--blue); }
+      .file-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .file-size { font-size: 12px; color: var(--muted); }
+      .file-status { font-size: 12px; min-width: 80px; text-align: right; text-transform: capitalize; }
+      .file-status.err { color: var(--red); }
+      .file-status.ok { color: var(--green); }
+      .file-del { font-size: 18px; color: var(--muted); cursor: pointer; line-height: 1; padding: 0 4px; }
+      .file-del:hover { color: var(--red); }
+      .progress { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+      .progress-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0%; transition: width 0.2s ease; }
+    
+      /* ── Size Limit ── */
+      .limit-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+                   background: var(--bg2); border: 1px solid var(--border);
+                   border-radius: 8px; font-size: 13px; color: var(--muted); margin: 14px 0; }
+    
+      /* ── Upload Button ── */
+      .upload-btn { width: 100%; margin-top: 16px; padding: 12px;
+                    font-size: 14px; font-weight: 500; border: none;
+                    border-radius: 8px; background: var(--blue); color: #fff;
+                    cursor: pointer; transition: opacity 0.2s; }
+      .upload-btn:hover:not(:disabled) { opacity: 0.85; }
+      .upload-btn:disabled { background: var(--bg3); color: var(--muted); cursor: not-allowed; }
+    
+      /* ── Uploaded Files List ── */
+      .uploaded-list { margin-top: 32px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
+      .uploaded-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+      .uploaded-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+      .uploaded-item:last-child { border-bottom: none; }
+      .uploaded-item .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .uploaded-item .fsize { color: var(--muted); font-size: 12px; }
+      .del-btn { font-size: 12px; color: var(--red); cursor: pointer; padding: 3px 8px; border: 1px solid var(--red); border-radius: 4px; opacity: 0.7; }
+      .del-btn:hover { opacity: 1; }
+      .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+    
+      /* ── Toast ── */
+      .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px;
+               border-radius: 8px; font-size: 13px; font-weight: 500;
+               opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+      .toast.show { opacity: 1; }
+      .toast.ok  { background: var(--green); color: #000; }
+      .toast.err { background: var(--red);   color: #fff; }
+    </style>
+    </head>
+    <body>
+    
+    <div class="container">
+      <!-- Dropzone -->
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">📁</div>
+        <div class="dropzone-text">Drag & drop files here</div>
+        <div class="dropzone-subtext">or click to browse from your computer</div>
+        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff" style="display:none">
+      </div>
+    
+      <!-- Destination Box -->
+      <div class="dest-box">
+        <span>🖥️</span>
+        <span>Destination:</span>
+        <code>/data/research-uploads</code>
+        <span class="muted">Kubernetes HostPath · ai-gateway namespace</span>
+      </div>
+    
+      <!-- Size Limit -->
+      <div class="limit-row">
+        ℹ️ &nbsp;Maximum file size: <strong style="color:var(--text)">20 GB</strong> per file &nbsp;·&nbsp; Multiple files supported
+      </div>
+    
+      <!-- Supported Formats -->
+      <div class="section-label">Supported Formats</div>
+      <div class="fmt-grid">
+        <span class="fmt fmt-doc">📄 PDF — Papers</span>
+        <span class="fmt fmt-doc">📝 DOCX / TXT / MD</span>
+        <span class="fmt fmt-data">📊 CSV / XLSX / TSV</span>
+        <span class="fmt fmt-bio">🧬 FASTA / FASTQ / VCF / GFF / BED</span>
+        <span class="fmt fmt-chem">🧪 PDB / MOL / SDF / SMILES</span>
+        <span class="fmt fmt-img">🖼️ PNG / JPG / TIFF</span>
+      </div>
+    
+      <!-- Upload Queue -->
+      <div class="file-queue" id="fileQueue"></div>
+    
+      <button class="upload-btn" id="uploadBtn" disabled onclick="uploadAllFiles()">⬆️ Upload to Cluster</button>
+    
+      <!-- Cluster File Storage Table -->
+      <div class="uploaded-list">
+        <div class="uploaded-header">Uploaded Files on Cluster</div>
+        <div id="uploadedFilesContainer">
+          <div class="empty">Loading uploaded files...</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+    // Route through Django's lab_workflow application endpoint
+    const API_BASE = window.location.origin + "/lab_workflow";
+    
+    // Helper function to obtain CSRF Cookie for Django Requests
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    
+    let selectedFiles = [];
+    
+    // Drag & drop handlers
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      }, false);
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+      const files = Array.from(e.dataTransfer.files);
+      addFilesToQueue(files);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      addFilesToQueue(files);
+    });
+    
+    function addFilesToQueue(files) {
+      files.forEach(file => {
+        if (!selectedFiles.some(f => f.file.name === file.name)) {
+          selectedFiles.push({ file: file, status: 'ready', progress: 0 });
+        }
+      });
+      renderQueue();
+    }
+    
+    function renderQueue() {
+      const queueContainer = document.getElementById('fileQueue');
+      const uploadBtn = document.getElementById('uploadBtn');
+      queueContainer.innerHTML = '';
+    
+      if (selectedFiles.length === 0) {
+        uploadBtn.disabled = true;
+        return;
+      }
+    
+      uploadBtn.disabled = false;
+    
+      selectedFiles.forEach((item, index) => {
+        const ext = item.file.name.split('.').pop().toUpperCase();
+        const size = (item.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        
+        const card = document.createElement('div');
+        card.className = 'file-card';
+        card.innerHTML = `
+          <div class="file-item">
+            <span class="file-ext">${ext}</span>
+            <span class="file-name">${item.file.name}</span>
+            <span class="file-size">${size}</span>
+            <span class="file-status ${item.status === 'error' ? 'err' : (item.status === 'success' ? 'ok' : '')}">${item.status}</span>
+            <span class="file-del" onclick="removeFile(${index})">&times;</span>
+          </div>
+          <div class="progress">
+            <div class="progress-fill" style="width: ${item.progress}%"></div>
+          </div>
+        `;
+        queueContainer.appendChild(card);
+      });
+    }
+    
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      renderQueue();
+    }
+    
+    async function uploadAllFiles() {
+      const uploadBtn = document.getElementById('uploadBtn');
+      uploadBtn.disabled = true;
+    
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const item = selectedFiles[i];
+        if (item.status === 'success') continue;
+    
+        item.status = 'uploading';
+        renderQueue();
+    
+        const formData = new FormData();
+        formData.append('file', item.file);
+    
+        try {
+          const res = await fetch(`${API_BASE}/uploads`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+          });
+    
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    
+          item.status = 'success';
+          item.progress = 100;
+          showToast(`Uploaded ${item.file.name}`, 'ok');
+        } catch (err) {
+          console.error(err);
+          item.status = 'error';
+          showToast(`Failed to upload ${item.file.name}`, 'err');
+        }
+        renderQueue();
+      }
+    
+      loadUploadedFiles();
+    }
+    
+    async function loadUploadedFiles() {
+      const container = document.getElementById('uploadedFilesContainer');
+      try {
+        const res = await fetch(`${API_BASE}/uploads`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const data = await res.json();
+        if (!data.files || data.files.length === 0) {
+          container.innerHTML = '<div class="empty">No files stored on node directory yet.</div>';
+          return;
+        }
+    
+        container.innerHTML = data.files.map(f => `
+          <div class="uploaded-item">
+            <span class="fname">${f.filename}</span>
+            <span class="fsize">${f.size_human}</span>
+            <button class="del-btn" onclick="deleteFile('${f.filename}')">Delete</button>
+          </div>
+        `).join('');
+    
+      } catch (err) {
+        console.error("Failed to load file list:", err);
+        container.innerHTML = '<div class="empty">Could not load file list — check backend connection</div>';
+      }
+    }
+    
+    async function deleteFile(filename) {
+      if (!confirm(`Delete ${filename}?`)) return;
+    
+      try {
+        const res = await fetch(`${API_BASE}/uploads?filename=${encodeURIComponent(filename)}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+          }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    
+        showToast(`Deleted ${filename}`, 'ok');
+        loadUploadedFiles();
+      } catch (err) {
+        console.error(err);
+        showToast(`Failed to delete ${filename}`, 'err');
+      }
+    }
+    
+    function showToast(msg, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast show ${type}`;
+      setTimeout(() => toast.className = 'toast', 3000);
+    }
+    
+    // Initial fetch on page load
+    loadUploadedFiles();
+    </script>
+    </body>
+    </html>

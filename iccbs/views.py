@@ -85,7 +85,7 @@ def login_view(request):
 
             # 🛠️ 1. NEW: IT SERVICES & ENGINE ACTORS REDIRECT
             # Intercepts IT Engineers, Supervisors, HODs, or Directors and routes to the dashboard
-            if user.groups.filter(name__in=['it_complains', 'DIRECTOR']).exists():
+            if user.groups.filter(name__in=['it_complains', 'hod']).exists():
                 return redirect('workflow_dashboard')  # Redirects to /workflow/dashboard/
 
             # ✅ ROLE-BASED REDIRECT

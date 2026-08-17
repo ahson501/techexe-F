@@ -34,7 +34,7 @@ class WorkflowDashboardView(LoginRequiredMixin, ListView):
         # ─── RESOLVER HISTORY LOGIC ───
         # If the user is in the IT group, show ALL resolved records system-wide.
         # Otherwise, restrict history to only their own items.
-        if user.groups.filter(name='it_complains').exists() or user.is_superuser:
+        if user.groups.filter(name__in=['it_complains', 'HOD_POOL']).exists() or user.is_superuser:
             context['history_tasks'] = WorkflowInstance.objects.filter(
                 status__in=['COMPLETED', 'REJECTED']
             ).select_related('workflow', 'submitted_by').order_by('-completed_at')
