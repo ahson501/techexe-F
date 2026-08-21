@@ -221,11 +221,10 @@ def rag_search(prompt, collection):
         logger.warning(f"RAG search failed: {e}")
         return None
 
-
 @login_required
 @csrf_protect
 def route_ai_query(request):
-    """Routes student prompts — RAG-enhanced for scientific queries."""
+    """Routes student prompts — RAG-enhanced or Agent-forwarded for files."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
@@ -235,23 +234,38 @@ def route_ai_query(request):
     if not user_prompt:
         return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
 
-    # ── Guard: Short-Circuit Local File References ───────────────────
+    # ── FORCE AGENT EXECUTION FOR FILE PATHS ─────────────────────────
     if FILE_PATH_REGEX.search(user_prompt):
-        return JsonResponse({
-            "reply": (
-                "📁 <strong>File Access Required</strong><br><br>"
-                "This query references a local file path or specific attachment. "
-                "Direct file analysis requires the <strong>AI Agent service</strong>.<br><br>"
-                "Please switch to the <strong>Agent tab</strong> to upload and parse files, "
-                "or copy and paste the file content directly into this prompt."
+        logger.info(f"File path detected in prompt '{user_prompt}'. Direct-proxying to Agents Service.")
+        try:
+            agent_payload = {
+                "message": user_prompt,
+                "history": []
+            }
+            resp = requests.post(
+                f"{AGENTS_SVC_URL}/agents/chat",
+                json=agent_payload,
+                timeout=120
             )
-        })
+            if resp.status_code == 200:
+                data = resp.json()
+                reply_text = data.get("answer") or data.get("reply") or str(data)
+                return JsonResponse({"reply": reply_text})
+            else:
+                return JsonResponse({
+                    "reply": f"⚠️ <strong>Agent Service Error ({resp.status_code}):</strong> {resp.text}"
+                })
+        except Exception as err:
+            logger.error(f"Failed to forward file query to agent: {err}")
+            return JsonResponse({
+                "reply": f"⚠️ <strong>Agent Connection Error:</strong> Unable to reach agent pod at {AGENTS_SVC_URL}"
+            })
 
+    # ── STANDARD LLM / RAG PATH ──────────────────────────────────────
     target_api = LLM_CLUSTER_URLS.get(selected_model)
     if not target_api:
         return JsonResponse({"error": f"Unknown model: {selected_model}"}, status=400)
 
-    # ── RAG Context Evaluation ──────────────────────────────────────
     is_scientific = any(k in user_prompt.lower() for k in SCIENTIFIC_KEYWORDS)
     rag_context   = None
     rag_used      = False
@@ -261,11 +275,7 @@ def route_ai_query(request):
         rag_context = rag_search(user_prompt, collection)
         if rag_context:
             rag_used = True
-            logger.info(f"RAG context retrieved from '{collection}' for model '{selected_model}'")
-        else:
-            logger.info(f"RAG search returned no context for collection '{collection}'")
 
-    # ── Build Prompt Payload ────────────────────────────────────────
     system_instruction = SYSTEM_PROMPTS.get(
         selected_model,
         "You are an expert institutional research assistant at ICCBS."
@@ -273,8 +283,7 @@ def route_ai_query(request):
 
     if rag_used:
         user_content = (
-            f"Use the following context retrieved from the ICCBS institutional "
-            f"database to answer the question accurately.\n\n"
+            f"Use the following context retrieved from the ICCBS institutional database to answer the question accurately.\n\n"
             f"--- CONTEXT ---\n{rag_context}\n--- END CONTEXT ---\n\n"
             f"Question: {user_prompt}"
         )
@@ -292,37 +301,21 @@ def route_ai_query(request):
 
     try:
         response = requests.post(target_api, json=payload, timeout=120)
-
         if response.status_code != 200:
-            return JsonResponse({
-                "reply": f"🚨 <strong>Compute Node Exception:</strong> vLLM returned {response.status_code}. {response.text}"
-            }, status=response.status_code)
+            return JsonResponse({"reply": f"🚨 <strong>vLLM Error:</strong> {response.text}"}, status=response.status_code)
 
         response_data = response.json()
-
         if "choices" in response_data and response_data["choices"]:
             ai_reply = response_data["choices"][0]["message"]["content"]
             if rag_used:
-                ai_reply += (
-                    "<br><br><small style='color:#64748b;'>"
-                    f"📚 <em>Response grounded in ICCBS institutional database ({collection} collection)</em>"
-                    "</small>"
-                )
+                ai_reply += f"<br><br><small style='color:#64748b;'>📚 <em>Grounded in ICCBS database ({collection})</em></small>"
         else:
-            ai_reply = f"🚨 <strong>Malformed Response:</strong> {str(response_data)}"
+            ai_reply = f"🚨 Malformed response: {str(response_data)}"
 
         return JsonResponse({"reply": ai_reply})
 
-    except requests.exceptions.Timeout:
-        return JsonResponse({
-            "reply": "⏳ <strong>Connection Interrupted:</strong> Compute pod timeout. Cluster under heavy load."
-        })  # Defaults to status=200
-
     except Exception as e:
-        logger.error(f"Error in route_ai_query: {str(e)}")
-        return JsonResponse({
-            "reply": f"⚠️ <strong>Internal Error:</strong> {str(e)}"
-        })  # Defaults to status=200
+        return JsonResponse({"reply": f"⚠️ Internal Error: {str(e)}"})
 
 # ICCBS ai-agent
 
@@ -340,7 +333,7 @@ from django.contrib.auth.decorators import login_required
 logger = logging.getLogger(__name__)
 
 # Direct Pod IP reachability (Matches working setup for Qwen/Mistral/DeepSeek)
-AGENTS_SVC_URL = "http://192.168.107.16:8080"
+AGENTS_SVC_URL = "http://192.168.224.143:8080"
 
 
 @login_required
@@ -348,7 +341,8 @@ AGENTS_SVC_URL = "http://192.168.107.16:8080"
 def route_agents_query(request):
     """
     Dedicated endpoint for the Agents microservice (agents-svc).
-    Routes requests directly to http://192.168.107.16:8080/query
+    Routes requests to http://192.168.224.143:8080/agents/chat
+    Supports file-based queries via /data/research-uploads/
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
@@ -356,7 +350,7 @@ def route_agents_query(request):
     # 1. Parse prompt from JSON body or FormData
     if request.content_type == "application/json":
         try:
-            body = json.loads(request.body.decode("utf-8"))
+            body        = json.loads(request.body.decode("utf-8"))
             user_prompt = body.get("prompt")
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON payload"}, status=400)
@@ -366,52 +360,94 @@ def route_agents_query(request):
     if not user_prompt:
         return JsonResponse({"error": "Prompt cannot be blank"}, status=400)
 
-    # 2. Prepare payload for the Agents microservice
+    # 2. Prepare payload for agents-svc /agents/chat endpoint
     payload = {
-        "prompt": user_prompt,
-        "user_id": request.user.username,
+        "message": user_prompt,   # agents-svc expects "message" not "prompt"
+        "history": [],            # stateless per request
     }
 
     # 3. Forward to agents-svc
     try:
         response = requests.post(
-            f"{AGENTS_SVC_URL}/query",
+            f"{AGENTS_SVC_URL}/agents/chat",   # ← correct endpoint
             json=payload,
-            timeout=120
+            timeout=120,
         )
 
         if response.status_code != 200:
             return JsonResponse({
-                "reply": f"⚠️ <strong>Agents Service Error:</strong> Code {response.status_code}. Response: {response.text}"
-            }, status=response.status_code)
+                "reply": (
+                    f"⚠️ <strong>Agents Service Error:</strong> "
+                    f"Code {response.status_code}. Response: {response.text}"
+                )
+            })
 
         data = response.json()
-        ai_reply = data.get("reply") or data.get("answer") or str(data)
 
-        # 4. Save session log
+        # 4. Extract answer — agents-svc returns "answer" not "reply"
+        ai_reply   = data.get("answer") or data.get("reply") or str(data)
+        agent_used = data.get("agent", "research")
+        model_used = data.get("model", "unknown")
+        sources    = data.get("sources", [])
+        ctx_hits   = data.get("context_hits", {})
+
+        # 5. Append agent metadata footer
+        footer_parts = [f"🤖 <em>Handled by <strong>{agent_used}</strong> agent"]
+
+        # Show file source if agent read a local file
+        local_file_sources = [s for s in sources if s.get("type") == "local_file"]
+        if local_file_sources:
+            fname = local_file_sources[0].get("filename", "")
+            footer_parts.append(f"· 📄 File: <code>{fname}</code>")
+
+        # Show RAG hit counts if RAG was used
+        elif ctx_hits:
+            hit_summary = ", ".join([f"{k}: {v}" for k, v in ctx_hits.items() if v])
+            if hit_summary:
+                footer_parts.append(f"· 📚 Context hits: {hit_summary}")
+
+        footer = (
+            "<br><br><small style='color:#64748b;'>"
+            + " ".join(footer_parts)
+            + f" · model: {model_used}</em></small>"
+        )
+
+        ai_reply += footer
+
+        # 6. Optional: persist session log
         try:
             AiResearchSession.objects.create(
                 student=request.user,
-                model_used="agents-service",
+                model_used=agent_used,
                 prompt_text=user_prompt,
                 response_text=ai_reply,
             )
         except Exception as db_err:
-            logger.error(f"Failed to log AiResearchSession: {db_err}")
+            logger.error("Failed to log AiResearchSession: %s", db_err)
 
         return JsonResponse({"reply": ai_reply})
 
     except requests.exceptions.Timeout:
         return JsonResponse({
-            "reply": "⚠️ <strong>Timeout:</strong> The agents service took longer than 120s to respond."
-        }, status=504)
+            "reply": (
+                "⏳ <strong>Agents Service Timeout</strong><br><br>"
+                "The agent took longer than 120s to respond. "
+                "Large files or complex queries may need more time. Please try again."
+            )
+        })
     except requests.exceptions.ConnectionError:
         return JsonResponse({
-            "reply": f"⚠️ <strong>Connection Error:</strong> Cannot reach agents service at <code>{AGENTS_SVC_URL}</code>. Check pod status."
-        }, status=502)
+            "reply": (
+                f"⚠️ <strong>Connection Error</strong><br><br>"
+                f"Cannot reach agents service at <code>{AGENTS_SVC_URL}</code>.<br>"
+                "Please contact the system administrator."
+            )
+        })
     except Exception as e:
-        return JsonResponse({"reply": f"⚠️ <strong>Error:</strong> {str(e)}"}, status=500)
-
+        logger.exception("Unexpected error in route_agents_query")
+        return JsonResponse({
+            "reply": f"⚠️ <strong>Unexpected Error:</strong> {str(e)}"
+        })
 
 @login_required
 @csrf_exempt
