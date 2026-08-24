@@ -781,11 +781,6 @@
                     <label for="dk_m_qwn" <span style="color: #4ade80; font-weight: 600;">🔍 Medical & Genomics</span></label>
                     <p>Clinical trial parsing, genomic sequence analysis, protein folding summaries, and cross-referencing medical literature.</p>
                 </div>
-                <!-- NEW: AI Agent Card -->
-                <div class="model-card active" data-model="agent">
-                <strong>🤖 ICCBS AI-Agent</strong>
-                <p>Local file analysis, research uploads, multi-step document extraction.</p>
-                </div>
             </div>
 
             <div class="dark-chat-container">
@@ -931,353 +926,1187 @@
 
 
 
-ICCBS AI-Agent 
 
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Research Data Upload — AI Copilot</title>
-    <style>
-      :root {
-        --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
-        --border: #30363d; --text: #e6edf3; --muted: #7d8590;
-        --blue: #388bfd; --green: #3fb950; --red: #f85149;
-        --amber: #d29922; --purple: #a371f7; --teal: #39d353;
-      }
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-             background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
-    
-      .container { max-width: 900px; margin: 0 auto; }
-    
-      /* ── Dropzone ── */
-      .dropzone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px 24px;
-                  text-align: center; background: var(--bg2); cursor: pointer;
-                  transition: border-color 0.2s, background 0.2s; margin-bottom: 20px; }
-      .dropzone:hover, .dropzone.dragover { border-color: var(--blue); background: rgba(56,139,253,0.05); }
-      .dropzone-icon { font-size: 32px; margin-bottom: 12px; }
-      .dropzone-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-      .dropzone-subtext { font-size: 13px; color: var(--muted); }
-      .browse-btn { margin-top: 14px; padding: 8px 16px; background: var(--bg3);
-                    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
-                    font-size: 13px; cursor: pointer; }
-      .browse-btn:hover { border-color: var(--muted); }
-    
-      /* ── Destination Box ── */
-      .dest-box { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-                  background: var(--bg2); border: 1px solid var(--border);
-                  border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
-      .dest-box code { font-family: monospace; font-size: 12px;
-                       background: var(--bg3); padding: 2px 8px; border-radius: 4px; color: var(--teal); }
-      .dest-box .muted { color: var(--muted); margin-left: auto; }
-    
-      /* ── Formats Grid ── */
-      .section-label { font-size: 11px; font-weight: 600; color: var(--muted);
-                       text-transform: uppercase; letter-spacing: 0.06em; margin: 24px 0 10px; }
-      .fmt-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-      .fmt { display: flex; align-items: center; gap: 6px; padding: 5px 10px;
-             border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid; }
-      .fmt-doc  { background: rgba(56,139,253,.12); color: #79c0ff; border-color: rgba(56,139,253,.3); }
-      .fmt-data { background: rgba(63,185,80,.12);  color: #7ee787; border-color: rgba(63,185,80,.3); }
-      .fmt-bio  { background: rgba(57,211,83,.1);   color: #39d353; border-color: rgba(57,211,83,.3); }
-      .fmt-chem { background: rgba(163,113,247,.12);color: #d2a8ff; border-color: rgba(163,113,247,.3); }
-      .fmt-img  { background: rgba(210,153,34,.12); color: #e3b341; border-color: rgba(210,153,34,.3); }
-    
-      /* ── File queue ── */
-      .file-queue { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-      .file-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-      .file-item { display: flex; align-items: center; gap: 12px; }
-      .file-ext { font-size: 10px; font-weight: 700; padding: 3px 7px;
-                  border-radius: 4px; letter-spacing: 0.04em; background: var(--bg3); color: var(--blue); }
-      .file-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .file-size { font-size: 12px; color: var(--muted); }
-      .file-status { font-size: 12px; min-width: 80px; text-align: right; text-transform: capitalize; }
-      .file-status.err { color: var(--red); }
-      .file-status.ok { color: var(--green); }
-      .file-del { font-size: 18px; color: var(--muted); cursor: pointer; line-height: 1; padding: 0 4px; }
-      .file-del:hover { color: var(--red); }
-      .progress { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-      .progress-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0%; transition: width 0.2s ease; }
-    
-      /* ── Size Limit ── */
-      .limit-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-                   background: var(--bg2); border: 1px solid var(--border);
-                   border-radius: 8px; font-size: 13px; color: var(--muted); margin: 14px 0; }
-    
-      /* ── Upload Button ── */
-      .upload-btn { width: 100%; margin-top: 16px; padding: 12px;
-                    font-size: 14px; font-weight: 500; border: none;
-                    border-radius: 8px; background: var(--blue); color: #fff;
-                    cursor: pointer; transition: opacity 0.2s; }
-      .upload-btn:hover:not(:disabled) { opacity: 0.85; }
-      .upload-btn:disabled { background: var(--bg3); color: var(--muted); cursor: not-allowed; }
-    
-      /* ── Uploaded Files List ── */
-      .uploaded-list { margin-top: 32px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
-      .uploaded-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
-      .uploaded-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
-      .uploaded-item:last-child { border-bottom: none; }
-      .uploaded-item .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .uploaded-item .fsize { color: var(--muted); font-size: 12px; }
-      .del-btn { font-size: 12px; color: var(--red); cursor: pointer; padding: 3px 8px; border: 1px solid var(--red); border-radius: 4px; opacity: 0.7; }
-      .del-btn:hover { opacity: 1; }
-      .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
-    
-      /* ── Toast ── */
-      .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px;
-               border-radius: 8px; font-size: 13px; font-weight: 500;
-               opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
-      .toast.show { opacity: 1; }
-      .toast.ok  { background: var(--green); color: #000; }
-      .toast.err { background: var(--red);   color: #fff; }
-    </style>
-    </head>
-    <body>
-    
-    <div class="container">
-      <!-- Dropzone -->
-      <div class="dropzone" id="dropzone">
-        <div class="dropzone-icon">📁</div>
-        <div class="dropzone-text">Drag & drop files here</div>
-        <div class="dropzone-subtext">or click to browse from your computer</div>
-        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
-        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff" style="display:none">
-      </div>
-    
-      <!-- Destination Box -->
-      <div class="dest-box">
-        <span>🖥️</span>
-        <span>Destination:</span>
-        <code>/data/research-uploads</code>
-        <span class="muted">Kubernetes HostPath · ai-gateway namespace</span>
-      </div>
-    
-      <!-- Size Limit -->
-      <div class="limit-row">
-        ℹ️ &nbsp;Maximum file size: <strong style="color:var(--text)">20 GB</strong> per file &nbsp;·&nbsp; Multiple files supported
-      </div>
-    
-      <!-- Supported Formats -->
-      <div class="section-label">Supported Formats</div>
-      <div class="fmt-grid">
-        <span class="fmt fmt-doc">📄 PDF — Papers</span>
-        <span class="fmt fmt-doc">📝 DOCX / TXT / MD</span>
-        <span class="fmt fmt-data">📊 CSV / XLSX / TSV</span>
-        <span class="fmt fmt-bio">🧬 FASTA / FASTQ / VCF / GFF / BED</span>
-        <span class="fmt fmt-chem">🧪 PDB / MOL / SDF / SMILES</span>
-        <span class="fmt fmt-img">🖼️ PNG / JPG / TIFF</span>
-      </div>
-    
-      <!-- Upload Queue -->
-      <div class="file-queue" id="fileQueue"></div>
-    
-      <button class="upload-btn" id="uploadBtn" disabled onclick="uploadAllFiles()">⬆️ Upload to Cluster</button>
-    
-      <!-- Cluster File Storage Table -->
-      <div class="uploaded-list">
-        <div class="uploaded-header">Uploaded Files on Cluster</div>
-        <div id="uploadedFilesContainer">
-          <div class="empty">Loading uploaded files...</div>
+{% load static %}
+
+<!-- ================================================================
+     ICCBS AI-AGENT
+     AUTONOMOUS RESEARCH WORKSPACE
+
+     IMPORTANT:
+     This component is completely isolated from the existing
+     Qwen / Mistral / DeepSeek AI-Copilot.
+
+     Existing AI-Copilot uses:
+         dark-*
+         dark-user-prompt
+         executeDarkClusterQuery()
+
+     AI-Agent uses ONLY:
+         agent-*
+         executeICCBSAgent()
+================================================================ -->
+
+<style>
+
+/* ================================================================
+   ICCBS AI-AGENT
+   ================================================================ */
+
+#iccbs-ai-agent {
+    --agent-bg: #070c14;
+    --agent-bg-2: #0a111d;
+    --agent-panel: #0d1726;
+    --agent-panel-2: #101c2e;
+    --agent-panel-3: #14243a;
+
+    --agent-border: rgba(148,163,184,.16);
+    --agent-border-hover: rgba(96,165,250,.45);
+
+    --agent-text: #e8eef7;
+    --agent-muted: #8d9bb0;
+    --agent-muted-2: #64748b;
+
+    --agent-blue: #3b82f6;
+    --agent-blue-light: #60a5fa;
+
+    --agent-purple: #a78bfa;
+    --agent-green: #34d399;
+    --agent-yellow: #fbbf24;
+    --agent-red: #f87171;
+
+    width: 100%;
+    min-height: 760px;
+    padding: 18px;
+    color: var(--agent-text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ================================================================
+   RESET
+================================================================ */
+
+#iccbs-ai-agent *,
+#iccbs-ai-agent *::before,
+#iccbs-ai-agent *::after {
+    box-sizing: border-box;
+}
+
+#iccbs-ai-agent button,
+#iccbs-ai-agent textarea,
+#iccbs-ai-agent input {
+    font-family: inherit;
+}
+
+#iccbs-ai-agent button {
+    cursor: pointer;
+}
+
+/* ================================================================
+   MAIN CONTAINER
+================================================================ */
+
+.agent-workspace {
+    width: 100%;
+    max-width: 1700px;
+    min-height: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--agent-border);
+    background:
+        radial-gradient(circle at 75% 15%, rgba(59,130,246,.07), transparent 35%),
+        radial-gradient(circle at 20% 80%, rgba(167,139,250,.045), transparent 35%),
+        var(--agent-bg);
+    box-shadow: 0 25px 70px rgba(0,0,0,.42);
+}
+
+/* ================================================================
+   HEADER
+================================================================ */
+
+.agent-header {
+    min-height: 92px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--agent-border);
+    background: rgba(9,17,29,.72);
+}
+
+.agent-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.agent-icon {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    font-size: 26px;
+    background: linear-gradient(145deg, rgba(139,92,246,.20), rgba(59,130,246,.08));
+    border: 1px solid rgba(167,139,250,.42);
+    box-shadow: 0 0 25px rgba(139,92,246,.08);
+}
+
+.agent-title {
+    font-size: 21px;
+    font-weight: 750;
+    letter-spacing: -.2px;
+}
+
+.agent-subtitle {
+    margin-top: 5px;
+    color: var(--agent-muted);
+    font-size: 12px;
+}
+
+.agent-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 13px;
+    border-radius: 8px;
+    color: var(--agent-green);
+    background: rgba(52,211,153,.05);
+    border: 1px solid rgba(52,211,153,.25);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .7px;
+}
+
+.agent-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--agent-green);
+    box-shadow: 0 0 10px rgba(52,211,153,.75);
+}
+
+/* ================================================================
+   AGENT BODY
+================================================================ */
+
+.agent-body {
+    flex: 1;
+    min-height: 600px;
+    display: grid;
+    grid-template-columns: 285px minmax(0,1fr);
+}
+
+/* ================================================================
+   LEFT AGENT CONTROL PANEL
+================================================================ */
+
+.agent-sidebar {
+    padding: 18px;
+    border-right: 1px solid var(--agent-border);
+    background: rgba(7,14,24,.48);
+}
+
+.agent-section-title {
+    margin-bottom: 10px;
+    color: var(--agent-muted-2);
+    font-size: 10px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+}
+
+/* ================================================================
+   WORKFLOW CARD
+================================================================ */
+
+.agent-workflow-card {
+    padding: 14px;
+    margin-bottom: 10px;
+    border-radius: 11px;
+    background: rgba(15,27,44,.68);
+    border: 1px solid var(--agent-border);
+}
+
+.agent-workflow-card.active {
+    border-color: rgba(96,165,250,.38);
+    background: linear-gradient(145deg, rgba(37,99,235,.10), rgba(15,27,44,.72));
+}
+
+.agent-workflow-card-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.agent-workflow-card-title span {
+    font-size: 17px;
+}
+
+.agent-workflow-card p {
+    margin-top: 7px;
+    color: var(--agent-muted);
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+/* ================================================================
+   AGENT CAPABILITIES
+================================================================ */
+
+.agent-capabilities {
+    margin-top: 22px;
+}
+
+.agent-capability {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 4px;
+    color: #aebacd;
+    font-size: 10px;
+}
+
+.agent-capability-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(96,165,250,.08);
+    color: var(--agent-blue-light);
+}
+
+/* ================================================================
+   FILE UPLOAD
+================================================================ */
+
+.agent-upload-zone {
+    margin-top: 20px;
+    padding: 15px 12px;
+    text-align: center;
+    border-radius: 10px;
+    border: 1px dashed rgba(148,163,184,.24);
+    background: rgba(8,15,25,.55);
+    transition: .2s ease;
+}
+
+.agent-upload-zone:hover,
+.agent-upload-zone.dragover {
+    border-color: rgba(96,165,250,.60);
+    background: rgba(59,130,246,.05);
+}
+
+.agent-upload-icon {
+    font-size: 21px;
+    margin-bottom: 7px;
+}
+
+.agent-upload-title {
+    font-size: 10px;
+    color: #cbd5e1;
+}
+
+.agent-upload-subtitle {
+    margin-top: 4px;
+    color: var(--agent-muted-2);
+    font-size: 9px;
+}
+
+.agent-browse-btn {
+    margin-top: 9px;
+    padding: 7px 11px;
+    border-radius: 7px;
+    color: #cbd5e1;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--agent-border);
+    font-size: 10px;
+}
+
+.agent-browse-btn:hover {
+    border-color: var(--agent-border-hover);
+    color: white;
+}
+
+/* ================================================================
+   MAIN CHAT AREA
+================================================================ */
+
+.agent-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ================================================================
+   AGENT TOOLBAR
+================================================================ */
+
+.agent-toolbar {
+    min-height: 55px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--agent-border);
+}
+
+.agent-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.agent-mode-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: 7px;
+    color: #c4b5fd;
+    background: rgba(167,139,250,.07);
+    border: 1px solid rgba(167,139,250,.18);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.agent-mode-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--agent-purple);
+}
+
+.agent-toolbar-right {
+    color: var(--agent-muted-2);
+    font-size: 9px;
+}
+
+/* ================================================================
+   CHAT / RESPONSE AREA
+================================================================ */
+
+.agent-chat {
+    flex: 1;
+    min-height: 430px;
+    overflow-y: auto;
+    padding: 25px;
+}
+
+.agent-welcome {
+    width: 100%;
+    max-width: 720px;
+    margin: 35px auto;
+    text-align: center;
+}
+
+/* ================================================================
+   ORB
+================================================================ */
+
+.agent-orb {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    margin: 0 auto 23px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.agent-orb-core {
+    position: relative;
+    z-index: 3;
+    width: 67px;
+    height: 67px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 31px;
+    background: radial-gradient(circle, rgba(139,92,246,.25), rgba(59,130,246,.04));
+    border: 1px solid rgba(167,139,250,.68);
+    box-shadow: 0 0 35px rgba(139,92,246,.13);
+}
+
+.agent-orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(167,139,250,.20);
+}
+
+.agent-orb-ring-one {
+    width: 88px;
+    height: 88px;
+}
+
+.agent-orb-ring-two {
+    width: 108px;
+    height: 108px;
+    border-color: rgba(96,165,250,.12);
+}
+
+.agent-welcome h2 {
+    font-size: 24px;
+    font-weight: 760;
+    background: linear-gradient(90deg, #c4b5fd, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.agent-welcome-description {
+    max-width: 620px;
+    margin: 11px auto 24px;
+    color: #9eacbf;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+/* ================================================================
+   QUICK ACTIONS
+================================================================ */
+
+.agent-quick-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.agent-quick-action {
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: #aebacd;
+    background: rgba(15,25,40,.65);
+    border: 1px solid var(--agent-border);
+    font-size: 10px;
+    transition: .2s ease;
+}
+
+.agent-quick-action:hover {
+    color: white;
+    border-color: var(--agent-border-hover);
+    transform: translateY(-1px);
+}
+
+/* ================================================================
+   AGENT RESPONSE MESSAGES & FORMATTING
+================================================================ */
+
+.agent-message {
+    max-width: 900px;
+    margin: 0 auto 18px;
+    padding: 15px 17px;
+    border-radius: 11px;
+    line-height: 1.65;
+    font-size: 12px;
+}
+
+.agent-message.user {
+    margin-left: auto;
+    margin-right: 0;
+    max-width: 720px;
+    color: #dbeafe;
+    background: rgba(37,99,235,.10);
+    border: 1px solid rgba(59,130,246,.22);
+}
+
+.agent-message.agent {
+    margin-left: 0;
+    color: #cbd5e1;
+    background: rgba(15,27,44,.72);
+    border: 1px solid var(--agent-border);
+}
+
+.agent-message-label {
+    margin-bottom: 7px;
+    color: var(--agent-blue-light);
+    font-size: 9px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.agent-message-content {
+    word-break: break-word;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.agent-message-content small {
+    display: block;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--agent-border);
+}
+
+.agent-message-content code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: var(--agent-blue-light);
+}
+
+/* ================================================================
+   AGENT EXECUTION TIMELINE
+================================================================ */
+
+.agent-execution {
+    display: none;
+    max-width: 900px;
+    margin: 0 auto 18px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(8,15,25,.68);
+    border: 1px solid var(--agent-border);
+}
+
+.agent-execution.active {
+    display: block;
+}
+
+.agent-execution-title {
+    margin-bottom: 10px;
+    color: #c4b5fd;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.agent-step {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 0;
+    color: var(--agent-muted);
+    font-size: 10px;
+}
+
+.agent-step-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(148,163,184,.08);
+}
+
+.agent-step.running {
+    color: var(--agent-blue-light);
+}
+
+.agent-step.running .agent-step-icon {
+    background: rgba(59,130,246,.12);
+}
+
+.agent-step.complete {
+    color: var(--agent-green);
+}
+
+.agent-step.complete .agent-step-icon {
+    background: rgba(52,211,153,.10);
+}
+
+/* ================================================================
+   INPUT AREA
+================================================================ */
+
+.agent-input-container {
+    padding: 13px;
+    border-top: 1px solid var(--agent-border);
+    background: rgba(9,17,29,.82);
+}
+
+.agent-input-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 9px;
+    padding: 9px;
+    border-radius: 12px;
+    background: rgba(17,29,45,.84);
+    border: 1px solid rgba(148,163,184,.16);
+    transition: .2s ease;
+}
+
+.agent-input-box:focus-within {
+    border-color: rgba(96,165,250,.50);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.06);
+}
+
+#agent-user-prompt {
+    flex: 1;
+    min-height: 48px;
+    max-height: 150px;
+    resize: none;
+    outline: none;
+    border: none;
+    padding: 12px 10px;
+    color: #e5edf7;
+    background: transparent;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+#agent-user-prompt::placeholder {
+    color: #718096;
+}
+
+.agent-send-btn {
+    min-width: 130px;
+    height: 46px;
+    padding: 0 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    box-shadow: 0 7px 20px rgba(37,99,235,.20);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.agent-send-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(37,99,235,.32);
+}
+
+.agent-send-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.agent-input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 7px;
+    padding: 0 3px;
+    color: var(--agent-muted-2);
+    font-size: 8px;
+}
+
+.agent-input-hint {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.agent-shortcut {
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #94a3b8;
+}
+
+/* ================================================================
+   FILE QUEUE
+================================================================ */
+
+.agent-file-list {
+    display: none;
+    margin-top: 8px;
+}
+
+.agent-file-list.has-files {
+    display: block;
+}
+
+.agent-file-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    margin-top: 4px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.025);
+    color: #aebacd;
+    font-size: 9px;
+}
+
+.agent-file-remove {
+    margin-left: auto;
+    color: var(--agent-red);
+    cursor: pointer;
+}
+
+/* ================================================================
+   RESPONSIVE
+================================================================ */
+
+@media (max-width: 900px) {
+    .agent-body {
+        grid-template-columns: 1fr;
+    }
+    .agent-sidebar {
+        display: none;
+    }
+}
+
+@media (max-width: 650px) {
+    #iccbs-ai-agent {
+        padding: 8px;
+    }
+    .agent-header {
+        padding: 16px;
+    }
+    .agent-status {
+        display: none;
+    }
+    .agent-chat {
+        padding: 15px;
+    }
+    .agent-send-btn {
+        min-width: 85px;
+    }
+}
+
+</style>
+
+
+<!-- ================================================================
+     ICCBS AI-AGENT HTML
+================================================================ -->
+
+<div id="iccbs-ai-agent">
+    <div class="agent-workspace">
+
+        <!-- ========================================================
+             HEADER
+        ========================================================= -->
+        <header class="agent-header">
+            <div class="agent-header-left">
+                <div class="agent-icon">
+                    🤖
+                </div>
+                <div>
+                    <div class="agent-title">
+                        ICCBS AI-Agent
+                    </div>
+                    <div class="agent-subtitle">
+                        Autonomous research, document analysis and multi-step workflow execution
+                    </div>
+                </div>
+            </div>
+
+            <div class="agent-status">
+                <span class="agent-status-dot"></span>
+                AGENT READY
+            </div>
+        </header>
+
+        <!-- ========================================================
+             BODY
+        ========================================================= -->
+        <div class="agent-body">
+
+            <!-- ====================================================
+                 LEFT SIDEBAR
+            ===================================================== -->
+            <aside class="agent-sidebar">
+                <div class="agent-section-title">
+                    Agent Workflow
+                </div>
+
+                <div class="agent-workflow-card active">
+                    <div class="agent-workflow-card-title">
+                        <span>🧠</span>
+                        Autonomous Research
+                    </div>
+                    <p>
+                        Plan the research task, analyze available
+                        information and execute multiple reasoning steps.
+                    </p>
+                </div>
+
+                <div class="agent-workflow-card">
+                    <div class="agent-workflow-card-title">
+                        <span>📄</span>
+                        Document Intelligence
+                    </div>
+                    <p>
+                        Read uploaded research documents and extract
+                        relevant information for the requested task.
+                    </p>
+                </div>
+
+                <div class="agent-workflow-card">
+                    <div class="agent-workflow-card-title">
+                        <span>🔬</span>
+                        Research Analysis
+                    </div>
+                    <p>
+                        Compare information, identify relationships,
+                        summarize findings and generate structured results.
+                    </p>
+                </div>
+
+                <div class="agent-workflow-card">
+                    <div class="agent-workflow-card-title">
+                        <span>⚙️</span>
+                        Multi-Step Execution
+                    </div>
+                    <p>
+                        Break complex requests into smaller tasks and
+                        execute them sequentially.
+                    </p>
+                </div>
+
+                <!-- CAPABILITIES -->
+                <div class="agent-capabilities">
+                    <div class="agent-section-title">
+                        Capabilities
+                    </div>
+
+                    <div class="agent-capability">
+                        <span class="agent-capability-icon">🔎</span>
+                        Research Planning
+                    </div>
+
+                    <div class="agent-capability">
+                        <span class="agent-capability-icon">📚</span>
+                        Document Retrieval
+                    </div>
+
+                    <div class="agent-capability">
+                        <span class="agent-capability-icon">🧩</span>
+                        Multi-Step Reasoning
+                    </div>
+
+                    <div class="agent-capability">
+                        <span class="agent-capability-icon">📊</span>
+                        Data Analysis
+                    </div>
+
+                    <div class="agent-capability">
+                        <span class="agent-capability-icon">📝</span>
+                        Structured Reporting
+                    </div>
+                </div>
+
+                <!-- UPLOAD -->
+                <div class="agent-upload-zone" id="agent-upload-zone">
+                    <div class="agent-upload-icon">📁</div>
+                    <div class="agent-upload-title">Add Research Files</div>
+                    <div class="agent-upload-subtitle">PDF, DOCX, TXT, CSV, XLSX and research data</div>
+
+                    <button
+                        type="button"
+                        class="agent-browse-btn"
+                        onclick="document.getElementById('agent-file-input').click()"
+                    >
+                        Browse Files
+                    </button>
+
+                    <input
+                        type="file"
+                        id="agent-file-input"
+                        multiple
+                        style="display:none;"
+                        onchange="handleAgentFileSelection(this)"
+                        accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff"
+                    >
+
+                    <div class="agent-file-list" id="agent-file-list"></div>
+                </div>
+            </aside>
+
+            <!-- ====================================================
+                 MAIN AGENT AREA
+            ===================================================== -->
+            <main class="agent-main">
+
+                <!-- TOOLBAR -->
+                <div class="agent-toolbar">
+                    <div class="agent-toolbar-left">
+                        <div class="agent-mode-badge">
+                            <span class="agent-mode-dot"></span>
+                            AUTONOMOUS AGENT
+                        </div>
+                    </div>
+                    <div class="agent-toolbar-right">
+                        Local ICCBS Research Environment
+                    </div>
+                </div>
+
+                <!-- CHAT CONTAINER -->
+                <div class="agent-chat" id="agent-chat-scroller">
+
+                    <!-- WELCOME SECTION -->
+                    <div class="agent-welcome" id="agent-welcome">
+                        <div class="agent-orb">
+                            <div class="agent-orb-core">🤖</div>
+                            <div class="agent-orb-ring agent-orb-ring-one"></div>
+                            <div class="agent-orb-ring agent-orb-ring-two"></div>
+                        </div>
+
+                        <h2>How can I assist your research today?</h2>
+
+                        <p class="agent-welcome-description">
+                            Give the ICCBS AI-Agent a complex research task.
+                            The Agent can plan the task, analyze uploaded
+                            documents, perform multi-step reasoning and
+                            return a structured research result.
+                        </p>
+
+                        <div class="agent-quick-actions">
+                            <button
+                                type="button"
+                                class="agent-quick-action"
+                                onclick="agentQuickPrompt('Analyze the uploaded research document and provide the key findings.')"
+                            >
+                                📄 Analyze Document
+                            </button>
+
+                            <button
+                                type="button"
+                                class="agent-quick-action"
+                                onclick="agentQuickPrompt('Compare the uploaded research documents and identify the major differences.')"
+                            >
+                                🔍 Compare Documents
+                            </button>
+
+                            <button
+                                type="button"
+                                class="agent-quick-action"
+                                onclick="agentQuickPrompt('Summarize the uploaded research material into a structured technical report.')"
+                            >
+                                📝 Create Report
+                            </button>
+
+                            <button
+                                type="button"
+                                class="agent-quick-action"
+                                onclick="agentQuickPrompt('Develop a step-by-step research analysis plan for the supplied material.')"
+                            >
+                                🧠 Research Plan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- EXECUTION TIMELINE -->
+                    <div class="agent-execution" id="agent-execution">
+                        <div class="agent-execution-title">Agent Execution</div>
+
+                        <div class="agent-step" id="agent-step-plan">
+                            <span class="agent-step-icon">1</span>
+                            Planning research task
+                        </div>
+
+                        <div class="agent-step" id="agent-step-context">
+                            <span class="agent-step-icon">2</span>
+                            Collecting relevant context
+                        </div>
+
+                        <div class="agent-step" id="agent-step-analysis">
+                            <span class="agent-step-icon">3</span>
+                            Performing analysis
+                        </div>
+
+                        <div class="agent-step" id="agent-step-result">
+                            <span class="agent-step-icon">4</span>
+                            Preparing research result
+                        </div>
+                    </div>
+
+                    <!-- RESPONSE AREA -->
+                    <div id="agent-response-area"></div>
+
+                </div>
+
+                <!-- INPUT AREA -->
+                <div class="agent-input-container">
+                    <div class="agent-input-box">
+                        {% csrf_token %}
+
+                        <textarea
+                            id="agent-user-prompt"
+                            placeholder="Ask the ICCBS AI-Agent to perform a research task... (Ctrl + Enter to send)"
+                            autocomplete="off"
+                            onkeydown="handleAgentKeyPress(event)"
+                        ></textarea>
+
+                        <button
+                            type="button"
+                            id="agent-send-button"
+                            class="agent-send-btn"
+                            onclick="executeICCBSAgent()"
+                        >
+                            <span>Send Prompt</span> ⚡
+                        </button>
+                    </div>
+
+                    <div class="agent-input-footer">
+                        <div class="agent-input-hint">
+                            <span>Autonomous research workflow</span>
+                        </div>
+                        <div>
+                            Press <kbd class="agent-shortcut">Ctrl</kbd> + <kbd class="agent-shortcut">Enter</kbd> to submit
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+
         </div>
-      </div>
     </div>
-    
-    <div class="toast" id="toast"></div>
-    
-    <script>
-    // Route through Django's lab_workflow application endpoint
-    const API_BASE = window.location.origin + "/lab_workflow";
-    
-    // Helper function to obtain CSRF Cookie for Django Requests
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
+</div>
+
+<!-- ================================================================
+     ICCBS AI-AGENT SCRIPTS
+================================================================ -->
+<script>
+
+/* Quick Action Filler */
+function agentQuickPrompt(text) {
+    const input = document.getElementById("agent-user-prompt");
+    if (input) {
+        input.value = text;
+        input.focus();
     }
-    
-    let selectedFiles = [];
-    
-    // Drag & drop handlers
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropzone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-      }, false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropzone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-      }, false);
-    });
-    
-    dropzone.addEventListener('drop', (e) => {
-      const files = Array.from(e.dataTransfer.files);
-      addFilesToQueue(files);
-    });
-    
-    fileInput.addEventListener('change', (e) => {
-      const files = Array.from(e.target.files);
-      addFilesToQueue(files);
-    });
-    
-    function addFilesToQueue(files) {
-      files.forEach(file => {
-        if (!selectedFiles.some(f => f.file.name === file.name)) {
-          selectedFiles.push({ file: file, status: 'ready', progress: 0 });
-        }
-      });
-      renderQueue();
+}
+
+/* Key Listener (Ctrl+Enter or Cmd+Enter) */
+function handleAgentKeyPress(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        executeICCBSAgent();
     }
-    
-    function renderQueue() {
-      const queueContainer = document.getElementById('fileQueue');
-      const uploadBtn = document.getElementById('uploadBtn');
-      queueContainer.innerHTML = '';
-    
-      if (selectedFiles.length === 0) {
-        uploadBtn.disabled = true;
-        return;
-      }
-    
-      uploadBtn.disabled = false;
-    
-      selectedFiles.forEach((item, index) => {
-        const ext = item.file.name.split('.').pop().toUpperCase();
-        const size = (item.file.size / (1024 * 1024)).toFixed(2) + ' MB';
-        
-        const card = document.createElement('div');
-        card.className = 'file-card';
-        card.innerHTML = `
-          <div class="file-item">
-            <span class="file-ext">${ext}</span>
-            <span class="file-name">${item.file.name}</span>
-            <span class="file-size">${size}</span>
-            <span class="file-status ${item.status === 'error' ? 'err' : (item.status === 'success' ? 'ok' : '')}">${item.status}</span>
-            <span class="file-del" onclick="removeFile(${index})">&times;</span>
-          </div>
-          <div class="progress">
-            <div class="progress-fill" style="width: ${item.progress}%"></div>
-          </div>
-        `;
-        queueContainer.appendChild(card);
-      });
-    }
-    
-    function removeFile(index) {
-      selectedFiles.splice(index, 1);
-      renderQueue();
-    }
-    
-    async function uploadAllFiles() {
-      const uploadBtn = document.getElementById('uploadBtn');
-      uploadBtn.disabled = true;
-    
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const item = selectedFiles[i];
-        if (item.status === 'success') continue;
-    
-        item.status = 'uploading';
-        renderQueue();
-    
-        const formData = new FormData();
-        formData.append('file', item.file);
-    
-        try {
-          const res = await fetch(`${API_BASE}/uploads`, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: formData
-          });
-    
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    
-          item.status = 'success';
-          item.progress = 100;
-          showToast(`Uploaded ${item.file.name}`, 'ok');
-        } catch (err) {
-          console.error(err);
-          item.status = 'error';
-          showToast(`Failed to upload ${item.file.name}`, 'err');
-        }
-        renderQueue();
-      }
-    
-      loadUploadedFiles();
-    }
-    
-    async function loadUploadedFiles() {
-      const container = document.getElementById('uploadedFilesContainer');
-      try {
-        const res = await fetch(`${API_BASE}/uploads`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        const data = await res.json();
-        if (!data.files || data.files.length === 0) {
-          container.innerHTML = '<div class="empty">No files stored on node directory yet.</div>';
-          return;
-        }
-    
-        container.innerHTML = data.files.map(f => `
-          <div class="uploaded-item">
-            <span class="fname">${f.filename}</span>
-            <span class="fsize">${f.size_human}</span>
-            <button class="del-btn" onclick="deleteFile('${f.filename}')">Delete</button>
-          </div>
-        `).join('');
-    
-      } catch (err) {
-        console.error("Failed to load file list:", err);
-        container.innerHTML = '<div class="empty">Could not load file list — check backend connection</div>';
-      }
-    }
-    
-    async function deleteFile(filename) {
-      if (!confirm(`Delete ${filename}?`)) return;
-    
-      try {
-        const res = await fetch(`${API_BASE}/uploads?filename=${encodeURIComponent(filename)}`, {
-          method: 'DELETE',
-          headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-          }
+}
+
+/* Display Selected Files in UI */
+function handleAgentFileSelection(input) {
+    const listContainer = document.getElementById("agent-file-list");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
+    if (input.files && input.files.length > 0) {
+        listContainer.classList.add("has-files");
+        Array.from(input.files).forEach((file) => {
+            const item = document.createElement("div");
+            item.className = "agent-file-item";
+            item.innerHTML = `
+                📄 <span>${escapeAgentHtml(file.name)}</span>
+            `;
+            listContainer.appendChild(item);
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    
-        showToast(`Deleted ${filename}`, 'ok');
-        loadUploadedFiles();
-      } catch (err) {
-        console.error(err);
-        showToast(`Failed to delete ${filename}`, 'err');
-      }
+    } else {
+        listContainer.classList.remove("has-files");
     }
-    
-    function showToast(msg, type) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.className = `toast show ${type}`;
-      setTimeout(() => toast.className = 'toast', 3000);
+}
+
+/* Helper: Escape Plaintext */
+function escapeAgentHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+    });
+}
+
+/* Helper: Parse Formatting to HTML */
+function formatAgentReply(text) {
+    if (!text) return "";
+    return text
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n-/g, '<br>• ')
+        .replace(/\n/g, '<br>');
+}
+
+/* Main Request Execution */
+async function executeICCBSAgent() {
+    const promptInput = document.getElementById("agent-user-prompt");
+    const sendButton = document.getElementById("agent-send-button");
+    const responseArea = document.getElementById("agent-response-area");
+    const welcomeSection = document.getElementById("agent-welcome");
+    const executionBox = document.getElementById("agent-execution");
+    const scroller = document.getElementById("agent-chat-scroller");
+
+    const userPrompt = promptInput.value.trim();
+    if (!userPrompt) return;
+
+    // 1. Hide Welcome Screen
+    if (welcomeSection) {
+        welcomeSection.style.display = "none";
     }
-    
-    // Initial fetch on page load
-    loadUploadedFiles();
-    </script>
-    </body>
-    </html>
+
+    // 2. Render User Message Box
+    const userMsgDiv = document.createElement("div");
+    userMsgDiv.className = "agent-message user";
+    userMsgDiv.innerHTML = `
+        <div class="agent-message-label">You</div>
+        <div class="agent-message-content">${escapeAgentHtml(userPrompt)}</div>
+    `;
+    responseArea.appendChild(userMsgDiv);
+
+    // Reset Input Box
+    promptInput.value = "";
+    sendButton.disabled = true;
+
+    // 3. Show Loading Execution Box & Agent Message Placeholder
+    if (executionBox) executionBox.classList.add("active");
+
+    const agentMsgDiv = document.createElement("div");
+    agentMsgDiv.className = "agent-message agent";
+    agentMsgDiv.innerHTML = `
+        <div class="agent-message-label">ICCBS AI-Agent</div>
+        <div class="agent-message-content">⏳ <em>Analyzing research data...</em></div>
+    `;
+    responseArea.appendChild(agentMsgDiv);
+
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+
+    // 4. Retrieve CSRF Token from Form
+    const csrfTokenEl = document.querySelector("#iccbs-ai-agent input[name='csrfmiddlewaretoken']");
+    const csrftoken = csrfTokenEl ? csrfTokenEl.value : "";
+
+    // 5. Send POST Request to backend endpoint
+    try {
+        const response = await fetch("{% url 'lab_workflow:route_agents_query' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": csrftoken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: new URLSearchParams({ "prompt": userPrompt })
+        });
+
+        const data = await response.json();
+        const contentDiv = agentMsgDiv.querySelector(".agent-message-content");
+
+        if (data.reply) {
+            // Render HTML directly so backend tags (<br>, <strong>, <code>, <small>) work properly
+            contentDiv.innerHTML = formatAgentReply(data.reply);
+        } else if (data.error) {
+            contentDiv.innerHTML = `⚠️ <strong>Error:</strong> ${escapeAgentHtml(data.error)}`;
+        } else {
+            contentDiv.innerHTML = `⚠️ <strong>Error:</strong> Unexpected response format from server.`;
+        }
+    } catch (err) {
+        const contentDiv = agentMsgDiv.querySelector(".agent-message-content");
+        contentDiv.innerHTML = `⚠️ <strong>Network Error:</strong> Unable to connect to backend endpoint.`;
+    } finally {
+        if (executionBox) executionBox.classList.remove("active");
+        sendButton.disabled = false;
+        if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    }
+}
+
+</script>
