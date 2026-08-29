@@ -317,23 +317,26 @@ def route_ai_query(request):
     except Exception as e:
         return JsonResponse({"reply": f"⚠️ Internal Error: {str(e)}"})
 
-# ICCBS ai-agent
 
 import json
 import logging
 import requests
 
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_protect
 
-# Ensure models are imported correctly (Adjust module path if necessary)
-# from .models import AiResearchSession
+# Attempt relative model import; fallback gracefully if not present
+try:
+    from .models import AiResearchSession
+except ImportError:
+    AiResearchSession = None
 
 logger = logging.getLogger(__name__)
 
-# Direct Pod IP reachability (Matches working setup for Qwen/Mistral/DeepSeek)
-AGENTS_SVC_URL = "http://192.168.224.143:8080"
+# ── Service Endpoints & Configurations ──────────────────────────────
+AGENTS_SVC_URL = getattr(settings, "AGENTS_SVC_URL", "http://192.168.224.143:8080")
 
 
 @login_required
@@ -342,7 +345,7 @@ def route_agents_query(request):
     """
     Dedicated endpoint for the Agents microservice (agents-svc).
     Routes requests to http://192.168.224.143:8080/agents/chat
-    Supports file-based queries via /data/research-uploads/
+    Supports file-based queries via /data/research-uploads/ inside K8s cluster
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
@@ -350,7 +353,7 @@ def route_agents_query(request):
     # 1. Parse prompt from JSON body or FormData
     if request.content_type == "application/json":
         try:
-            body        = json.loads(request.body.decode("utf-8"))
+            body = json.loads(request.body.decode("utf-8"))
             user_prompt = body.get("prompt")
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON payload"}, status=400)
@@ -362,14 +365,14 @@ def route_agents_query(request):
 
     # 2. Prepare payload for agents-svc /agents/chat endpoint
     payload = {
-        "message": user_prompt,   # agents-svc expects "message" not "prompt"
+        "message": user_prompt,   # agents-svc expects "message"
         "history": [],            # stateless per request
     }
 
-    # 3. Forward to agents-svc
+    # 3. Forward request to agents-svc
     try:
         response = requests.post(
-            f"{AGENTS_SVC_URL}/agents/chat",   # ← correct endpoint
+            f"{AGENTS_SVC_URL}/agents/chat",
             json=payload,
             timeout=120,
         )
@@ -384,12 +387,12 @@ def route_agents_query(request):
 
         data = response.json()
 
-        # 4. Extract answer — agents-svc returns "answer" not "reply"
-        ai_reply   = data.get("answer") or data.get("reply") or str(data)
+        # 4. Extract answer response payload
+        ai_reply = data.get("answer") or data.get("reply") or str(data)
         agent_used = data.get("agent", "research")
         model_used = data.get("model", "unknown")
-        sources    = data.get("sources", [])
-        ctx_hits   = data.get("context_hits", {})
+        sources = data.get("sources", [])
+        ctx_hits = data.get("context_hits", {})
 
         # 5. Append agent metadata footer
         footer_parts = [f"🤖 <em>Handled by <strong>{agent_used}</strong> agent"]
@@ -414,16 +417,17 @@ def route_agents_query(request):
 
         ai_reply += footer
 
-        # 6. Optional: persist session log
-        try:
-            AiResearchSession.objects.create(
-                student=request.user,
-                model_used=agent_used,
-                prompt_text=user_prompt,
-                response_text=ai_reply,
-            )
-        except Exception as db_err:
-            logger.error("Failed to log AiResearchSession: %s", db_err)
+        # 6. Optional: persist session log if model is available
+        if AiResearchSession:
+            try:
+                AiResearchSession.objects.create(
+                    student=request.user,
+                    model_used=agent_used,
+                    prompt_text=user_prompt,
+                    response_text=ai_reply,
+                )
+            except Exception as db_err:
+                logger.error("Failed to log AiResearchSession: %s", db_err)
 
         return JsonResponse({"reply": ai_reply})
 
@@ -449,17 +453,19 @@ def route_agents_query(request):
             "reply": f"⚠️ <strong>Unexpected Error:</strong> {str(e)}"
         })
 
+
 @login_required
-@csrf_exempt
+@csrf_protect
 def proxy_uploads(request):
     """
-    Handles POST (file upload), GET (list files), and DELETE operations 
-    by forwarding them directly to the Kubernetes agents service.
+    Proxies GET, POST (file uploads), and DELETE requests directly over HTTP 
+    from Django to the Kubernetes agents-service pod endpoint.
+    Target: http://192.168.224.143:8080/uploads
     """
     target_url = f"{AGENTS_SVC_URL}/uploads"
 
     try:
-        # --- GET: Retrieve list of uploaded files ---
+        # --- GET: Fetch list of uploaded files from K8s pod ---
         if request.method == "GET":
             resp = requests.get(target_url, timeout=10)
             return HttpResponse(
@@ -468,27 +474,31 @@ def proxy_uploads(request):
                 content_type="application/json"
             )
 
-        # --- POST: Process File Upload from JavaScript / Form ---
+        # --- POST: Forward file binary to K8s pod using the exact key 'file' ---
         elif request.method == "POST":
-            if not request.FILES:
+            # Extract file objects regardless of key used by frontend form
+            uploaded_file = None
+            if request.FILES:
+                # Grab the first uploaded file in the request payload
+                first_key = next(iter(request.FILES))
+                uploaded_file = request.FILES[first_key]
+
+            if not uploaded_file:
                 return JsonResponse({"error": "No files provided"}, status=400)
 
-            # Build file dict for multipart forwarding
-            files_to_forward = []
-            for field_name, file_obj in request.FILES.items():
-                file_obj.seek(0)  # Reset buffer position before reading
-                files_to_forward.append(
-                    ('file', (file_obj.name, file_obj.read(), file_obj.content_type))
-                )
+            # Force key to 'file' matching curl behavior: -F "file=@..."
+            files_payload = {
+                'file': (uploaded_file.name, uploaded_file.read(), uploaded_file.content_type)
+            }
 
-            resp = requests.post(target_url, files=files_to_forward, timeout=300)
+            resp = requests.post(target_url, files=files_payload, timeout=300)
             return HttpResponse(
                 resp.content, 
                 status=resp.status_code, 
                 content_type="application/json"
             )
 
-        # --- DELETE: Remove file from storage ---
+        # --- DELETE: Forward deletion request to K8s pod ---
         elif request.method == "DELETE":
             filename = request.GET.get('filename')
             if not filename:
@@ -510,7 +520,7 @@ def proxy_uploads(request):
     except Exception as e:
         logger.error(f"Error in proxy_uploads: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
-
+    
 # =========================
 # SOP GATE
 # =========================

@@ -928,30 +928,16 @@
 
 
 {% load static %}
-
-<!-- ================================================================
-     ICCBS AI-AGENT
-     AUTONOMOUS RESEARCH WORKSPACE
-
-     IMPORTANT:
-     This component is completely isolated from the existing
-     Qwen / Mistral / DeepSeek AI-Copilot.
-
-     Existing AI-Copilot uses:
-         dark-*
-         dark-user-prompt
-         executeDarkClusterQuery()
-
-     AI-Agent uses ONLY:
-         agent-*
-         executeICCBSAgent()
-================================================================ -->
+<script>
+    // Store CSRF token as Javascript state instead of using an input element
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
 
 <style>
 
-/* ================================================================
-   ICCBS AI-AGENT
-   ================================================================ */
+/* 
+   ICCBS AI-AGENT COMPONENT STYLES
+*/
 
 #iccbs-ai-agent {
     --agent-bg: #070c14;
@@ -982,9 +968,7 @@
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* ================================================================
-   RESET
-================================================================ */
+/* RESET */
 
 #iccbs-ai-agent *,
 #iccbs-ai-agent *::before,
@@ -993,8 +977,7 @@
 }
 
 #iccbs-ai-agent button,
-#iccbs-ai-agent textarea,
-#iccbs-ai-agent input {
+#iccbs-ai-agent textarea {
     font-family: inherit;
 }
 
@@ -1002,9 +985,7 @@
     cursor: pointer;
 }
 
-/* ================================================================
-   MAIN CONTAINER
-================================================================ */
+/* MAIN CONTAINER */
 
 .agent-workspace {
     width: 100%;
@@ -1023,9 +1004,7 @@
     box-shadow: 0 25px 70px rgba(0,0,0,.42);
 }
 
-/* ================================================================
-   HEADER
-================================================================ */
+/* HEADER */
 
 .agent-header {
     min-height: 92px;
@@ -1092,9 +1071,7 @@
     box-shadow: 0 0 10px rgba(52,211,153,.75);
 }
 
-/* ================================================================
-   AGENT BODY
-================================================================ */
+/* AGENT BODY */
 
 .agent-body {
     flex: 1;
@@ -1103,9 +1080,7 @@
     grid-template-columns: 285px minmax(0,1fr);
 }
 
-/* ================================================================
-   LEFT AGENT CONTROL PANEL
-================================================================ */
+/* LEFT CONTROL PANEL */
 
 .agent-sidebar {
     padding: 18px;
@@ -1122,9 +1097,7 @@
     letter-spacing: .09em;
 }
 
-/* ================================================================
-   WORKFLOW CARD
-================================================================ */
+/* WORKFLOW CARD */
 
 .agent-workflow-card {
     padding: 14px;
@@ -1158,9 +1131,7 @@
     line-height: 1.55;
 }
 
-/* ================================================================
-   AGENT CAPABILITIES
-================================================================ */
+/* AGENT CAPABILITIES */
 
 .agent-capabilities {
     margin-top: 22px;
@@ -1186,9 +1157,7 @@
     color: var(--agent-blue-light);
 }
 
-/* ================================================================
-   FILE UPLOAD
-================================================================ */
+/* FILE UPLOAD ZONE */
 
 .agent-upload-zone {
     margin-top: 20px;
@@ -1198,6 +1167,7 @@
     border: 1px dashed rgba(148,163,184,.24);
     background: rgba(8,15,25,.55);
     transition: .2s ease;
+    cursor: pointer;
 }
 
 .agent-upload-zone:hover,
@@ -1230,6 +1200,7 @@
     background: rgba(255,255,255,.04);
     border: 1px solid var(--agent-border);
     font-size: 10px;
+    display: inline-block;
 }
 
 .agent-browse-btn:hover {
@@ -1237,9 +1208,7 @@
     color: white;
 }
 
-/* ================================================================
-   MAIN CHAT AREA
-================================================================ */
+/* MAIN CHAT AREA */
 
 .agent-main {
     min-width: 0;
@@ -1247,9 +1216,7 @@
     flex-direction: column;
 }
 
-/* ================================================================
-   AGENT TOOLBAR
-================================================================ */
+/* AGENT TOOLBAR */
 
 .agent-toolbar {
     min-height: 55px;
@@ -1291,9 +1258,7 @@
     font-size: 9px;
 }
 
-/* ================================================================
-   CHAT / RESPONSE AREA
-================================================================ */
+/* CHAT AREA */
 
 .agent-chat {
     flex: 1;
@@ -1309,9 +1274,7 @@
     text-align: center;
 }
 
-/* ================================================================
-   ORB
-================================================================ */
+/* ORB GRAPHIC */
 
 .agent-orb {
     position: relative;
@@ -1372,9 +1335,7 @@
     line-height: 1.7;
 }
 
-/* ================================================================
-   QUICK ACTIONS
-================================================================ */
+/* QUICK ACTIONS */
 
 .agent-quick-actions {
     display: flex;
@@ -1399,9 +1360,7 @@
     transform: translateY(-1px);
 }
 
-/* ================================================================
-   AGENT RESPONSE MESSAGES & FORMATTING
-================================================================ */
+/* AGENT RESPONSE MESSAGES */
 
 .agent-message {
     max-width: 900px;
@@ -1458,9 +1417,7 @@
     color: var(--agent-blue-light);
 }
 
-/* ================================================================
-   AGENT EXECUTION TIMELINE
-================================================================ */
+/* EXECUTION TIMELINE */
 
 .agent-execution {
     display: none;
@@ -1520,9 +1477,7 @@
     background: rgba(52,211,153,.10);
 }
 
-/* ================================================================
-   INPUT AREA
-================================================================ */
+/* INPUT CONTAINER */
 
 .agent-input-container {
     padding: 13px;
@@ -1616,9 +1571,7 @@
     color: #94a3b8;
 }
 
-/* ================================================================
-   FILE QUEUE
-================================================================ */
+/* FILE QUEUE DISPLAY */
 
 .agent-file-list {
     display: none;
@@ -1632,6 +1585,7 @@
 .agent-file-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 7px;
     padding: 6px 8px;
     margin-top: 4px;
@@ -1641,15 +1595,12 @@
     font-size: 9px;
 }
 
-.agent-file-remove {
-    margin-left: auto;
-    color: var(--agent-red);
-    cursor: pointer;
+.agent-file-status {
+    font-size: 9px;
+    color: var(--agent-blue-light);
 }
 
-/* ================================================================
-   RESPONSIVE
-================================================================ */
+/* RESPONSIVE DESIGN */
 
 @media (max-width: 900px) {
     .agent-body {
@@ -1680,17 +1631,14 @@
 
 </style>
 
-
-<!-- ================================================================
-     ICCBS AI-AGENT HTML
-================================================================ -->
+<!-- 
+     ICCBS AI-AGENT HTML STRUCTURE
+-->
 
 <div id="iccbs-ai-agent">
     <div class="agent-workspace">
 
-        <!-- ========================================================
-             HEADER
-        ========================================================= -->
+        <!-- HEADER -->
         <header class="agent-header">
             <div class="agent-header-left">
                 <div class="agent-icon">
@@ -1712,14 +1660,10 @@
             </div>
         </header>
 
-        <!-- ========================================================
-             BODY
-        ========================================================= -->
+        <!-- BODY -->
         <div class="agent-body">
 
-            <!-- ====================================================
-                 LEFT SIDEBAR
-            ===================================================== -->
+            <!-- LEFT SIDEBAR -->
             <aside class="agent-sidebar">
                 <div class="agent-section-title">
                     Agent Workflow
@@ -1801,36 +1745,28 @@
                     </div>
                 </div>
 
-                <!-- UPLOAD -->
-                <div class="agent-upload-zone" id="agent-upload-zone">
+                <!-- UPLOAD ZONE (NO INPUT TAG USED) -->
+                <div 
+                    class="agent-upload-zone" 
+                    id="agent-upload-zone"
+                    tabindex="0"
+                    role="button"
+                    onclick="triggerFileSelector()"
+                    onkeydown="if(event.key==='Enter'||event.key===' ') triggerFileSelector();"
+                >
                     <div class="agent-upload-icon">📁</div>
                     <div class="agent-upload-title">Add Research Files</div>
                     <div class="agent-upload-subtitle">PDF, DOCX, TXT, CSV, XLSX and research data</div>
 
-                    <button
-                        type="button"
-                        class="agent-browse-btn"
-                        onclick="document.getElementById('agent-file-input').click()"
-                    >
+                    <div class="agent-browse-btn">
                         Browse Files
-                    </button>
-
-                    <input
-                        type="file"
-                        id="agent-file-input"
-                        multiple
-                        style="display:none;"
-                        onchange="handleAgentFileSelection(this)"
-                        accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff"
-                    >
+                    </div>
 
                     <div class="agent-file-list" id="agent-file-list"></div>
                 </div>
             </aside>
 
-            <!-- ====================================================
-                 MAIN AGENT AREA
-            ===================================================== -->
+            <!-- MAIN AGENT AREA -->
             <main class="agent-main">
 
                 <!-- TOOLBAR -->
@@ -1934,8 +1870,6 @@
                 <!-- INPUT AREA -->
                 <div class="agent-input-container">
                     <div class="agent-input-box">
-                        {% csrf_token %}
-
                         <textarea
                             id="agent-user-prompt"
                             placeholder="Ask the ICCBS AI-Agent to perform a research task... (Ctrl + Enter to send)"
@@ -1969,10 +1903,146 @@
     </div>
 </div>
 
-<!-- ================================================================
+<!-- 
      ICCBS AI-AGENT SCRIPTS
-================================================================ -->
+-->
 <script>
+
+/* Selected Files Store */
+let agentUploadedFiles = [];
+
+/* Helper: Get Cookie or CSRF State */
+function getAgentCsrfToken() {
+    if (window.CSRF_TOKEN) return window.CSRF_TOKEN;
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === ('csrftoken=')) {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue || "";
+}
+
+/* Custom File Selector Trigger via File Picker API */
+async function triggerFileSelector() {
+    try {
+        if ('showOpenFilePicker' in window) {
+            const fileHandles = await window.showOpenFilePicker({
+                multiple: true,
+                types: [{
+                    description: 'Research Documents and Data',
+                    accept: {
+                        'application/pdf': ['.pdf'],
+                        'application/msword': ['.doc'],
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                        'text/plain': ['.txt', '.md', '.csv', '.tsv', '.fasta', '.fastq'],
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                        'image/*': ['.png', '.jpg', '.jpeg', '.tiff']
+                    }
+                }]
+            });
+            agentUploadedFiles = [];
+            for (const handle of fileHandles) {
+                const file = await handle.getFile();
+                agentUploadedFiles.push(file);
+            }
+        } else {
+            // Fallback for browsers without File System Access API using dynamic element
+            await new Promise((resolve) => {
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.multiple = true;
+                picker.accept = ".pdf,.docx,.txt,.md,.csv,.xlsx,.tsv,.fasta,.fastq,.vcf,.gff,.bed,.pdb,.mol,.mol2,.sdf,.smi,.png,.jpg,.jpeg,.tiff";
+                picker.onchange = (e) => {
+                    agentUploadedFiles = Array.from(e.target.files);
+                    resolve();
+                };
+                picker.click();
+            });
+        }
+
+        renderSelectedFiles();
+        await uploadFilesToServer();
+
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.log("File selection cancelled or failed:", err);
+        }
+    }
+}
+
+/* Asynchronously upload agentUploadedFiles to Django proxy endpoint */
+async function uploadFilesToServer() {
+    if (agentUploadedFiles.length === 0) return;
+
+    const csrftoken = getAgentCsrfToken();
+    const listContainer = document.getElementById("agent-file-list");
+
+    for (let i = 0; i < agentUploadedFiles.length; i++) {
+        const file = agentUploadedFiles[i];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const statusSpan = document.getElementById(`file-status-${i}`);
+        if (statusSpan) statusSpan.textContent = "Uploading...";
+
+        try {
+            const response = await fetch("{% url 'lab_workflow:proxy_uploads' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            if (response.ok && !result.error) {
+                if (statusSpan) {
+                    statusSpan.textContent = "✓ Uploaded";
+                    statusSpan.style.color = "var(--agent-green)";
+                }
+            } else {
+                if (statusSpan) {
+                    statusSpan.textContent = "❌ Failed";
+                    statusSpan.style.color = "var(--agent-red)";
+                }
+            }
+        } catch (error) {
+            console.error(`Error uploading ${file.name}:`, error);
+            if (statusSpan) {
+                statusSpan.textContent = "❌ Error";
+                statusSpan.style.color = "var(--agent-red)";
+            }
+        }
+    }
+}
+
+/* Render Selected Files */
+function renderSelectedFiles() {
+    const listContainer = document.getElementById("agent-file-list");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
+    if (agentUploadedFiles.length > 0) {
+        listContainer.classList.add("has-files");
+        agentUploadedFiles.forEach((file, idx) => {
+            const item = document.createElement("div");
+            item.className = "agent-file-item";
+            item.innerHTML = `
+                <div>📄 <span>${escapeAgentHtml(file.name)}</span></div>
+                <span class="agent-file-status" id="file-status-${idx}">Pending...</span>
+            `;
+            listContainer.appendChild(item);
+        });
+    } else {
+        listContainer.classList.remove("has-files");
+    }
+}
 
 /* Quick Action Filler */
 function agentQuickPrompt(text) {
@@ -1988,27 +2058,6 @@ function handleAgentKeyPress(event) {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
         executeICCBSAgent();
-    }
-}
-
-/* Display Selected Files in UI */
-function handleAgentFileSelection(input) {
-    const listContainer = document.getElementById("agent-file-list");
-    if (!listContainer) return;
-
-    listContainer.innerHTML = "";
-    if (input.files && input.files.length > 0) {
-        listContainer.classList.add("has-files");
-        Array.from(input.files).forEach((file) => {
-            const item = document.createElement("div");
-            item.className = "agent-file-item";
-            item.innerHTML = `
-                📄 <span>${escapeAgentHtml(file.name)}</span>
-            `;
-            listContainer.appendChild(item);
-        });
-    } else {
-        listContainer.classList.remove("has-files");
     }
 }
 
@@ -2072,9 +2121,8 @@ async function executeICCBSAgent() {
 
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
 
-    // 4. Retrieve CSRF Token from Form
-    const csrfTokenEl = document.querySelector("#iccbs-ai-agent input[name='csrfmiddlewaretoken']");
-    const csrftoken = csrfTokenEl ? csrfTokenEl.value : "";
+    // 4. Retrieve CSRF Token from JS Context Variable
+    const csrftoken = getAgentCsrfToken();
 
     // 5. Send POST Request to backend endpoint
     try {
@@ -2092,7 +2140,6 @@ async function executeICCBSAgent() {
         const contentDiv = agentMsgDiv.querySelector(".agent-message-content");
 
         if (data.reply) {
-            // Render HTML directly so backend tags (<br>, <strong>, <code>, <small>) work properly
             contentDiv.innerHTML = formatAgentReply(data.reply);
         } else if (data.error) {
             contentDiv.innerHTML = `⚠️ <strong>Error:</strong> ${escapeAgentHtml(data.error)}`;
@@ -2108,5 +2155,35 @@ async function executeICCBSAgent() {
         if (scroller) scroller.scrollTop = scroller.scrollHeight;
     }
 }
+
+/* Drag and Drop Handling for Upload Zone */
+document.addEventListener("DOMContentLoaded", () => {
+    const dropZone = document.getElementById("agent-upload-zone");
+    if (!dropZone) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+        const dt = e.dataTransfer;
+        if (dt.files && dt.files.length > 0) {
+            agentUploadedFiles = Array.from(dt.files);
+            renderSelectedFiles();
+            await uploadFilesToServer();
+        }
+    });
+});
 
 </script>

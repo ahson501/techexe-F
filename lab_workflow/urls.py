@@ -24,5 +24,6 @@ urlpatterns = [
     # AI-agent
     path("api/ai-query/", views.route_ai_query, name="route_ai_query"),
     path("api/agents-query/", views.route_agents_query, name="route_agents_query"),
-    path('uploads/', views.proxy_uploads, name='proxy_uploads'),
+    # Update this path to match your API route prefix:
+    path("api/uploads/", views.proxy_uploads, name="proxy_uploads"),
 ]
