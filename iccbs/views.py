@@ -83,14 +83,17 @@ def login_view(request):
 
             messages.success(request, f'Welcome, {user.username}!')
 
-            # 🛠️ 1. NEW: IT SERVICES & ENGINE ACTORS REDIRECT
-            # Intercepts IT Engineers, Supervisors, HODs, or Directors and routes to the dashboard
+            # IT SERVICES & ENGINE ACTORS REDIRECT
             if user.groups.filter(name__in=['it_complains', 'hod']).exists():
                 return redirect('workflow_dashboard')  # Redirects to /workflow/dashboard/
 
-            # ✅ ROLE-BASED REDIRECT
+            # LAB WORKFLOW REDIRECT
             if user.groups.filter(name__in=['uplc_student', 'uplc_supervisor', 'nmr_student', 'nmr_supervisor', 'mediate_supervisor', 'final_approvar']).exists():
                 return redirect('lab_workflow:post_login_redirect')  # use URL name, not hardcoded path
+            
+            # LMS STUDENTS / INSTRUCTORS REDIRECT
+            if user.groups.filter(name__in=['lms_student', 'LMS', 'lms_instructor']).exists():
+                return redirect('course_list')  # Redirects to /LMS/courses/
 
             return redirect('iccbs:profile')
 

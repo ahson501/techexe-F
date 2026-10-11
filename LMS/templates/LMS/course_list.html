@@ -1,0 +1,29 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-8">Explore Courses</h1>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for course in courses %}
+      <div class="border rounded-lg shadow-sm overflow-hidden bg-white flex flex-col justify-between">
+        <div class="p-6">
+          <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+            {{ course.category.name|default:"General" }}
+          </span>
+          <h2 class="text-xl font-bold text-gray-900 mt-2 mb-2">{{ course.title }}</h2>
+          <p class="text-gray-600 text-sm line-clamp-3 mb-4">{{ course.description }}</p>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
+          <span class="text-sm text-gray-500">By {{ course.instructor.username }}</span>
+          <a href="{% url 'course_detail' course.slug %}" class="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-indigo-700">
+            View Course
+          </a>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-gray-500">No published courses available yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

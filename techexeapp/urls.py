@@ -39,6 +39,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('workflow/', include('core_workflow.urls')),
     path('it-services/', include('it_services.urls')),
+    path('LMS/', include('LMS.urls')),
     
 ] 
 

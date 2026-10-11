@@ -112,13 +112,13 @@ from .models import AiResearchSession
 logger = logging.getLogger(__name__)
 
 # ── Cluster Endpoints ──────────────────────────────────────────────
-BGE_EMBED_URL = "http://192.168.224.177:80/embed"        # embedding-bge pod IP
-QDRANT_URL    = "http://192.168.224.180:6333"            # qdrant pod IP
+BGE_EMBED_URL = "http://192.168.160.19:80/embed"        # embedding-bge pod IP
+QDRANT_URL    = "http://192.168.160.46:6333"            # qdrant pod IP
 
 LLM_CLUSTER_URLS = {
-    "qwen":     "http://192.168.224.155:8000/v1/chat/completions",
-    "mistral":  "http://192.168.166.187:8000/v1/chat/completions",
-    "deepseek": "http://192.168.160.15:8000/v1/chat/completions",
+    "qwen":     "http://192.168.224.182:8000/v1/chat/completions",
+    "mistral":  "http://192.168.166.148:8000/v1/chat/completions",
+    "deepseek": "http://192.168.160.44:8000/v1/chat/completions",
 }
 
 VLLM_MODEL_NAMES = {
@@ -336,7 +336,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # ── Service Endpoints & Configurations ──────────────────────────────
-AGENTS_SVC_URL = getattr(settings, "AGENTS_SVC_URL", "http://192.168.224.143:8080")
+AGENTS_SVC_URL = getattr(settings, "AGENTS_SVC_URL", "http://10.103.217.253:80")
 
 
 @login_required
@@ -344,7 +344,7 @@ AGENTS_SVC_URL = getattr(settings, "AGENTS_SVC_URL", "http://192.168.224.143:808
 def route_agents_query(request):
     """
     Dedicated endpoint for the Agents microservice (agents-svc).
-    Routes requests to http://192.168.224.143:8080/agents/chat
+    Routes requests to http://10.103.217.253:80/agents/chat
     Supports file-based queries via /data/research-uploads/ inside K8s cluster
     """
     if request.method != "POST":
@@ -460,7 +460,7 @@ def proxy_uploads(request):
     """
     Proxies GET, POST (file uploads), and DELETE requests directly over HTTP 
     from Django to the Kubernetes agents-service pod endpoint.
-    Target: http://192.168.224.143:8080/uploads
+    Target: http://10.103.217.253:80/uploads
     """
     target_url = f"{AGENTS_SVC_URL}/uploads"
 

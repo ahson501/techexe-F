@@ -1,0 +1,57 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-12">
+  <div class="bg-white border rounded-xl shadow-sm text-center p-8">
+    
+    {% if attempt.passed %}
+      <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+        ✓
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Quiz Passed!</h1>
+      <p class="text-gray-600 text-sm mt-1">Great job! You met the passing requirements.</p>
+    {% else %}
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+        ✕
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Quiz Failed</h1>
+      <p class="text-gray-600 text-sm mt-1">You did not reach the passing threshold this time.</p>
+    {% endif %}
+
+    <!-- Score Card -->
+    <div class="my-6 p-4 bg-gray-50 rounded-lg border flex justify-around items-center">
+      <div>
+        <span class="block text-xs text-gray-500 uppercase tracking-wider font-semibold">Your Score</span>
+        <span class="text-3xl font-extrabold {% if attempt.passed %}text-emerald-600{% else %}text-red-600{% endif %}">
+          {{ attempt.score_percentage }}%
+        </span>
+      </div>
+      <div class="border-r h-10 border-gray-200"></div>
+      <div>
+        <span class="block text-xs text-gray-500 uppercase tracking-wider font-semibold">Passing Score</span>
+        <span class="text-3xl font-extrabold text-gray-700">
+          {{ attempt.quiz.pass_mark_percentage }}%
+        </span>
+      </div>
+    </div>
+
+    <div class="text-xs text-gray-500 mb-6">
+      Attempt #{{ attempt.attempt_number }} • Submitted on {{ attempt.created_at|date:"M d, Y H:i" }}
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3 justify-center">
+      <a href="{% url 'course_detail' attempt.quiz.module.course.slug %}" class="bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded hover:bg-gray-200">
+        Back to Course
+      </a>
+      
+      {% if not attempt.passed and attempt.quiz.max_attempts > attempt.attempt_number %}
+        <a href="{% url 'quiz_take' attempt.quiz.pk %}" class="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-indigo-700">
+          Retake Quiz
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

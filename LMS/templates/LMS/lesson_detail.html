@@ -1,0 +1,209 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+  
+  <!-- Sidebar Navigation -->
+  <aside class="w-80 border-r bg-gray-50 overflow-y-auto">
+    <div class="p-4 border-b">
+      <a href="{% url 'course_detail' course.slug %}" class="text-xs text-indigo-600 font-semibold">← Back to Course</a>
+      <h2 class="font-bold text-gray-900 text-lg mt-1 truncate">{{ course.title }}</h2>
+    </div>
+    
+    <nav class="p-2 space-y-4">
+      {% for module in modules %}
+        <div>
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 px-3 mb-2">
+            Module {{ module.order }}: {{ module.title }}
+          </h3>
+          <ul class="space-y-1">
+            {% for item in module.lessons.all %}
+              <li>
+                <a href="{% url 'lesson_detail' item.pk %}" 
+                   class="flex items-center justify-between px-3 py-2 text-sm rounded-md font-medium
+                          {% if item.pk == lesson.pk %} bg-indigo-100 text-indigo-700 {% else %} text-gray-700 hover:bg-gray-200 {% endif %}">
+                  <span class="truncate">{{ item.order }}. {{ item.title }}</span>
+                  {% if item.pk in completed_lesson_ids %}
+                    <span class="text-xs text-emerald-600 font-bold">✓</span>
+                  {% endif %}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 overflow-y-auto p-8 bg-white">
+    <div class="max-w-3xl mx-auto">
+      <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ lesson.title }}</h1>
+
+      <!-- Media Content Switcher -->
+      {% if lesson.content_type == 'VIDEO' and lesson.video_url %}
+        <div class="aspect-video bg-black rounded-lg overflow-hidden mb-6">
+          <iframe class="w-full h-full" src="{{ lesson.video_url }}" frameborder="0" allowfullscreen></iframe>
+        </div>
+      {% elif lesson.content_type == 'PDF' and lesson.pdf_file %}
+        <div class="mb-6 p-4 border rounded bg-gray-50 flex items-center justify-between">
+          <span class="text-sm font-medium">Downloadable Resource</span>
+          <a href="{{ lesson.pdf_file.url }}" download class="bg-indigo-600 text-white text-xs px-3 py-2 rounded">Download PDF</a>
+        </div>
+      {% endif %}
+
+      <!-- Text / Transcript Content -->
+      {% if lesson.body_text %}
+        <div class="prose max-w-none text-gray-800 leading-relaxed mb-8">
+          {{ lesson.body_text|linebreaks }}
+        </div>
+      {% endif %}
+
+      <!-- Progress Actions -->
+      <div class="border-t pt-6 flex justify-between items-center">
+        <form action="{% url 'toggle_lesson_complete' lesson.pk %}" method="POST">
+          {% csrf_token %}
+          <button type="submit" 
+                  class="px-5 py-2.5 rounded-md font-medium text-sm transition-colors
+                         {% if is_completed %} bg-gray-200 text-gray-700 hover:bg-gray-300 {% else %} bg-emerald-600 text-white hover:bg-emerald-700 {% endif %}">
+            {% if is_completed %} Mark as Incomplete {% else %} Mark as Completed ✓ {% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Floating AI Chat Trigger Button -->
+<button id="ai-chat-toggle" 
+        class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105 z-50">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+  </svg>
+</button>
+
+<!-- Slide-over AI Assistant Panel -->
+<aside id="ai-chat-panel" 
+       class="fixed top-0 right-0 h-full w-96 bg-white border-l shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+  
+  <!-- Panel Header -->
+  <div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
+    <div class="flex items-center space-x-2">
+      <span class="text-xl">🤖</span>
+      <div>
+        <h3 class="font-bold text-sm">AI Teaching Assistant</h3>
+        <p class="text-xs text-indigo-200">Ask anything about this lesson</p>
+      </div>
+    </div>
+    <button id="ai-chat-close" class="text-white hover:text-indigo-200 font-bold text-xl">&times;</button>
+  </div>
+
+  <!-- Chat History Container -->
+  <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50 text-sm">
+    <div class="bg-indigo-100 text-indigo-900 p-3 rounded-lg max-w-[85%] self-start">
+      Hi {{ request.user.first_name|default:request.user.username }}! How can I help you understand <strong>{{ lesson.title }}</strong>?
+    </div>
+  </div>
+
+  <!-- Chat Input Form -->
+  <form id="ai-chat-form" class="p-3 border-t bg-white flex gap-2">
+    {% csrf_token %}
+    <input type="text" id="ai-chat-input" 
+           placeholder="Ask a question..." 
+           class="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+           required />
+    <button type="submit" 
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+      Send
+    </button>
+  </form>
+</aside>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("ai-chat-toggle");
+    const closeBtn = document.getElementById("ai-chat-close");
+    const panel = document.getElementById("ai-chat-panel");
+    const form = document.getElementById("ai-chat-form");
+    const input = document.getElementById("ai-chat-input");
+    const messagesContainer = document.getElementById("ai-chat-messages");
+
+    const lessonId = "{{ lesson.pk }}";
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Toggle Drawer Open/Close
+    if (toggleBtn && panel) {
+      toggleBtn.addEventListener("click", () => panel.classList.remove("translate-x-full"));
+    }
+    if (closeBtn && panel) {
+      closeBtn.addEventListener("click", () => panel.classList.add("translate-x-full"));
+    }
+
+    // Append Message to UI
+    function appendMessage(text, isUser = false) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = isUser 
+        ? "bg-indigo-600 text-white p-3 rounded-lg max-w-[85%] ml-auto text-sm" 
+        : "bg-white border text-gray-800 p-3 rounded-lg max-w-[85%] self-start text-sm shadow-sm";
+      
+      if (isUser) {
+        msgDiv.innerText = text; // Safe text for user inputs
+      } else {
+        msgDiv.innerHTML = text; // Render HTML tags (bold, line breaks, metadata) for AI replies
+      }
+
+      messagesContainer.appendChild(msgDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Handle Submit
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const userMsg = input.value.trim();
+        if (!userMsg) return;
+
+        appendMessage(userMsg, true);
+        input.value = "";
+
+        // Loading Indicator
+        const loadingDiv = document.createElement("div");
+        loadingDiv.className = "text-gray-400 text-xs italic p-2";
+        loadingDiv.innerText = "AI is thinking...";
+        messagesContainer.appendChild(loadingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        try {
+          const response = await fetch("{% url 'ai_assistant_api' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({
+              message: userMsg,
+              lesson_id: lessonId,
+              model_type: "qwen"
+            }),
+          });
+
+          const data = await response.json();
+          messagesContainer.removeChild(loadingDiv);
+
+          if (data.reply) {
+            appendMessage(data.reply, false);
+          } else {
+            appendMessage("Sorry, I encountered an error. Please try again.", false);
+          }
+        } catch (err) {
+          if (messagesContainer.contains(loadingDiv)) {
+            messagesContainer.removeChild(loadingDiv);
+          }
+          appendMessage("Network error. Please check your connection.", false);
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

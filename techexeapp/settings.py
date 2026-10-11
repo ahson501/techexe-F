@@ -60,7 +60,8 @@ INSTALLED_APPS = [
     'iccbs',
     'lab_workflow',
     'core_workflow',
-    'it_services'       
+    'it_services',
+    'LMS'       
 ]
 
 MIDDLEWARE = [
@@ -190,7 +191,16 @@ CKEDITOR_CONFIGS = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #LOGIN_REDIRECT_URL = '/'  # Redirect after successful login
-LOGIN_REDIRECT_URL = 'lab_workflow:post_login_redirect'
-LOGOUT_REDIRECT_URL = '/iccbs/login'  # Redirect after logout
+#LOGIN_REDIRECT_URL = 'lab_workflow:post_login_redirect'
+#LOGOUT_REDIRECT_URL = '/iccbs/login'  # Redirect after logout
+
+# settings.py
+
+# Unauthenticated users attempting to access protected pages get redirected here
+LOGIN_URL = '/iccbs/login/'
+# Fallback default ONLY IF no role group matches in login_view
+LOGIN_REDIRECT_URL = '/iccbs/profile/'
+# Central logout destination (Use path string to prevent reverse lookup errors)
+LOGOUT_REDIRECT_URL = '/iccbs/login/'
 
 

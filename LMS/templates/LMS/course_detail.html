@@ -1,0 +1,60 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <div class="mb-8">
+    <h1 class="text-4xl font-extrabold text-gray-900 mb-4">{{ course.title }}</h1>
+    <p class="text-lg text-gray-600 mb-6">{{ course.description }}</p>
+    
+    {% if not is_enrolled %}
+      <button class="bg-emerald-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-emerald-700">
+        Enroll Now (${{ course.price }})
+      </button>
+    {% else %}
+      <span class="inline-block bg-green-100 text-green-800 font-semibold px-4 py-2 rounded-md">
+        ✓ Enrolled
+      </span>
+    {% endif %}
+  </div>
+
+  <h2 class="text-2xl font-bold text-gray-900 mb-4">Course Curriculum</h2>
+  <div class="space-y-4">
+    {% for module in modules %}
+      <div class="border rounded-lg bg-white overflow-hidden">
+        <div class="bg-gray-50 px-6 py-3 border-b font-semibold text-gray-800">
+          Module {{ module.order }}: {{ module.title }}
+        </div>
+        <ul class="divide-y divide-gray-100">
+          {% for lesson in module.lessons.all %}
+            <li class="px-6 py-3 flex items-center justify-between hover:bg-gray-50">
+              <span class="text-sm font-medium text-gray-700">{{ lesson.order }}. {{ lesson.title }}</span>
+              {% if is_enrolled or lesson.is_preview %}
+                <a href="{% url 'lesson_detail' lesson.pk %}" class="text-xs text-indigo-600 hover:underline">
+                  Start Lesson →
+                </a>
+              {% else %}
+                <span class="text-xs text-gray-400">Locked 🔒</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+<!-- course_detail.html -->
+{% if is_enrolled and certificate %}
+  <div class="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+    <div>
+      <h3 class="font-bold text-emerald-900">🎉 Congratulations! You completed this course.</h3>
+      <p class="text-xs text-emerald-700">Your official certificate of completion is ready.</p>
+    </div>
+    <a href="{% url 'download_certificate' certificate.id %}" 
+       class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm px-4 py-2 rounded-lg shadow">
+      🎓 Download Certificate (PDF)
+    </a>
+  </div>
+{% endif %}
+

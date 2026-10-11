@@ -1,0 +1,65 @@
+{% extends "LMS/base.html" %}
+
+<!-- templates/lms/certificate_view.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Certificate - {{ course.title }}</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #f8fafc;
+    }
+    .cert-card {
+      border: 10px solid #2563eb;
+      background: white;
+      padding: 60px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    /* ── MEDIA PRINT RULES ── */
+    @media print {
+      /* Hide all website navigation, headers, footers, and print buttons when printing */
+      .no-print, nav, header, footer {
+        display: none !important;
+      }
+      body {
+        background: white;
+        padding: 0;
+      }
+      .cert-card {
+        border: 8px solid #2563eb;
+        box-shadow: none;
+      }
+      @page {
+        size: landscape; /* Force printer dialog to landscape mode */
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden during print -->
+  <div class="no-print" style="margin-bottom: 20px;">
+    <button onclick="window.print()" style="background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+      🖨️ Print / Save as PDF
+    </button>
+  </div>
+
+  <!-- Printed Certificate Body -->
+  <div class="cert-card">
+    <h1 style="color: #1e3a8a;">CERTIFICATE OF COMPLETION</h1>
+    <p>This is presented to</p>
+    <h2 style="font-size: 32px;">{{ student.get_full_name|default:student.username }}</h2>
+    <p>for completing <strong>{{ course.title }}</strong></p>
+    <p><small>Code: {{ certificate.certificate_code }}</small></p>
+  </div>
+
+</body>
+</html>
