@@ -11,7 +11,10 @@
 <body>
 
     <header>
-        <h1>Welcome ICCBS Login Portal</h1>
+        <style>
+            .d-none { display: none; }
+          </style><h1 class="d-none">Welcome ICCBS Login Portal</h1>
+        <h1>Welcome to Syscon Login Portal</h1>
         <nav>
             <ul>
                 <li><a href="{% url 'iccbs:iccbs_login' %}">Login</a></li>
@@ -21,8 +24,8 @@
     </header>
 
     <div class="portal-hero-wrapper">
-        <img src="{% static 'images/services/LEJ.jpeg' %}" alt="ICCBS Portal Backdrop" class="portal-hero-bg">
-        
+        <img src="{% static 'images/services/LEJ.jpeg' %}" alt="ICCBS Portal Backdrop" class="portal-hero-bg d-none">
+        <img src="{% static 'images/services/SySlogin.png' %}" alt="ICCBS Portal Backdrop" class="portal-hero-bg">
         <main>
             {% block content %}
             {% endblock %}
@@ -30,7 +33,8 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 ICCBS</p>
+        <p class="d-none">&copy; 2026 ICCBS</p>
+        <p>&copy; 2026 SysconTechnologies</p>
     </footer>
 
 </body>

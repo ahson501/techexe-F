@@ -10,8 +10,14 @@
 </head>
 <body class="login-page">
     <div class="login-container">
-        <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="User Icon">
-        <h2>ICCBS Login</h2>
+        <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="User Icon" class="d-none">
+        <img src="{% static 'images/services/SySLogo.png' %}" alt="User Icon">
+        <style>
+            .d-none { display: none; }
+          </style>
+          
+          <h2 class="d-none">ICCBS Login</h2>
+        <h2>SyS Login</h2>
         <form method="POST">
             {% csrf_token %}
             <input type="text" name="username" placeholder="Username..." required>

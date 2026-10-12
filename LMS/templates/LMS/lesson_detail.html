@@ -12,7 +12,7 @@
     
     <nav class="p-2 space-y-4">
       {% for module in modules %}
-        <div>
+        <div class="mb-4">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 px-3 mb-2">
             Module {{ module.order }}: {{ module.title }}
           </h3>
@@ -29,9 +29,42 @@
                 </a>
               </li>
             {% endfor %}
+            
+            <!-- 📝 MODULE QUIZZES LOOP -->
+            {% for q in module.quizzes.all %}
+              <li>
+                <a href="{% url 'quiz_take' q.id %}" 
+                   class="flex items-center gap-2 px-3 py-2 text-sm rounded-md font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 mt-1">
+                  <span>📝</span>
+                  <span class="truncate">Quiz: {{ q.title }}</span>
+                </a>
+              </li>
+            {% empty %}
+              {% if module.quiz %}
+                <li>
+                  <a href="{% url 'quiz_take' module.quiz.id %}" 
+                     class="flex items-center gap-2 px-3 py-2 text-sm rounded-md font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 mt-1">
+                    <span>📝</span>
+                    <span class="truncate">Quiz: {{ module.quiz.title }}</span>
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
           </ul>
         </div>
       {% endfor %}
+
+      <!-- 🏆 FINAL COURSE QUIZ LINK -->
+      {% if course.final_quiz %}
+        <div class="pt-2 border-t">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 px-3 mb-2">Assessment</h3>
+          <a href="{% url 'quiz_take' course.final_quiz.id %}" 
+             class="flex items-center gap-2 px-3 py-2 text-sm rounded-md font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200">
+            <span>🏆</span>
+            <span class="truncate">Final Course Quiz</span>
+          </a>
+        </div>
+      {% endif %}
     </nav>
   </aside>
 
@@ -55,11 +88,11 @@
       <!-- Text / Transcript Content -->
       {% if lesson.body_text %}
         <div class="prose max-w-none text-gray-800 leading-relaxed mb-8">
-          {{ lesson.body_text|linebreaks }}
+          {{ lesson.body_text|safe }}
         </div>
       {% endif %}
 
-      <!-- Progress Actions -->
+      <!-- Progress Actions & Quiz Trigger -->
       <div class="border-t pt-6 flex justify-between items-center">
         <form action="{% url 'toggle_lesson_complete' lesson.pk %}" method="POST">
           {% csrf_token %}
@@ -69,6 +102,21 @@
             {% if is_completed %} Mark as Incomplete {% else %} Mark as Completed ✓ {% endif %}
           </button>
         </form>
+
+        <!-- 📝 MODULE QUIZ TRIGGER -->
+        {% for q in lesson.module.quizzes.all %}
+          <a href="{% url 'quiz_take' q.id %}" 
+             class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-md font-medium text-sm transition-colors flex items-center gap-2">
+            <span>📝</span> Take Quiz: {{ q.title }}
+          </a>
+        {% empty %}
+          {% if lesson.module.quiz %}
+            <a href="{% url 'quiz_take' lesson.module.quiz.id %}" 
+               class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-md font-medium text-sm transition-colors flex items-center gap-2">
+              <span>📝</span> Take Module Quiz
+            </a>
+          {% endif %}
+        {% endfor %}
       </div>
     </div>
   </main>
@@ -132,7 +180,6 @@
     const lessonId = "{{ lesson.pk }}";
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    // Toggle Drawer Open/Close
     if (toggleBtn && panel) {
       toggleBtn.addEventListener("click", () => panel.classList.remove("translate-x-full"));
     }
@@ -140,7 +187,6 @@
       closeBtn.addEventListener("click", () => panel.classList.add("translate-x-full"));
     }
 
-    // Append Message to UI
     function appendMessage(text, isUser = false) {
       const msgDiv = document.createElement("div");
       msgDiv.className = isUser 
@@ -148,16 +194,15 @@
         : "bg-white border text-gray-800 p-3 rounded-lg max-w-[85%] self-start text-sm shadow-sm";
       
       if (isUser) {
-        msgDiv.innerText = text; // Safe text for user inputs
+        msgDiv.innerText = text;
       } else {
-        msgDiv.innerHTML = text; // Render HTML tags (bold, line breaks, metadata) for AI replies
+        msgDiv.innerHTML = text; // Safely renders AI HTML tags (bold, badge)
       }
 
       messagesContainer.appendChild(msgDiv);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // Handle Submit
     if (form) {
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -167,7 +212,6 @@
         appendMessage(userMsg, true);
         input.value = "";
 
-        // Loading Indicator
         const loadingDiv = document.createElement("div");
         loadingDiv.className = "text-gray-400 text-xs italic p-2";
         loadingDiv.innerText = "AI is thinking...";

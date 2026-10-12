@@ -4,6 +4,7 @@ from django.conf import UserSettingsHolder
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
+from ckeditor_uploader.fields import RichTextUploadingField # Supports image/file uploads inline
 
 User = get_user_model()
 
@@ -47,7 +48,7 @@ class Course(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
-    description = models.TextField()
+    description = RichTextUploadingField(blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='courses')
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='courses_teaching')
     
@@ -72,7 +73,7 @@ class Course(TimeStampedModel):
 class Module(TimeStampedModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    description = RichTextUploadingField(blank=True, null=True)
     order = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -93,8 +94,9 @@ class Lesson(TimeStampedModel):
     title = models.CharField(max_length=200)
     content_type = models.CharField(max_length=10, choices=ContentType.choices, default=ContentType.TEXT)
     
+
     # Content Fields
-    body_text = models.TextField(blank=True, help_text="Used for text articles or lecture transcripts.")
+    body_text = RichTextUploadingField(blank=True, null=True, help_text="Used for text articles or lecture transcripts.")
     video_url = models.URLField(blank=True, help_text="HLS stream URL or Cloudflare/AWS video URL.")
     pdf_file = models.FileField(upload_to='course_pdfs/', blank=True, null=True)
     
@@ -218,3 +220,41 @@ class Certificate(TimeStampedModel):
 
     def __str__(self):
         return f"Certificate for {self.student.username} - {self.course.title}"
+    
+ 
+# ==========================================
+# 5. LIVE SESSIONS
+# ==========================================
+
+from django.utils import timezone
+from .models import Course
+
+class LiveSession(models.Model):
+    PLATFORM_CHOICES = [
+        ('ZOOM', 'Zoom Meeting'),
+        ('JITSI', 'Jitsi Meet (Self-Hosted)'),
+        ('BBB', 'BigBlueButton'),
+    ]
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='live_sessions')
+    title = models.CharField(max_length=255)
+    description = RichTextUploadingField(blank=True, null=True)
+    platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES, default='JITSI')
+    
+    # Scheduling
+    start_time = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(default=60)
+    
+    # Meeting URLs & Access
+    join_url = models.URLField(max_length=500, help_text="Instructor or Student Join Link")
+    recording_url = models.URLField(max_length=500, blank=True, null=True, help_text="Link to session recording")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_live(self):
+        now = timezone.now()
+        end_time = self.start_time + timezone.timedelta(minutes=self.duration_minutes)
+        return self.start_time <= now <= end_time
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"

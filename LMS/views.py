@@ -1,19 +1,18 @@
 import json
 import logging
 import requests
+import uuid
+
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, View
-
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
-from .models import Certificate
 
 from .forms import QuizTakeForm
 from .models import (
@@ -22,6 +21,7 @@ from .models import (
     Course,
     Enrollment,
     Lesson,
+    LiveSession,
     LessonProgress,
     Question,
     Quiz,
@@ -34,6 +34,18 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 1. COURSES & LESSON VIEWS
 # ==========================================
+class EnrollCourseView(LoginRequiredMixin, View):
+    def post(self, request, slug):
+        course = get_object_or_404(Course, slug=slug)
+        
+        # Create enrollment record if it doesn't already exist
+        Enrollment.objects.get_or_create(student=request.user, course=course)
+        
+        # Redirect back to the course detail page or first lesson
+        first_lesson = Lesson.objects.filter(module__course=course).order_by('module__order', 'order').first()
+        if first_lesson:
+            return redirect('lesson_detail', pk=first_lesson.pk)
+        return redirect('course_detail', slug=course.slug)
 
 class CourseListView(ListView):
     model = Course
@@ -84,7 +96,6 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         lesson = self.get_object()
         course = lesson.module.course
         
-        # Verify enrollment or allow preview lessons
         is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
         if not is_enrolled and not lesson.is_preview:
             return redirect('course_detail', slug=course.slug)
@@ -97,10 +108,9 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         course = lesson.module.course
         user = self.request.user
 
-        # Fetch full navigation tree for sidebar
-        modules = course.modules.prefetch_related('lessons').order_by('order')
+        # Fetch modules with lessons AND quizzes prefetched
+        modules = course.modules.prefetch_related('lessons', 'quizzes').order_by('order')
         
-        # Get completed lessons set for the current user
         completed_lesson_ids = set(
             LessonProgress.objects.filter(
                 student=user,
@@ -109,7 +119,6 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
             ).values_list('lesson_id', flat=True)
         )
 
-        # Track view on current lesson
         progress, _ = LessonProgress.objects.get_or_create(student=user, lesson=lesson)
         
         context['course'] = course
@@ -119,14 +128,33 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+
 class ToggleLessonCompleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         lesson = get_object_or_404(Lesson, pk=pk)
         progress, _ = LessonProgress.objects.get_or_create(student=request.user, lesson=lesson)
         
+        # Toggle lesson completion
         progress.is_completed = not progress.is_completed
         progress.completed_at = timezone.now() if progress.is_completed else None
         progress.save()
+
+        # Check total vs completed lessons for the course
+        course = lesson.module.course
+        total_lessons = Lesson.objects.filter(module__course=course).count()
+        completed_lessons_count = LessonProgress.objects.filter(
+            student=request.user,
+            lesson__module__course=course,
+            is_completed=True
+        ).count()
+
+        # Automated Certificate Trigger (Issue if 100% completed)
+        if total_lessons > 0 and completed_lessons_count == total_lessons:
+            Certificate.objects.get_or_create(
+                student=request.user,
+                course=course,
+                defaults={'certificate_code': f"CERT-{uuid.uuid4().hex[:8].upper()}"}
+            )
 
         return redirect('lesson_detail', pk=lesson.pk)
 
@@ -409,37 +437,132 @@ class AIChatAssistantView(LoginRequiredMixin, View):
         except Exception as err:
             logger.warning(f"LMS RAG search skipped: {err}")
             return None
-
-
 # ==========================================
-# 4. CERTIFICATES
+# 4. LIVE SESSION
+# ==========================================
+class LiveSessionRoomView(LoginRequiredMixin, View):
+    def get(self, request, session_id):
+        session = get_object_or_404(LiveSession, id=session_id)
+        
+        # Security check: Ensure user is enrolled or an instructor
+        is_enrolled = session.course.enrollments.filter(student=request.user).exists()
+        is_instructor = request.user.groups.filter(name='lms_instructor').exists()
+        
+        if not (is_enrolled or is_instructor or request.user.is_staff):
+            return render(request, 'LMS/access_denied.html', {'reason': 'You are not enrolled in this course.'})
+
+        context = {
+            'session': session,
+            'course': session.course,
+            'user_display_name': request.user.get_full_name() or request.user.username,
+        }
+        return render(request, 'LMS/live_session_room.html', context)
+# ==========================================
+# 5. CERTIFICATES
 # ==========================================
 
 class DownloadCertificatePillowView(View):
     def get(self, request, certificate_id):
         cert = get_object_or_404(Certificate, id=certificate_id, student=request.user)
 
-        # 1. Create a blank landscape canvas (A4 @ 300 DPI: 3508 x 2480 px)
-        img = Image.new('RGB', (3508, 2480), color=(255, 255, 255))
+        # 1. Canvas Dimensions (300 DPI A4 Landscape: 3508 x 2480 px)
+        width, height = 3508, 2480
+        img = Image.new('RGB', (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
-        # 2. Draw border
-        draw.rectangle([100, 100, 3408, 2380], outline=(37, 99, 235), width=20)
+        # 2. Color Palette (University Gold & Deep Royal Blue)
+        NAVY = (30, 58, 138)
+        GOLD = (202, 138, 4)
+        CHARCOAL = (31, 41, 55)
+        MUTED_GRAY = (100, 116, 139)
+        BG_INNER = (250, 250, 249)
 
-        # 3. Add text (using standard fonts or loaded TTF)
-        font_large = ImageFont.load_default() # Or ImageFont.truetype("arial.ttf", 100)
+        # 3. Outer Framing & Ornamental Borders
+        # Subtle inner tint fill
+        draw.rectangle([80, 80, width - 80, height - 80], fill=BG_INNER)
+        # Outer Gold Border
+        draw.rectangle([100, 100, width - 100, height - 100], outline=GOLD, width=12)
+        # Inner Navy Border
+        draw.rectangle([130, 130, width - 130, height - 130], outline=NAVY, width=6)
+        # Decorative Corner Brackets
+        corner_len = 80
+        # Top-Left
+        draw.line([(90, 90), (90 + corner_len, 90)], fill=GOLD, width=8)
+        draw.line([(90, 90), (90, 90 + corner_len)], fill=GOLD, width=8)
+        # Top-Right
+        draw.line([(width - 90, 90), (width - 90 - corner_len, 90)], fill=GOLD, width=8)
+        draw.line([(width - 90, 90), (width - 90, 90 + corner_len)], fill=GOLD, width=8)
+        # Bottom-Left
+        draw.line([(90, height - 90), (90 + corner_len, height - 90)], fill=GOLD, width=8)
+        draw.line([(90, height - 90), (90, height - 90 - corner_len)], fill=GOLD, width=8)
+        # Bottom-Right
+        draw.line([(width - 90, height - 90), (width - 90 - corner_len, height - 90)], fill=GOLD, width=8)
+        draw.line([(width - 90, height - 90), (width - 90, height - 90 - corner_len)], fill=GOLD, width=8)
+
+        # 4. Load High-Quality TTF Fonts (Fallback to default if not installed)
+        try:
+            # Standard Linux/Ubuntu TrueType fonts available in Docker containers
+            font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 90)
+            font_subHeader = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
+            font_name = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 110)
+            font_body = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40)
+            font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 65)
+            font_meta = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30)
+        except OSError:
+            # Fallback for systems without DejaVu TTF fonts
+            font_header = font_subHeader = font_name = font_body = font_title = font_meta = ImageFont.load_default()
+
+        cx = width // 2  # Center point horizontally
+
+        # 5. Header Section
+        draw.text((cx, 320), "TECHEXE INSTITUTE OF TECHNOLOGY", fill=NAVY, anchor="mm", font=font_subHeader)
+        draw.text((cx, 480), "CERTIFICATE OF COMPLETION", fill=GOLD, anchor="mm", font=font_header)
         
-        draw.text((1754, 500), "CERTIFICATE OF COMPLETION", fill=(30, 58, 138), anchor="mm", font=font_large)
-        draw.text((1754, 900), f"This is presented to: {cert.student.username}", fill=(15, 23, 42), anchor="mm")
-        draw.text((1754, 1200), f"Course: {cert.course.title}", fill=(37, 99, 235), anchor="mm")
-        draw.text((1754, 1500), f"Code: {cert.certificate_code}", fill=(100, 116, 139), anchor="mm")
+        # Decorative Divider Line
+        draw.line([(cx - 400, 560), (cx + 400, 560)], fill=NAVY, width=3)
 
-        # 4. Save directly as PDF into memory buffer
+        # 6. Recipient Details
+        draw.text((cx, 720), "THIS IS PROUDLY PRESENTED TO", fill=MUTED_GRAY, anchor="mm", font=font_subHeader)
+        
+        full_name = cert.student.get_full_name() or cert.student.username.upper()
+        draw.text((cx, 880), full_name, fill=CHARCOAL, anchor="mm", font=font_name)
+        
+        # Gold underline beneath student name
+        draw.line([(cx - 500, 960), (cx + 500, 960)], fill=GOLD, width=4)
+
+        # 7. Achievement Statement
+        draw.text((cx, 1120), "for successfully completing the specialized professional program in", fill=MUTED_GRAY, anchor="mm", font=font_body)
+        draw.text((cx, 1260), f'"{cert.course.title}"', fill=NAVY, anchor="mm", font=font_title)
+
+        # 8. Signatures & Verification Block (Bottom Section)
+        y_sign = 1850
+        
+        # Left Signature: Course Instructor
+        draw.line([(500, y_sign), (1100, y_sign)], fill=CHARCOAL, width=2)
+        draw.text((800, y_sign + 30), "Lead Instructor", fill=CHARCOAL, anchor="mm", font=font_meta)
+        draw.text((800, y_sign + 70), "Department of Bioinformatics & IT", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+
+        # Right Signature: Academic Director
+        draw.line([(2408, y_sign), (3008, y_sign)], fill=CHARCOAL, width=2)
+        draw.text((2708, y_sign + 30), "Academic Director", fill=CHARCOAL, anchor="mm", font=font_meta)
+        draw.text((2708, y_sign + 70), "TechExe LMS Board of Education", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+
+        # Center Seal Graphics (Emblem Polygon Placeholder)
+        seal_cx, seal_cy = cx, y_sign - 30
+        draw.ellipse([seal_cx - 90, seal_cy - 90, seal_cx + 90, seal_cy + 90], outline=GOLD, width=6, fill=(254, 243, 199))
+        draw.text((seal_cx, seal_cy), "OFFICIAL\nSEAL", fill=GOLD, anchor="mm", font=font_meta, align="center")
+
+        # 9. Footer Security Metadata
+        issue_date = cert.created_at.strftime("%B %d, %Y") if hasattr(cert, 'created_at') else timezone.now().strftime("%B %d, %Y")
+        draw.text((350, 2220), f"Issue Date: {issue_date}", fill=MUTED_GRAY, font=font_meta)
+        draw.text((cx, 2220), f"Certificate Code: {cert.certificate_code}", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+        draw.text((width - 350, 2220), "Verify at: https://techexe.net/verify", fill=MUTED_GRAY, anchor="rt", font=font_meta)
+
+        # 10. Output Stream
         pdf_buffer = BytesIO()
         img.save(pdf_buffer, format='PDF', resolution=300.0)
         pdf_buffer.seek(0)
 
-        # 5. Return HTTP Response
         response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="Certificate_{cert.certificate_code}.pdf"'
         return response

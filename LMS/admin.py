@@ -2,9 +2,10 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count
 from .models import (
-    Category, Course, Module, Lesson, Quiz, 
+    Category, Course, Module, Lesson, Quiz,LiveSession, 
     Question, AnswerChoice, Enrollment, LessonProgress, QuizAttempt
 )
+
 
 
 # ==========================================
@@ -181,3 +182,11 @@ class QuizAttemptAdmin(admin.ModelAdmin):
             '<span style="background-color: {}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">{}</span>',
             color, label
         )
+
+
+
+@admin.register(LiveSession)
+class LiveSessionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course', 'start_time', 'duration_minutes', 'platform')
+    list_filter = ('platform', 'course')
+    search_fields = ('title', 'course__title')
