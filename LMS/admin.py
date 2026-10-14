@@ -5,7 +5,7 @@ from .models import (
     Category, Course, Module, Lesson, Quiz,LiveSession, 
     Question, AnswerChoice, Enrollment, LessonProgress, QuizAttempt
 )
-
+from .models import DiscussionTopic, DiscussionPost
 
 
 # ==========================================
@@ -184,9 +184,21 @@ class QuizAttemptAdmin(admin.ModelAdmin):
         )
 
 
-
 @admin.register(LiveSession)
 class LiveSessionAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'start_time', 'duration_minutes', 'platform')
-    list_filter = ('platform', 'course')
-    search_fields = ('title', 'course__title')
+    # Change 'platform' to 'mode'
+    list_display = ('title', 'course', 'section', 'start_time', 'mode', 'status')
+    list_filter = ('mode', 'status', 'course')
+    search_fields = ('title', 'course__title', 'campus_room')
+
+@admin.register(DiscussionTopic)
+class DiscussionTopicAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course', 'section', 'author', 'is_pinned', 'is_closed', 'created_at')
+    list_filter = ('is_pinned', 'is_closed', 'course')
+    search_fields = ('title', 'content', 'author__username')
+
+@admin.register(DiscussionPost)
+class DiscussionPostAdmin(admin.ModelAdmin):
+    list_display = ('topic', 'author', 'is_instructor_response', 'created_at')
+    list_filter = ('is_instructor_response', 'created_at')
+    search_fields = ('content', 'author__username')

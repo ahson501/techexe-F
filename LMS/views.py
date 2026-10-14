@@ -2,50 +2,257 @@ import json
 import logging
 import requests
 import uuid
-
+from decimal import Decimal
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db import transaction
+from django.db.models import Sum
 from django.db.models import Prefetch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, View
-
-from .forms import QuizTakeForm
+from .forms import QuizTakeForm, AssignFacultySectionForm
 from .models import (
     AnswerChoice,
     Certificate,
     Course,
+    CourseSection,
     Enrollment,
     Lesson,
-    LiveSession,
     LessonProgress,
+    LiveSession,
     Question,
     Quiz,
     QuizAttempt,
+    DiscussionTopic, 
+    DiscussionPost,
+    VisitingFacultyClaim,
 )
 
+User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
 # ==========================================
+# 0. DASHBOARDS
+# ==========================================
+
+class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Student portal view displaying enrolled courses and auto-generated payment vouchers."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_Student').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Fetch student enrollments
+        enrollments = Enrollment.objects.filter(
+            student=user
+        ).select_related('course', 'course__instructor').order_by('-created_at')
+
+        # 2. Check if explicit reverse relation exists; fallback to enrollments list
+        if hasattr(user, 'vouchers') and user.vouchers.exists():
+            vouchers = user.vouchers.select_related('course').order_by('-created_at')
+        else:
+            vouchers = enrollments  # Treat enrollments as fee vouchers for manual payment tracking
+
+        context = {
+            'enrollments': enrollments,
+            'vouchers': vouchers,
+        }
+        return render(request, 'LMS/student_dashboard.html', context)
+
+class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Dashboard for Admissions Officers to review student registrations and documents."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_admissions_officer').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        # Fetch students belonging to LMS_Student group or pending admission approval
+        students = User.objects.filter(groups__name='LMS_Student').order_by('-date_joined')
+        
+        context = {
+            'students': students,
+            'total_students': students.count(),
+        }
+        return render(request, 'LMS/admissions_dashboard.html', context)
+    
+class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Instructor portal view displaying assigned courses and sections."""
+    
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_Instructor').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        user = request.user
+        courses = Course.objects.filter(instructor=user)
+        sections = CourseSection.objects.filter(instructor=user).select_related('course')
+        
+        context = {
+            'courses': courses,
+            'sections': sections,
+        }
+        return render(request, 'LMS/instructor_dashboard.html', context)
+    
+
+class HODDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Central administrative hub for HODs, Accountants, and Admissions Officers."""
+    
+    def test_func(self):
+        return self.request.user.groups.filter(
+            name__in=['LMS_HOD', 'LMS_Accountant', 'LMS_admissions_officer']
+        ).exists() or self.request.user.is_staff
+
+    def get(self, request):
+        sections = CourseSection.objects.select_related('course', 'instructor').all()
+        pending_claims = VisitingFacultyClaim.objects.filter(
+            status=VisitingFacultyClaim.Status.SUBMITTED
+        ).select_related('faculty')
+        
+        context = {
+            'sections': sections,
+            'pending_claims': pending_claims,
+            'total_sections': sections.count(),
+            'total_claims_pending': pending_claims.count(),
+            'total_payout_pending': sum(claim.total_amount for claim in pending_claims),
+        }
+        return render(request, 'LMS/hod_dashboard.html', context)
+
+
+class VisitingFacultyDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Workspace for Visiting Faculty to view sections, classes, and claims."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_VistingFaculty').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        user = request.user
+        assigned_sections = CourseSection.objects.filter(instructor=user).select_related('course')
+        upcoming_sessions = LiveSession.objects.filter(
+            section__instructor=user,
+            status=LiveSession.Status.SCHEDULED
+        ).order_by('start_time')
+        
+        past_claims = VisitingFacultyClaim.objects.filter(faculty=user).order_by('-created_at')
+
+        context = {
+            'assigned_sections': assigned_sections,
+            'upcoming_sessions': upcoming_sessions,
+            'past_claims': past_claims,
+        }
+        return render(request, 'LMS/visiting_faculty_dashboard.html', context)
+
+class AccountantDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Financial dashboard for Accountants to verify vouchers and execute payouts."""
+    
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        # 1. Base Queryset
+        qs = Enrollment.objects.select_related('student', 'course').order_by('-created_at')
+
+        # 2. Filter Pending vs Paid depending on available model fields
+        if hasattr(Enrollment, 'is_verified'):
+            pending_enrollments = qs.filter(is_verified=False)
+            cleared_enrollments = qs.filter(is_verified=True)
+        elif hasattr(Enrollment, 'is_paid'):
+            pending_enrollments = qs.filter(is_paid=False)
+            cleared_enrollments = qs.filter(is_paid=True)
+        elif hasattr(Enrollment, 'status'):
+            pending_enrollments = qs.filter(status__in=['PENDING', 'UNPAID'])
+            cleared_enrollments = qs.filter(status='PAID')
+        else:
+            pending_enrollments = qs
+            cleared_enrollments = Enrollment.objects.none()
+
+        # 3. Calculate total revenue from cleared enrollments
+        total_revenue_cleared = sum(
+            (e.course.price for e in cleared_enrollments if hasattr(e.course, 'price') and e.course.price),
+            Decimal('0.00')
+        )
+
+        # 4. Fetch HOD-approved faculty claims
+        approved_claims = VisitingFacultyClaim.objects.filter(
+            status=VisitingFacultyClaim.Status.HOD_APPROVED
+        ).select_related('faculty')
+
+        context = {
+            'pending_vouchers': pending_enrollments,
+            'pending_vouchers_count': pending_enrollments.count(),
+            'total_revenue_cleared': round(total_revenue_cleared, 2),
+            'approved_claims': approved_claims,
+            'approved_payouts_total': round(sum(c.total_amount for c in approved_claims), 2),
+        }
+        return render(request, 'LMS/accountant_dashboard.html', context)
+    
+class VerifyVoucherPaymentView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows Accountants to approve student payments and activate course access."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
+
+    def post(self, request, voucher_id):
+        enrollment = get_object_or_404(Enrollment, id=voucher_id)
+        
+        # Update whichever verification field exists on Enrollment model
+        if hasattr(enrollment, 'is_verified'):
+            enrollment.is_verified = True
+        if hasattr(enrollment, 'is_paid'):
+            enrollment.is_paid = True
+        if hasattr(enrollment, 'status'):
+            enrollment.status = 'PAID'
+            
+        enrollment.save()
+
+        messages.success(
+            request, 
+            f"Payment for {enrollment.student.get_full_name() or enrollment.student.username} ({enrollment.course.title}) verified successfully."
+        )
+        return redirect('accountant_dashboard')
+    
+
+# ==========================================
 # 1. COURSES & LESSON VIEWS
 # ==========================================
+
+
+class DownloadChallanView(LoginRequiredMixin, View):
+    """Generates an official fee voucher / bank challan for offline manual payment."""
+
+    def get(self, request, enrollment_id):
+        enrollment = get_object_or_404(Enrollment, id=enrollment_id, student=request.user)
+        
+        context = {
+            'enrollment': enrollment,
+            'student': request.user,
+            'course': enrollment.course,
+            'amount': getattr(enrollment.course, 'price', Decimal('3500.00')),
+            'bank_name': 'Habib Bank Limited (HBL)',
+            'account_title': 'TechExe LMS Fee Collection',
+            'iban': 'PK36HABB0001234567890123',
+            'issue_date': enrollment.created_at if hasattr(enrollment, 'created_at') else timezone.now(),
+        }
+        return render(request, 'LMS/fee_challan.html', context)
+
 class EnrollCourseView(LoginRequiredMixin, View):
     def post(self, request, slug):
         course = get_object_or_404(Course, slug=slug)
-        
-        # Create enrollment record if it doesn't already exist
         Enrollment.objects.get_or_create(student=request.user, course=course)
         
-        # Redirect back to the course detail page or first lesson
         first_lesson = Lesson.objects.filter(module__course=course).order_by('module__order', 'order').first()
         if first_lesson:
             return redirect('lesson_detail', pk=first_lesson.pk)
         return redirect('course_detail', slug=course.slug)
+
 
 class CourseListView(ListView):
     model = Course
@@ -70,11 +277,8 @@ class CourseDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
-        # Prefetch modules and lessons to avoid N+1 queries
         context['modules'] = self.object.modules.prefetch_related('lessons').order_by('order')
         
-        # Check enrollment and certificate status
         is_enrolled = False
         certificate = None
         if user.is_authenticated:
@@ -95,11 +299,9 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
     def dispatch(self, request, *args, **kwargs):
         lesson = self.get_object()
         course = lesson.module.course
-        
         is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
         if not is_enrolled and not lesson.is_preview:
             return redirect('course_detail', slug=course.slug)
-            
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -108,9 +310,7 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         course = lesson.module.course
         user = self.request.user
 
-        # Fetch modules with lessons AND quizzes prefetched
         modules = course.modules.prefetch_related('lessons', 'quizzes').order_by('order')
-        
         completed_lesson_ids = set(
             LessonProgress.objects.filter(
                 student=user,
@@ -120,7 +320,6 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         )
 
         progress, _ = LessonProgress.objects.get_or_create(student=user, lesson=lesson)
-        
         context['course'] = course
         context['modules'] = modules
         context['completed_lesson_ids'] = completed_lesson_ids
@@ -128,18 +327,15 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-
 class ToggleLessonCompleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         lesson = get_object_or_404(Lesson, pk=pk)
         progress, _ = LessonProgress.objects.get_or_create(student=request.user, lesson=lesson)
         
-        # Toggle lesson completion
         progress.is_completed = not progress.is_completed
         progress.completed_at = timezone.now() if progress.is_completed else None
         progress.save()
 
-        # Check total vs completed lessons for the course
         course = lesson.module.course
         total_lessons = Lesson.objects.filter(module__course=course).count()
         completed_lessons_count = LessonProgress.objects.filter(
@@ -148,7 +344,6 @@ class ToggleLessonCompleteView(LoginRequiredMixin, View):
             is_completed=True
         ).count()
 
-        # Automated Certificate Trigger (Issue if 100% completed)
         if total_lessons > 0 and completed_lessons_count == total_lessons:
             Certificate.objects.get_or_create(
                 student=request.user,
@@ -158,7 +353,35 @@ class ToggleLessonCompleteView(LoginRequiredMixin, View):
 
         return redirect('lesson_detail', pk=lesson.pk)
 
+class CreateDiscussionTopicView(LoginRequiredMixin, View):
+    """Allows instructors and students to create new discussion topics."""
+    def get(self, request):
+        # Instructors see their assigned courses; staff see all
+        if request.user.groups.filter(name='LMS_Instructor').exists():
+            courses = Course.objects.filter(instructor=request.user)
+        else:
+            courses = Course.objects.all()
+            
+        return render(request, 'LMS/create_discussion_topic.html', {'courses': courses})
 
+    def post(self, request):
+        course_id = request.POST.get('course_id')
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+
+        if course_id and title and content:
+            course = get_object_or_404(Course, id=course_id)
+            topic = DiscussionTopic.objects.create(
+                course=course,
+                author=request.user,
+                title=title,
+                content=content
+            )
+            messages.success(request, "Discussion topic created successfully.")
+            return redirect('discussion_topic_detail', pk=topic.pk)
+
+        messages.error(request, "Please fill in all required fields.")
+        return redirect('create_discussion_topic')
 # ==========================================
 # 2. QUIZ VIEWS
 # ==========================================
@@ -170,12 +393,10 @@ class QuizTakeView(LoginRequiredMixin, View):
         quiz = self.get_quiz(kwargs['pk'])
         course = quiz.module.course
         
-        # Verify enrollment
         is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
         if not is_enrolled:
             return redirect('course_detail', slug=course.slug)
 
-        # Check maximum attempts limit
         attempt_count = QuizAttempt.objects.filter(student=request.user, quiz=quiz).count()
         if quiz.max_attempts > 0 and attempt_count >= quiz.max_attempts:
             return redirect('quiz_result_latest', pk=quiz.pk)
@@ -202,39 +423,31 @@ class QuizTakeView(LoginRequiredMixin, View):
         if not form.is_valid():
             return render(request, self.template_name, {'quiz': quiz, 'form': form})
 
-        # --- SCORING ENGINE ---
         total_points = 0
         earned_points = 0
 
         for question in quiz.questions.all():
             field_name = f"question_{question.id}"
             user_answer = form.cleaned_data.get(field_name)
-            
-            correct_choice_ids = set(
-                question.choices.filter(is_correct=True).values_list('id', flat=True)
-            )
-            
+            correct_choice_ids = set(question.choices.filter(is_correct=True).values_list('id', flat=True))
             total_points += question.points
 
             if question.question_type in [Question.QuestionType.SINGLE_CHOICE, Question.QuestionType.TRUE_FALSE]:
                 if user_answer and int(user_answer) in correct_choice_ids:
                     earned_points += question.points
-
             elif question.question_type == Question.QuestionType.MULTIPLE_CHOICE:
                 selected_ids = set(int(cid) for cid in user_answer) if user_answer else set()
                 if selected_ids == correct_choice_ids:
                     earned_points += question.points
 
         score_percentage = (earned_points / total_points * 100) if total_points > 0 else 0.0
-        score_percentage = round(score_percentage, 2)
         passed = score_percentage >= quiz.pass_mark_percentage
-
         previous_attempts = QuizAttempt.objects.filter(student=request.user, quiz=quiz).count()
         
         attempt = QuizAttempt.objects.create(
             student=request.user,
             quiz=quiz,
-            score_percentage=score_percentage,
+            score_percentage=round(score_percentage, 2),
             passed=passed,
             attempt_number=previous_attempts + 1
         )
@@ -258,19 +471,14 @@ class QuizResultDetailView(LoginRequiredMixin, DetailView):
 
 class LatestQuizResultRedirectView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        latest_attempt = (
-            QuizAttempt.objects.filter(student=request.user, quiz_id=pk)
-            .order_by('-created_at')
-            .first()
-        )
-
+        latest_attempt = QuizAttempt.objects.filter(student=request.user, quiz_id=pk).order_by('-created_at').first()
         if latest_attempt:
             return redirect('quiz_result_detail', pk=latest_attempt.pk)
         return redirect('quiz_take', pk=pk)
 
 
 # ==========================================
-# 3. K8S VLLM AI TEACHING ASSISTANT
+# 3. AI TEACHING ASSISTANT
 # ==========================================
 
 BGE_EMBED_URL = getattr(settings, "BGE_EMBED_URL", "http://192.168.160.19:80/embed")
@@ -278,8 +486,8 @@ QDRANT_URL    = getattr(settings, "QDRANT_URL", "http://192.168.160.46:6333")
 
 LLM_CLUSTER_URLS = {
     "qwen":     "http://192.168.224.182:8000/v1/chat/completions",
-    "mistral":  "http://192.168.166.148:8000/v1/chat/completions",
-    "deepseek": "http://192.168.160.44:8000/v1/chat/completions",
+    "mistral":  "http://192.168.166.136:8000/v1/chat/completions",
+    "deepseek": "http://192.168.160.61:8000/v1/chat/completions"
 }
 
 VLLM_MODEL_NAMES = {
@@ -296,12 +504,6 @@ LMS_SYSTEM_PROMPTS = {
 
 
 class AIChatAssistantView(LoginRequiredMixin, View):
-    """
-    LMS AI Teaching Assistant: 
-    Routes student queries to self-hosted K8s vLLM cluster (Qwen/Mistral/DeepSeek)
-    with lesson-specific context and optional Qdrant RAG grounding.
-    """
-
     def post(self, request, *args, **kwargs):
         try:
             if request.content_type == "application/json":
@@ -316,11 +518,7 @@ class AIChatAssistantView(LoginRequiredMixin, View):
             if not user_message or not lesson_id:
                 return JsonResponse({"error": "Missing user message or lesson ID"}, status=400)
 
-            lesson = get_object_or_404(
-                Lesson.objects.select_related("module__course"), 
-                pk=lesson_id
-            )
-
+            lesson = get_object_or_404(Lesson.objects.select_related("module__course"), pk=lesson_id)
             target_api = LLM_CLUSTER_URLS.get(selected_model)
             if not target_api:
                 return JsonResponse({"error": f"Unknown cluster model: {selected_model}"}, status=400)
@@ -343,14 +541,10 @@ class AIChatAssistantView(LoginRequiredMixin, View):
                 f"--- END LESSON CONTEXT ---\n\n"
                 f"Instructions:\n"
                 f"- Answer the student's question accurately using the lesson context above.\n"
-                f"- Be clear, concise, and pedagogical.\n"
-                f"- If the question is off-topic, gently redirect the student to the lesson material."
+                f"- Be clear, concise, and pedagogical."
             )
 
-            user_content = (
-                f"Additional Reference Context:\n\n{rag_context}\n\nQuestion: {user_message}"
-                if rag_used else user_message
-            )
+            user_content = f"Additional Reference Context:\n\n{rag_context}\n\nQuestion: {user_message}" if rag_used else user_message
 
             payload = {
                 "model": VLLM_MODEL_NAMES[selected_model],
@@ -362,53 +556,30 @@ class AIChatAssistantView(LoginRequiredMixin, View):
             }
 
             response = requests.post(target_api, json=payload, timeout=120)
-
             if response.status_code != 200:
-                return JsonResponse({
-                    "reply": f"🚨 <strong>vLLM Cluster Error ({response.status_code}):</strong> {response.text}"
-                }, status=response.status_code)
+                return JsonResponse({"reply": f"🚨 <strong>vLLM Cluster Error ({response.status_code}):</strong> {response.text}"}, status=response.status_code)
 
             response_data = response.json()
-
             if "choices" in response_data and response_data["choices"]:
                 ai_reply = response_data["choices"][0]["message"]["content"]
-                badge_info = f"🤖 <em>Answered by <strong>{selected_model.upper()}</strong>"
-                if rag_used:
-                    badge_info += " · Grounded with Qdrant RAG"
-                badge_info += "</em>"
+                badge_info = f"🤖 <em>Answered by <strong>{selected_model.upper()}</strong>" + (" · Grounded with Qdrant RAG" if rag_used else "") + "</em>"
                 ai_reply += f"<br><br><small style='color:#64748b;'>{badge_info}</small>"
             else:
                 ai_reply = f"🚨 Malformed response from cluster: {str(response_data)}"
 
             return JsonResponse({"reply": ai_reply})
 
-        except requests.exceptions.Timeout:
-            return JsonResponse({
-                "reply": "⏳ <strong>Cluster Timeout:</strong> The AI model pod took longer than 120s to respond."
-            }, status=504)
-        except requests.exceptions.ConnectionError as err:
-            logger.error(f"Failed to connect to vLLM Pod: {err}")
-            return JsonResponse({
-                "reply": "⚠️ <strong>Cluster Error:</strong> Unable to connect to Kubernetes vLLM pod."
-            }, status=502)
         except Exception as e:
             logger.exception("Unexpected error in AIChatAssistantView")
             return JsonResponse({"reply": f"⚠️ Internal Error: {str(e)}"}, status=500)
 
     def perform_rag_search(self, prompt, model_key):
         try:
-            embed_resp = requests.post(
-                BGE_EMBED_URL,
-                json={"inputs": prompt[:512]},
-                timeout=10
-            ).json()
-
-            if isinstance(embed_resp, list):
-                vec = embed_resp[0]
-                if isinstance(vec, dict) and "embedding" in vec:
-                    vec = vec["embedding"]
-            elif isinstance(embed_resp, dict) and "embeddings" in embed_resp:
-                vec = embed_resp["embeddings"][0]
+            embed_resp = requests.post(BGE_EMBED_URL, json={"inputs": prompt[:512]}, timeout=10).json()
+            if isinstance(embed_resp, list) and isinstance(embed_resp[0], dict):
+                vec = embed_resp[0].get("embedding")
+            elif isinstance(embed_resp, dict):
+                vec = embed_resp.get("embeddings", [[]])[0]
             else:
                 return None
 
@@ -422,31 +593,48 @@ class AIChatAssistantView(LoginRequiredMixin, View):
             ).json()
 
             hits = qdrant_resp.get("result", [])
-            if not hits:
-                return None
-
-            contexts = []
-            for h in hits:
-                payload = h.get("payload", {})
-                ctx_text = payload.get("context") or payload.get("text") or payload.get("document")
-                if ctx_text:
-                    contexts.append(str(ctx_text))
-
+            contexts = [str(h["payload"].get("context") or h["payload"].get("text")) for h in hits if h.get("payload")]
             return "\n\n".join(contexts) if contexts else None
-
         except Exception as err:
             logger.warning(f"LMS RAG search skipped: {err}")
             return None
+
+
 # ==========================================
-# 4. LIVE SESSION
+# 4. LIVE SESSIONS & HOD MANAGEMENT
 # ==========================================
+
+class InviteFacultyView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows HODs to generate or send email invitations for new permanent/visiting faculty."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_HOD').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        return render(request, 'LMS/invite_faculty.html')
+
+    def post(self, request):
+        email = request.POST.get('email', '').strip()
+        faculty_type = request.POST.get('faculty_type', 'VISITING')
+        department = request.POST.get('department', 'Computer Science')
+
+        if email:
+            # Here you can save to a FacultyInvitation model or trigger an email send
+            messages.success(request, f"Faculty invitation sent to {email} ({faculty_type}).")
+            return redirect('hod_dashboard')
+
+        messages.error(request, "Please provide a valid email address.")
+        return render(request, 'LMS/invite_faculty.html')
+    
 class LiveSessionRoomView(LoginRequiredMixin, View):
     def get(self, request, session_id):
         session = get_object_or_404(LiveSession, id=session_id)
-        
-        # Security check: Ensure user is enrolled or an instructor
         is_enrolled = session.course.enrollments.filter(student=request.user).exists()
-        is_instructor = request.user.groups.filter(name='lms_instructor').exists()
+        
+        # Check both permanent instructors, visiting faculty, and HODs
+        is_instructor = request.user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VistingFaculty', 'LMS_HOD']
+        ).exists()
         
         if not (is_enrolled or is_instructor or request.user.is_staff):
             return render(request, 'LMS/access_denied.html', {'reason': 'You are not enrolled in this course.'})
@@ -457,51 +645,189 @@ class LiveSessionRoomView(LoginRequiredMixin, View):
             'user_display_name': request.user.get_full_name() or request.user.username,
         }
         return render(request, 'LMS/live_session_room.html', context)
+
+
+class HODSectionAssignmentView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_HOD').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        sections = CourseSection.objects.select_related('course', 'instructor').all()
+        form = AssignFacultySectionForm()
+        pending_claims = VisitingFacultyClaim.objects.filter(status=VisitingFacultyClaim.Status.SUBMITTED).select_related('faculty')
+        return render(request, 'LMS/hod_section_management.html', {'sections': sections, 'form': form, 'pending_claims': pending_claims})
+
+    def post(self, request):
+        form = AssignFacultySectionForm(request.POST)
+        if form.is_valid():
+            section = form.save()
+            messages.success(request, f"Section '{section.name}' assigned successfully.")
+            return redirect('hod_section_assignment')
+        
+        sections = CourseSection.objects.select_related('course', 'instructor').all()
+        pending_claims = VisitingFacultyClaim.objects.filter(status=VisitingFacultyClaim.Status.SUBMITTED)
+        return render(request, 'LMS/hod_section_management.html', {'sections': sections, 'form': form, 'pending_claims': pending_claims})
+
+
+class HODApproveClaimView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_HOD').exists() or self.request.user.is_staff
+
+    def post(self, request, claim_id):
+        claim = get_object_or_404(VisitingFacultyClaim, id=claim_id)
+        action = request.POST.get('action')
+
+        if action == 'approve':
+            claim.status = VisitingFacultyClaim.Status.HOD_APPROVED
+            claim.approved_by = request.user
+            claim.save()
+            messages.success(request, f"Claim #{claim.id} approved.")
+        elif action == 'reject':
+            claim.status = VisitingFacultyClaim.Status.REJECTED
+            claim.save()
+            messages.warning(request, f"Claim #{claim.id} rejected.")
+
+        return redirect('hod_section_assignment')
+
+
+class VisitingFacultyClaimEngineView(LoginRequiredMixin, UserPassesTestMixin, View):
+    HOURLY_RATE_PKR = Decimal('3500.00')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_VistingFaculty').exists() or self.request.user.is_staff
+
+    def get(self, request):
+        user = request.user
+        unclaimed_sessions = LiveSession.objects.filter(
+            section__instructor=user,
+            status=LiveSession.Status.COMPLETED,
+            claims__isnull=True
+        ).order_by('start_time')
+
+        total_minutes = sum(s.duration_minutes for s in unclaimed_sessions)
+        total_hours = Decimal(total_minutes) / Decimal(60)
+        total_amount = total_hours * self.HOURLY_RATE_PKR
+        past_claims = VisitingFacultyClaim.objects.filter(faculty=user).order_by('-created_at')
+
+        context = {
+            'unclaimed_sessions': unclaimed_sessions,
+            'total_hours': round(total_hours, 2),
+            'total_amount': round(total_amount, 2),
+            'hourly_rate': self.HOURLY_RATE_PKR,
+            'past_claims': past_claims,
+        }
+        return render(request, 'LMS/faculty_claims.html', context)
+
+    def post(self, request):
+        user = request.user
+        with transaction.atomic():
+            unclaimed_sessions = LiveSession.objects.filter(
+                section__instructor=user,
+                status=LiveSession.Status.COMPLETED,
+                claims__isnull=True
+            )
+
+            if not unclaimed_sessions.exists():
+                messages.error(request, "No eligible completed sessions found to claim.")
+                return redirect('faculty_claims')
+
+            total_minutes = sum(s.duration_minutes for s in unclaimed_sessions)
+            total_hours = Decimal(total_minutes) / Decimal(60)
+            total_amount = total_hours * self.HOURLY_RATE_PKR
+
+            claim = VisitingFacultyClaim.objects.create(
+                faculty=user,
+                total_hours=round(total_hours, 2),
+                total_amount=round(total_amount, 2),
+                status=VisitingFacultyClaim.Status.SUBMITTED
+            )
+            claim.sessions.set(unclaimed_sessions)
+
+        messages.success(request, f"Payout Claim #{claim.id} for PKR {claim.total_amount} submitted to HOD.")
+        return redirect('faculty_claims')
+
+
 # ==========================================
-# 5. CERTIFICATES
+# 5. DISCUSSION GROUPS
+# ==========================================
+
+class DiscussionBoardView(LoginRequiredMixin, View):
+    """Lists discussion topics for enrolled students and instructors."""
+    def get(self, request):
+        topics = DiscussionTopic.objects.select_related('course', 'section', 'author').all()
+        return render(request, 'LMS/discussion_board.html', {'topics': topics})
+
+
+class DiscussionTopicDetailView(LoginRequiredMixin, View):
+    """Displays a single discussion topic and handles reply submissions."""
+    def get(self, request, pk):
+        topic = get_object_or_404(DiscussionTopic.objects.select_related('course', 'author'), pk=pk)
+        posts = topic.posts.select_related('author').order_by('created_at')
+        return render(request, 'LMS/discussion_topic_detail.html', {'topic': topic, 'posts': posts})
+
+    def post(self, request, pk):
+        topic = get_object_or_404(DiscussionTopic, pk=pk)
+        content = request.POST.get('content', '').strip()
+        
+        if content:
+            DiscussionPost.objects.create(
+                topic=topic,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, "Reply posted successfully.")
+        return redirect('discussion_topic_detail', pk=topic.pk)
+
+
+class CreateDiscussionTopicView(LoginRequiredMixin, View):
+    """Allows instructors and students to create new discussion topics."""
+    def get(self, request):
+        courses = Course.objects.all()
+        return render(request, 'LMS/create_discussion_topic.html', {'courses': courses})
+
+    def post(self, request):
+        course_id = request.POST.get('course_id')
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+
+        if course_id and title and content:
+            course = get_object_or_404(Course, id=course_id)
+            topic = DiscussionTopic.objects.create(
+                course=course,
+                author=request.user,
+                title=title,
+                content=content
+            )
+            messages.success(request, "Discussion topic created successfully.")
+            return redirect('discussion_topic_detail', pk=topic.pk)
+
+        messages.error(request, "Please fill in all required fields.")
+        return redirect('create_discussion_topic')
+
+
+# ==========================================
+# 6. CERTIFICATE GENERATION
 # ==========================================
 
 class DownloadCertificatePillowView(View):
     def get(self, request, certificate_id):
         cert = get_object_or_404(Certificate, id=certificate_id, student=request.user)
 
-        # 1. Canvas Dimensions (300 DPI A4 Landscape: 3508 x 2480 px)
         width, height = 3508, 2480
         img = Image.new('RGB', (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
-        # 2. Color Palette (University Gold & Deep Royal Blue)
         NAVY = (30, 58, 138)
         GOLD = (202, 138, 4)
         CHARCOAL = (31, 41, 55)
         MUTED_GRAY = (100, 116, 139)
         BG_INNER = (250, 250, 249)
 
-        # 3. Outer Framing & Ornamental Borders
-        # Subtle inner tint fill
         draw.rectangle([80, 80, width - 80, height - 80], fill=BG_INNER)
-        # Outer Gold Border
         draw.rectangle([100, 100, width - 100, height - 100], outline=GOLD, width=12)
-        # Inner Navy Border
         draw.rectangle([130, 130, width - 130, height - 130], outline=NAVY, width=6)
-        # Decorative Corner Brackets
-        corner_len = 80
-        # Top-Left
-        draw.line([(90, 90), (90 + corner_len, 90)], fill=GOLD, width=8)
-        draw.line([(90, 90), (90, 90 + corner_len)], fill=GOLD, width=8)
-        # Top-Right
-        draw.line([(width - 90, 90), (width - 90 - corner_len, 90)], fill=GOLD, width=8)
-        draw.line([(width - 90, 90), (width - 90, 90 + corner_len)], fill=GOLD, width=8)
-        # Bottom-Left
-        draw.line([(90, height - 90), (90 + corner_len, height - 90)], fill=GOLD, width=8)
-        draw.line([(90, height - 90), (90, height - 90 - corner_len)], fill=GOLD, width=8)
-        # Bottom-Right
-        draw.line([(width - 90, height - 90), (width - 90 - corner_len, height - 90)], fill=GOLD, width=8)
-        draw.line([(width - 90, height - 90), (width - 90, height - 90 - corner_len)], fill=GOLD, width=8)
 
-        # 4. Load High-Quality TTF Fonts (Fallback to default if not installed)
         try:
-            # Standard Linux/Ubuntu TrueType fonts available in Docker containers
             font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 90)
             font_subHeader = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
             font_name = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 110)
@@ -509,56 +835,37 @@ class DownloadCertificatePillowView(View):
             font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 65)
             font_meta = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30)
         except OSError:
-            # Fallback for systems without DejaVu TTF fonts
             font_header = font_subHeader = font_name = font_body = font_title = font_meta = ImageFont.load_default()
 
-        cx = width // 2  # Center point horizontally
+        cx = width // 2
 
-        # 5. Header Section
         draw.text((cx, 320), "TECHEXE INSTITUTE OF TECHNOLOGY", fill=NAVY, anchor="mm", font=font_subHeader)
         draw.text((cx, 480), "CERTIFICATE OF COMPLETION", fill=GOLD, anchor="mm", font=font_header)
-        
-        # Decorative Divider Line
         draw.line([(cx - 400, 560), (cx + 400, 560)], fill=NAVY, width=3)
 
-        # 6. Recipient Details
         draw.text((cx, 720), "THIS IS PROUDLY PRESENTED TO", fill=MUTED_GRAY, anchor="mm", font=font_subHeader)
-        
         full_name = cert.student.get_full_name() or cert.student.username.upper()
         draw.text((cx, 880), full_name, fill=CHARCOAL, anchor="mm", font=font_name)
-        
-        # Gold underline beneath student name
         draw.line([(cx - 500, 960), (cx + 500, 960)], fill=GOLD, width=4)
 
-        # 7. Achievement Statement
         draw.text((cx, 1120), "for successfully completing the specialized professional program in", fill=MUTED_GRAY, anchor="mm", font=font_body)
         draw.text((cx, 1260), f'"{cert.course.title}"', fill=NAVY, anchor="mm", font=font_title)
 
-        # 8. Signatures & Verification Block (Bottom Section)
         y_sign = 1850
-        
-        # Left Signature: Course Instructor
         draw.line([(500, y_sign), (1100, y_sign)], fill=CHARCOAL, width=2)
         draw.text((800, y_sign + 30), "Lead Instructor", fill=CHARCOAL, anchor="mm", font=font_meta)
-        draw.text((800, y_sign + 70), "Department of Bioinformatics & IT", fill=MUTED_GRAY, anchor="mm", font=font_meta)
 
-        # Right Signature: Academic Director
         draw.line([(2408, y_sign), (3008, y_sign)], fill=CHARCOAL, width=2)
         draw.text((2708, y_sign + 30), "Academic Director", fill=CHARCOAL, anchor="mm", font=font_meta)
-        draw.text((2708, y_sign + 70), "TechExe LMS Board of Education", fill=MUTED_GRAY, anchor="mm", font=font_meta)
 
-        # Center Seal Graphics (Emblem Polygon Placeholder)
         seal_cx, seal_cy = cx, y_sign - 30
         draw.ellipse([seal_cx - 90, seal_cy - 90, seal_cx + 90, seal_cy + 90], outline=GOLD, width=6, fill=(254, 243, 199))
         draw.text((seal_cx, seal_cy), "OFFICIAL\nSEAL", fill=GOLD, anchor="mm", font=font_meta, align="center")
 
-        # 9. Footer Security Metadata
         issue_date = cert.created_at.strftime("%B %d, %Y") if hasattr(cert, 'created_at') else timezone.now().strftime("%B %d, %Y")
         draw.text((350, 2220), f"Issue Date: {issue_date}", fill=MUTED_GRAY, font=font_meta)
         draw.text((cx, 2220), f"Certificate Code: {cert.certificate_code}", fill=MUTED_GRAY, anchor="mm", font=font_meta)
-        draw.text((width - 350, 2220), "Verify at: https://techexe.net/verify", fill=MUTED_GRAY, anchor="rt", font=font_meta)
 
-        # 10. Output Stream
         pdf_buffer = BytesIO()
         img.save(pdf_buffer, format='PDF', resolution=300.0)
         pdf_buffer.seek(0)

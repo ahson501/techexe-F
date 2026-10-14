@@ -1,0 +1,87 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">👨‍🏫 Visiting Faculty Workspace</h1>
+      <p class="text-xs text-gray-500 mt-1">Manage assigned course sections, launch virtual classrooms, and monitor payout claims.</p>
+    </div>
+    <a href="{% url 'faculty_claims' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow">
+      💰 Open Payout Engine →
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column: Assigned Sections & Live Classes -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <!-- Assigned Sections -->
+      <div class="bg-white p-6 rounded-xl border shadow-sm">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">📚 Assigned Sections</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for section in assigned_sections %}
+            <div class="border p-4 rounded-lg bg-gray-50">
+              <h3 class="font-bold text-gray-900 text-sm">{{ section.course.title }}</h3>
+              <p class="text-xs text-indigo-600 font-semibold mt-0.5">{{ section.name }}</p>
+              <div class="mt-3 flex justify-between items-center text-[10px]">
+                <span class="px-2 py-0.5 rounded font-bold {% if section.confirmed_by_faculty %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                  {% if section.confirmed_by_faculty %}✓ Section Active{% else %}Pending Confirmation{% endif %}
+                </span>
+                <a href="{% url 'discussion_board' %}" class="text-indigo-600 hover:underline font-bold">Class Forum →</a>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic col-span-2">No sections assigned yet by the HOD.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Upcoming Sessions -->
+      <div class="bg-white p-6 rounded-xl border shadow-sm">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">📅 Upcoming Live Sessions</h2>
+        <div class="space-y-3">
+          {% for session in upcoming_sessions %}
+            <div class="p-3 border rounded-lg flex justify-between items-center bg-gray-50">
+              <div>
+                <p class="font-bold text-sm text-gray-800">{{ session.title }}</p>
+                <p class="text-xs text-gray-500">{{ session.start_time|date:"M d, Y @ h:i A" }} ({{ session.duration_minutes }} mins)</p>
+              </div>
+              <a href="{% url 'live_session_room' session.id %}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-md font-bold">
+                Launch Jitsi Class
+              </a>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic">No live sessions scheduled.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Quick Payout Status -->
+    <div class="bg-white p-6 rounded-xl border shadow-sm">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">🧾 Recent Payout Claims</h2>
+      <div class="space-y-3">
+        {% for claim in past_claims %}
+          <div class="p-3 border rounded-lg bg-gray-50 flex justify-between items-center">
+            <div>
+              <p class="font-bold text-xs text-gray-800">Claim #{{ claim.id }}</p>
+              <p class="text-[10px] text-gray-500">{{ claim.total_hours }} hrs | PKR {{ claim.total_amount }}</p>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full 
+              {% if claim.status == 'APPROVED' %}bg-blue-100 text-blue-800
+              {% elif claim.status == 'PAID' %}bg-emerald-100 text-emerald-800
+              {% else %}bg-amber-100 text-amber-800{% endif %}">
+              {{ claim.get_status_display }}
+            </span>
+          </div>
+        {% empty %}
+          <p class="text-xs text-gray-400 italic">No claim history found.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

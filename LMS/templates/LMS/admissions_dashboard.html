@@ -1,0 +1,65 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Admissions Portal | TechExe LMS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  
+  <!-- Header Banner -->
+  <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <div>
+      <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">📋 Admissions Officer Workspace</h1>
+      <p class="text-xs text-gray-500 mt-1">Review student registration credentials, verify CNIC/B-Form documents, and manage enrollment eligibility.</p>
+    </div>
+    <span class="text-xs font-semibold px-3 py-1.5 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full">
+      Role: Admissions Officer
+    </span>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <p class="text-xs font-bold uppercase text-gray-400">Total Registered Students</p>
+      <p class="text-2xl font-black text-indigo-600 mt-1">{{ total_students|default:"0" }}</p>
+    </div>
+  </div>
+
+  <!-- Registered Students Table -->
+  <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <h2 class="text-lg font-bold text-gray-900 mb-4">👨‍🎓 Student Registrations</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-gray-600">
+        <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+          <tr>
+            <th class="py-3 px-3">Username</th>
+            <th class="py-3 px-3">Full Name</th>
+            <th class="py-3 px-3">Email</th>
+            <th class="py-3 px-3">Joined Date</th>
+            <th class="py-3 px-3">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+            <tr class="border-b hover:bg-gray-50">
+              <td class="py-3 px-3 font-bold text-gray-900">{{ student.username }}</td>
+              <td class="py-3 px-3">{{ student.get_full_name|default:"N/A" }}</td>
+              <td class="py-3 px-3">{{ student.email }}</td>
+              <td class="py-3 px-3">{{ student.date_joined|date:"M d, Y" }}</td>
+              <td class="py-3 px-3">
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                  Active Student
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="py-8 text-center text-gray-400 italic">No registered students found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

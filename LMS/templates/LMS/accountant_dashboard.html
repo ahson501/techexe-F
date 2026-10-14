@@ -1,0 +1,156 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Accountant Financial Hub | TechExe LMS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  
+  <!-- Header Banner -->
+  <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <div>
+      <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">💳 Financial & Accounts Management</h1>
+      <p class="text-xs text-gray-500 mt-1">Verify student payment vouchers, process manual bank receipts, and review approved visiting faculty payouts.</p>
+    </div>
+    <div class="mt-4 md:mt-0 flex items-center space-x-3">
+      <span class="text-xs font-semibold px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full">
+        Role: Finance / Accountant
+      </span>
+    </div>
+  </div>
+
+  <!-- Metric Overview Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <p class="text-xs font-bold uppercase text-gray-400">Pending Receipt Verifications</p>
+      <p class="text-2xl font-black text-amber-600 mt-1">{{ pending_vouchers_count|default:"0" }}</p>
+      <p class="text-[11px] text-gray-500 mt-1">Unverified student bank deposits</p>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <p class="text-xs font-bold uppercase text-gray-400">Total Cleared Revenue</p>
+      <p class="text-2xl font-black text-emerald-600 mt-1">PKR {{ total_revenue_cleared|default:"0.00" }}</p>
+      <p class="text-[11px] text-gray-500 mt-1">Verified course admissions</p>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <p class="text-xs font-bold uppercase text-gray-400">Faculty Payouts Awaiting Execution</p>
+      <p class="text-2xl font-black text-indigo-600 mt-1">PKR {{ approved_payouts_total|default:"0.00" }}</p>
+      <p class="text-[11px] text-gray-500 mt-1">HOD-approved faculty claims</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Left Column (2 Cols): Student Vouchers & Bank Receipts Verification -->
+    <div class="lg:col-span-2 space-y-8">
+      
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-gray-900">🧾 Student Admission Vouchers & Bank Receipts</h2>
+          <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-semibold">
+            Action Required
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+              <tr>
+                <th class="py-3 px-3">Voucher ID</th>
+                <th class="py-3 px-3">Student</th>
+                <th class="py-3 px-3">Course</th>
+                <th class="py-3 px-3">Amount</th>
+                <th class="py-3 px-3">Status</th>
+                <th class="py-3 px-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for voucher in pending_vouchers %}
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="py-3 px-3 font-mono font-bold text-gray-900">
+                    #{{ voucher.voucher_code|default:voucher.id }}
+                  </td>
+                  <td class="py-3 px-3 font-medium text-gray-800">
+                    {{ voucher.student.get_full_name|default:voucher.student.username }}
+                  </td>
+                  <td class="py-3 px-3">
+                    {{ voucher.course.title }}
+                  </td>
+                  <td class="py-3 px-3 font-bold text-gray-900">
+                    PKR {{ voucher.course.price|default:"N/A" }}
+                  </td>
+                  
+                  <!-- Dynamic Status Rendering -->
+                  <td class="py-3 px-3">
+                    {% if voucher.is_verified or voucher.is_paid or voucher.status == 'PAID' %}
+                      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                        Paid & Verified
+                      </span>
+                    {% elif voucher.status == 'REJECTED' %}
+                      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800">
+                        Rejected
+                      </span>
+                    {% else %}
+                      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
+                        Pending Payment
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Dynamic Action Button Rendering -->
+                  <td class="py-3 px-3">
+                    {% if not voucher.is_verified and not voucher.is_paid and voucher.status != 'PAID' %}
+                      <form method="POST" action="{% url 'verify_voucher_payment' voucher.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                          Approve Payment →
+                        </button>
+                      </form>
+                    {% else %}
+                      <span class="text-[11px] text-emerald-600 font-bold">✓ Verified</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="py-8 text-center text-gray-400 italic">No pending payment vouchers requiring verification.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column (1 Col): Approved Visiting Faculty Payout Executions -->
+    <div class="space-y-6">
+      
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h2 class="text-md font-bold text-gray-900 mb-4">💰 Approved Faculty Claims (Ready for Transfer)</h2>
+        <div class="space-y-3">
+          {% for claim in approved_claims %}
+            <div class="p-3 border rounded-xl bg-gray-50 flex justify-between items-center">
+              <div>
+                <p class="font-bold text-xs text-gray-900">{{ claim.faculty.get_full_name|default:claim.faculty.username }}</p>
+                <p class="text-[10px] text-gray-500">Claim #{{ claim.id }} · {{ claim.total_hours }} hrs</p>
+                <p class="text-xs font-black text-emerald-700 mt-0.5">PKR {{ claim.total_amount }}</p>
+              </div>
+              <form method="POST" action="{% url 'mark_claim_paid' claim.id %}">
+                {% csrf_token %}
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition">
+                  Mark Paid
+                </button>
+              </form>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic">No approved faculty payouts currently queueing for disbursement.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

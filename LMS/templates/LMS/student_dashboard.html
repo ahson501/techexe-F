@@ -1,0 +1,100 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Student Learning Portal | TechExe LMS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">🎓 Student Learning Portal</h1>
+
+  <!-- Active Courses Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+    {% for enrollment in enrollments %}
+      <div class="bg-white border rounded-xl shadow-sm overflow-hidden flex flex-col justify-between">
+        <div class="p-6">
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full {% if enrollment.is_verified or enrollment.is_paid or enrollment.status == 'PAID' or enrollment.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+            {% if enrollment.is_verified or enrollment.is_paid or enrollment.status == 'PAID' or enrollment.status == 'ACTIVE' %}
+              PAID
+            {% else %}
+              Pending Payment
+            {% endif %}
+          </span>
+          <h3 class="text-lg font-bold text-gray-900 mt-3">{{ enrollment.course.title }}</h3>
+          <p class="text-xs text-gray-500 mt-1">Instructor: {{ enrollment.course.instructor.get_full_name|default:enrollment.course.instructor.username }}</p>
+        </div>
+
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
+          <a href="{% url 'course_detail' enrollment.course.slug %}" class="text-xs font-bold text-emerald-600 hover:underline">
+            Go to Course →
+          </a>
+          {% if enrollment.completed %}
+            <span class="text-xs font-bold text-emerald-700">✓ Completed</span>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-sm text-gray-500 italic col-span-3">You are not currently enrolled in any courses.</p>
+    {% endfor %}
+  </div>
+
+  <!-- Vouchers & Pending Payments Card -->
+  <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-8">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold text-gray-900">🎟️ Course Vouchers & Payment Status</h2>
+    </div>
+  
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-gray-600">
+        <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+          <tr>
+            <th class="py-3 px-3">Voucher / Enrollment ID</th>
+            <th class="py-3 px-3">Course</th>
+            <th class="py-3 px-3">Amount</th>
+            <th class="py-3 px-3">Status</th>
+            <th class="py-3 px-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enrollment in enrollments %}
+            <tr class="border-b hover:bg-gray-50">
+              <td class="py-3 px-3 font-mono font-bold text-gray-900">
+                #{{ enrollment.id }}
+              </td>
+              <td class="py-3 px-3 font-semibold text-gray-800">
+                {{ enrollment.course.title }}
+              </td>
+              <td class="py-3 px-3 font-bold text-gray-900">
+                PKR {{ enrollment.course.price|default:"3,500.00" }}
+              </td>
+              <td class="py-3 px-3">
+                {% if enrollment.is_verified or enrollment.is_paid or enrollment.status == 'PAID' or enrollment.status == 'ACTIVE' %}
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                    Paid & Verified
+                  </span>
+                {% else %}
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
+                    Pending Payment
+                  </span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-3">
+                {% if not enrollment.is_verified and not enrollment.is_paid and enrollment.status != 'PAID' and enrollment.status != 'ACTIVE' %}
+                  <a href="{% url 'download_challan' enrollment.id %}" target="_blank" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                    📄 Print Bank Challan
+                  </a>
+                {% else %}
+                  <span class="text-[11px] text-emerald-600 font-bold">✓ Payment Cleared</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="py-8 text-center text-gray-400 italic">No vouchers or enrollments generated yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

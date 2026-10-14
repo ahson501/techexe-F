@@ -1,0 +1,37 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">💬 Course Group Discussions</h1>
+    <a href="{% url 'create_discussion_topic' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg">
+      + Start New Topic
+    </a>
+  </div>
+
+  <div class="space-y-4">
+    {% for topic in topics %}
+      <div class="bg-white border rounded-xl p-5 shadow-sm hover:border-emerald-300 transition-colors">
+        <div class="flex justify-between items-start">
+          <div>
+            {% if topic.is_pinned %}
+              <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase mr-2">Pinned</span>
+            {% endif %}
+            <h2 class="text-lg font-bold text-gray-900 inline-block">
+              <a href="{% url 'discussion_topic_detail' topic.id %}" class="hover:text-emerald-600">{{ topic.title }}</a>
+            </h2>
+            <p class="text-xs text-gray-500 mt-1">Course: <span class="font-semibold">{{ topic.course.title }}</span> | By {{ topic.author.get_full_name|default:topic.author.username }} on {{ topic.created_at|date:"M d, Y @ h:i A" }}</p>
+          </div>
+          <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full font-medium">
+            {{ topic.posts.count }} Replies
+          </span>
+        </div>
+      </div>
+    {% empty %}
+      <div class="bg-white border p-8 rounded-xl text-center text-gray-500 text-sm">
+        No topics discussed yet. Be the first to start a discussion!
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

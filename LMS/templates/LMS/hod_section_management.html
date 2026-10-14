@@ -1,0 +1,98 @@
+{% extends "LMS/base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">🏛️ HOD Section & Payout Dashboard</h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Assign Faculty Form -->
+    <div class="bg-white p-6 rounded-xl border shadow-sm">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">➕ Create & Assign Section</h2>
+      <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Course</label>
+          {{ form.course }}
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Section Name</label>
+          {{ form.name }}
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Assigned Instructor</label>
+          {{ form.instructor }}
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-lg transition">
+          Assign Section
+        </button>
+      </form>
+    </div>
+
+    <!-- Active Sections Overview -->
+    <div class="lg:col-span-2 space-y-8">
+      <div class="bg-white p-6 rounded-xl border shadow-sm">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">📋 Active Course Sections</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+              <tr>
+                <th class="py-3 px-3">Course</th>
+                <th class="py-3 px-3">Section</th>
+                <th class="py-3 px-3">Faculty</th>
+                <th class="py-3 px-3">Confirmation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for section in sections %}
+                <tr class="border-b">
+                  <td class="py-3 px-3 font-semibold text-gray-800">{{ section.course.title }}</td>
+                  <td class="py-3 px-3 font-mono">{{ section.name }}</td>
+                  <td class="py-3 px-3">{{ section.instructor.get_full_name|default:section.instructor.username }}</td>
+                  <td class="py-3 px-3">
+                    {% if section.confirmed_by_faculty %}
+                      <span class="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-md">Confirmed</span>
+                    {% else %}
+                      <span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">Pending</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="py-4 text-center text-gray-400 italic">No sections created yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Visiting Faculty Pending Claims -->
+      <div class="bg-white p-6 rounded-xl border shadow-sm">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">💰 Pending Visiting Faculty Payout Claims</h2>
+        <div class="space-y-3">
+          {% for claim in pending_claims %}
+            <div class="p-4 border rounded-xl flex justify-between items-center bg-gray-50">
+              <div>
+                <p class="font-bold text-sm text-gray-900">{{ claim.faculty.get_full_name|default:claim.faculty.username }}</p>
+                <p class="text-xs text-gray-500">Claim #{{ claim.id }} | Total Hours: <span class="font-semibold text-gray-800">{{ claim.total_hours }} hrs</span></p>
+                <p class="text-sm font-black text-emerald-700 mt-1">PKR {{ claim.total_amount }}</p>
+              </div>
+              <form method="POST" action="{% url 'approve_claim' claim.id %}" class="flex space-x-2">
+                {% csrf_token %}
+                <button type="submit" name="action" value="approve" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg">
+                  Approve
+                </button>
+                <button type="submit" name="action" value="reject" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg">
+                  Reject
+                </button>
+              </form>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic">No pending faculty claims requiring approval.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

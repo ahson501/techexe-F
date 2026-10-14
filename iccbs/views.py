@@ -91,9 +91,30 @@ def login_view(request):
             if user.groups.filter(name__in=['uplc_student', 'uplc_supervisor', 'nmr_student', 'nmr_supervisor', 'mediate_supervisor', 'final_approvar']).exists():
                 return redirect('lab_workflow:post_login_redirect')  # use URL name, not hardcoded path
             
-            # LMS STUDENTS / INSTRUCTORS REDIRECT
-            if user.groups.filter(name__in=['lms_student', 'LMS', 'lms_instructor']).exists():
-                return redirect('course_list')  # Redirects to /LMS/courses/
+            
+            # 🏛️ 1. HOD / DEPARTMENT HEAD
+            if user.groups.filter(name='LMS_HOD').exists():
+                return redirect('hod_dashboard')
+
+            # 💳 2. ACCOUNTANT / FINANCE
+            if user.groups.filter(name='LMS_Accountant').exists():
+                return redirect('accountant_dashboard')  # or voucher verification view
+
+            # 📋 3. ADMISSIONS OFFICER
+            if user.groups.filter(name='LMS_admissions_officer').exists():
+                return redirect('admissions_dashboard')  # or student verification list
+
+            # 👨‍🏫 4. PERMANENT INSTRUCTOR
+            if user.groups.filter(name='LMS_Instructor').exists():
+                return redirect('instructor_dashboard')
+
+            # 💼 5. VISITING FACULTY
+            if user.groups.filter(name='LMS_VistingFaculty').exists():
+                return redirect('visiting_faculty_dashboard')
+
+            # 🎓 6. STUDENT
+            if user.groups.filter(name='LMS_Student').exists():
+                return redirect('student_dashboard')
 
             return redirect('iccbs:profile')
 
