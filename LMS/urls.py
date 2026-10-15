@@ -25,6 +25,7 @@ urlpatterns = [
     path('challan/<int:enrollment_id>/download/', views.DownloadChallanView.as_view(), name='download_challan'),
     path('discussions/', views.DiscussionBoardView.as_view(), name='discussion_board'),
     path('discussions/topic/<int:pk>/', views.DiscussionTopicDetailView.as_view(), name='discussion_topic_detail'),
+    path('discussions/topic/<int:topic_id>/comment/', views.AddDiscussionCommentView.as_view(), name='add_discussion_comment'),
     path('discussions/create/', views.CreateDiscussionTopicView.as_view(), name='create_discussion_topic'),
     path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
     path('lessons/<int:pk>/toggle-complete/', views.ToggleLessonCompleteView.as_view(), name='toggle_lesson_complete'),

@@ -382,6 +382,33 @@ class CreateDiscussionTopicView(LoginRequiredMixin, View):
 
         messages.error(request, "Please fill in all required fields.")
         return redirect('create_discussion_topic')
+
+class DiscussionTopicDetailView(LoginRequiredMixin, View):
+    """View details of a discussion topic and its replies."""
+
+    def get(self, request, pk):
+        topic = get_object_or_404(DiscussionTopic, pk=pk)
+        return render(request, 'LMS/discussion_topic_detail.html', {'topic': topic})
+
+
+class AddDiscussionCommentView(LoginRequiredMixin, View):
+    """Allows enrolled students or instructors to post a comment to a topic."""
+
+    def post(self, request, topic_id):
+        topic = get_object_or_404(DiscussionTopic, id=topic_id)
+        content = request.POST.get('content', '').strip()
+
+        if content:
+            DiscussionComment.objects.create(
+                topic=topic,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, "Your reply has been posted.")
+        else:
+            messages.error(request, "Reply cannot be empty.")
+
+        return redirect('discussion_topic_detail', pk=topic.id)
 # ==========================================
 # 2. QUIZ VIEWS
 # ==========================================
