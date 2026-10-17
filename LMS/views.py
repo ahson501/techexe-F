@@ -32,6 +32,7 @@ from .models import (
     QuizAttempt,
     DiscussionTopic, 
     DiscussionPost,
+    DiscussionComment,
     VisitingFacultyClaim,
 )
 
