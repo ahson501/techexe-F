@@ -314,6 +314,30 @@ class Enrollment(TimeStampedModel):
         return f"{self.student.username} enrolled in {self.course.title} ({self.status})"
 
 
+class StudentProfile(models.Model):
+    class VerificationStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending Verification'
+        VERIFIED = 'VERIFIED', 'Verified'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    # Set related_name='student_profile' to avoid collision with LMS.UserProfile & iccbs.Profile
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='student_profile'
+    )
+    cnic_number = models.CharField(max_length=15, blank=True, null=True)
+    cnic_front = models.FileField(upload_to='cnic_docs/', blank=True, null=True)
+    cnic_back = models.FileField(upload_to='cnic_docs/', blank=True, null=True)
+    verification_status = models.CharField(
+        max_length=10, 
+        choices=VerificationStatus.choices, 
+        default=VerificationStatus.PENDING
+    )
+
+    def __str__(self):
+        return f"{self.user.username} Student Profile ({self.verification_status})"
+
 class LessonProgress(TimeStampedModel):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lesson_progress')
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='student_progress')

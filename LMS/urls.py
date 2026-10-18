@@ -23,6 +23,8 @@ urlpatterns = [
     # o
     path('voucher/<int:voucher_id>/verify/', views.VerifyVoucherPaymentView.as_view(), name='verify_voucher_payment'),
     path('challan/<int:enrollment_id>/download/', views.DownloadChallanView.as_view(), name='download_challan'),
+    path('student/upload-documents/', views.UploadStudentDocumentsView.as_view(), name='upload_student_documents'),
+    path('admissions/verify/<int:student_id>/', views.VerifyStudentDocumentView.as_view(), name='verify_student_document'),
     path('discussions/', views.DiscussionBoardView.as_view(), name='discussion_board'),
     path('discussions/topic/<int:pk>/', views.DiscussionTopicDetailView.as_view(), name='discussion_topic_detail'),
     path('discussions/topic/<int:topic_id>/comment/', views.AddDiscussionCommentView.as_view(), name='add_discussion_comment'),

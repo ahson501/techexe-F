@@ -11,7 +11,7 @@
       <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">📋 Admissions Officer Workspace</h1>
       <p class="text-xs text-gray-500 mt-1">Review student registration credentials, verify CNIC/B-Form documents, and manage enrollment eligibility.</p>
     </div>
-    <span class="text-xs font-semibold px-3 py-1.5 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full">
+    <span class="mt-4 md:mt-0 text-xs font-semibold px-3 py-1.5 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full w-fit">
       Role: Admissions Officer
     </span>
   </div>
@@ -26,34 +26,109 @@
 
   <!-- Registered Students Table -->
   <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">👨‍🎓 Student Registrations</h2>
+    <h2 class="text-lg font-bold text-gray-900 mb-4">👨‍🎓 Student Registrations & Document Verification</h2>
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs text-gray-600">
+      <table class="w-full text-left text-xs text-gray-600 border-collapse">
         <thead class="bg-gray-50 uppercase text-gray-500 border-b">
           <tr>
-            <th class="py-3 px-3">Username</th>
+            <th class="py-3 px-3">Username / Email</th>
             <th class="py-3 px-3">Full Name</th>
-            <th class="py-3 px-3">Email</th>
+            <th class="py-3 px-3">CNIC / B-Form</th>
+            <th class="py-3 px-3">Uploaded Documents</th>
             <th class="py-3 px-3">Joined Date</th>
-            <th class="py-3 px-3">Status</th>
+            <th class="py-3 px-3">Verification Status</th>
+            <th class="py-3 px-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100">
           {% for student in students %}
-            <tr class="border-b hover:bg-gray-50">
-              <td class="py-3 px-3 font-bold text-gray-900">{{ student.username }}</td>
-              <td class="py-3 px-3">{{ student.get_full_name|default:"N/A" }}</td>
-              <td class="py-3 px-3">{{ student.email }}</td>
-              <td class="py-3 px-3">{{ student.date_joined|date:"M d, Y" }}</td>
+            <tr class="hover:bg-gray-50 transition">
+              <!-- Username & Email -->
               <td class="py-3 px-3">
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                  Active Student
-                </span>
+                <span class="font-bold text-gray-900 block">{{ student.username }}</span>
+                <span class="text-[11px] text-gray-400">{{ student.email|default:"No email provided" }}</span>
+              </td>
+
+              <!-- Full Name -->
+              <td class="py-3 px-3 font-medium text-gray-800">
+                {{ student.get_full_name|default:"N/A" }}
+              </td>
+
+              <!-- CNIC / B-Form Number -->
+              <td class="py-3 px-3 font-mono text-gray-700">
+                {% if student.student_profile and student.student_profile.cnic_number %}
+                  {{ student.student_profile.cnic_number }}
+                {% else %}
+                  Not Provided
+                {% endif %}
+              </td>
+
+              <!-- Uploaded Document Links -->
+              <td class="py-3 px-3">
+                {% if student.student_profile and student.student_profile.cnic_front %}
+                  <div class="flex items-center gap-2">
+                    <a href="{{ student.student_profile.cnic_front.url }}" 
+                       target="_blank" rel="noopener noreferrer" 
+                       class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline inline-flex items-center gap-1">
+                      📄 Front
+                    </a>
+                    {% if student.student_profile.cnic_back %}
+                      <a href="{{ student.student_profile.cnic_back.url }}" 
+                         target="_blank" rel="noopener noreferrer" 
+                         class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline inline-flex items-center gap-1">
+                        📄 Back
+                      </a>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <span class="text-gray-400 italic">No files uploaded</span>
+                {% endif %}
+              </td>
+
+              <!-- Joined Date -->
+              <td class="py-3 px-3 text-gray-500">
+                {{ student.date_joined|date:"M d, Y" }}
+              </td>
+
+              <!-- Verification Status Badge -->
+              <td class="py-3 px-3">
+                {% if student.student_profile and student.student_profile.verification_status == 'VERIFIED' %}
+                  <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    ✓ Verified
+                  </span>
+                {% elif student.student_profile and student.student_profile.verification_status == 'REJECTED' %}
+                  <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                    ✕ Rejected
+                  </span>
+                {% else %}
+                  <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                    ⚠️ Pending Review
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Action Buttons -->
+              <td class="py-3 px-3 text-right">
+                {% if not student.student_profile or student.student_profile.verification_status != 'VERIFIED' %}
+                  <form action="{% url 'verify_student_document' student.id %}" method="POST" class="inline-flex gap-1.5">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="approve" 
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                      Approve
+                    </button>
+                    <button type="submit" name="action" value="reject" 
+                            class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                      Reject
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="text-[11px] text-gray-400 italic">Verified</span>
+                {% endif %}
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="5" class="py-8 text-center text-gray-400 italic">No registered students found.</td>
+              <td colspan="7" class="py-8 text-center text-gray-400 italic">No registered students found.</td>
             </tr>
           {% endfor %}
         </tbody>

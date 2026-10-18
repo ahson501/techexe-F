@@ -3,10 +3,9 @@ from django.utils.html import format_html
 from django.db.models import Count
 from .models import (
     Category, Course, Module, Lesson, Quiz,LiveSession, 
-    Question, AnswerChoice, Enrollment, LessonProgress, QuizAttempt
+    Question, AnswerChoice, Enrollment, LessonProgress, QuizAttempt, Certificate
 )
 from .models import DiscussionTopic, DiscussionPost
-
 
 # ==========================================
 # 1. INLINES FOR FAST NESTED EDITING
@@ -202,3 +201,10 @@ class DiscussionPostAdmin(admin.ModelAdmin):
     list_display = ('topic', 'author', 'is_instructor_response', 'created_at')
     list_filter = ('is_instructor_response', 'created_at')
     search_fields = ('content', 'author__username')
+
+
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ('certificate_code', 'student', 'course', 'issued_at')
+    search_fields = ('certificate_code', 'student__username', 'course__title')
+    list_filter = ('issued_at', 'course')

@@ -35,7 +35,71 @@
       <p class="text-sm text-gray-500 italic col-span-3">You are not currently enrolled in any courses.</p>
     {% endfor %}
   </div>
-
+  <!-- CNIC / B-Form Verification Upload Card -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+        <span>🪪</span> Identity & CNIC/B-Form Verification
+      </h2>
+  
+      <!-- Verification Badge -->
+      {% if request.user.student_profile and request.user.student_profile.verification_status == 'VERIFIED' %}
+        <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+          ✓ Verified by Admissions
+        </span>
+      {% elif request.user.student_profile and request.user.student_profile.verification_status == 'REJECTED' %}
+        <span class="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+          ✕ Upload Rejected (Please Re-upload)
+        </span>
+      {% else %}
+        <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+          ⚠️ Verification Pending
+        </span>
+      {% endif %}
+    </div>
+  
+    <form action="{% url 'upload_student_documents' %}" method="POST" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- CNIC Number Field -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">CNIC / B-Form Number</label>
+          <input type="text" name="cnic_number" placeholder="42101-XXXXXXX-X"
+                 value="{{ request.user.student_profile.cnic_number|default:'' }}"
+                 class="w-full text-xs px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono" required>
+        </div>
+  
+        <!-- CNIC Front File -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">CNIC Front (JPG/PNG/PDF)</label>
+          <input type="file" name="cnic_front" accept="image/*,.pdf"
+                 class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                 {% if not request.user.student_profile.cnic_front %}required{% endif %}>
+          {% if request.user.student_profile.cnic_front %}
+            <span class="text-[10px] text-emerald-600 font-semibold block mt-1">✓ Front uploaded</span>
+          {% endif %}
+        </div>
+  
+        <!-- CNIC Back File -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">CNIC Back (JPG/PNG/PDF)</label>
+          <input type="file" name="cnic_back" accept="image/*,.pdf"
+                 class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+          {% if request.user.student_profile.cnic_back %}
+            <span class="text-[10px] text-emerald-600 font-semibold block mt-1">✓ Back uploaded</span>
+          {% endif %}
+        </div>
+  
+      </div>
+  
+      <div class="flex justify-end pt-2">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow transition">
+          Submit Documents for Verification
+        </button>
+      </div>
+    </form>
+  </div>
   <!-- Vouchers & Pending Payments Card -->
   <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-8">
     <div class="flex justify-between items-center mb-4">

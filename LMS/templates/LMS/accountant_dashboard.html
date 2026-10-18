@@ -26,11 +26,13 @@
       <p class="text-[11px] text-gray-500 mt-1">Unverified student bank deposits</p>
     </div>
 
+    <!-- TOTAL CLEARED REVENUE CARD -->
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
       <p class="text-xs font-bold uppercase text-gray-400">Total Cleared Revenue</p>
-      <p class="text-2xl font-black text-emerald-600 mt-1">PKR {{ total_revenue_cleared|default:"0.00" }}</p>
-      <p class="text-[11px] text-gray-500 mt-1">Verified course admissions</p>
+      <p class="text-2xl font-black text-emerald-600 mt-1">PKR {{ total_revenue|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-400 mt-1">Verified course admissions</p>
     </div>
+
 
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
       <p class="text-xs font-bold uppercase text-gray-400">Faculty Payouts Awaiting Execution</p>
@@ -40,6 +42,63 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- 📊 Course-Wise Revenue Breakdown Table -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <span>📚</span> Course Revenue Breakdown
+        </h2>
+        <p class="text-xs text-gray-500 mt-0.5">Itemized summary of verified funds collected per course.</p>
+      </div>
+    </div>
+  
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-gray-600 border-collapse">
+        <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+          <tr>
+            <th class="py-3 px-4">Course Name</th>
+            <th class="py-3 px-4 text-center">Course Fee</th>
+            <th class="py-3 px-4 text-center">Verified Paid Students</th>
+            <th class="py-3 px-4 text-right">Total Revenue Collected</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for item in course_revenue_list %}
+            <tr class="hover:bg-gray-50 transition">
+              <!-- Course Title -->
+              <td class="py-3.5 px-4">
+                <span class="font-bold text-gray-900 block">{{ item.title }}</span>
+                <span class="text-[11px] text-gray-400">Code/Slug: {{ item.slug }}</span>
+              </td>
+  
+              <!-- Fee per Student -->
+              <td class="py-3.5 px-4 text-center font-mono text-gray-700">
+                PKR {{ item.price|default:"0.00" }}
+              </td>
+  
+              <!-- Verified Enrolled Count -->
+              <td class="py-3.5 px-4 text-center">
+                <span class="px-2.5 py-1 rounded-full font-bold text-[11px] {% if item.verified_students > 0 %}bg-indigo-100 text-indigo-800{% else %}bg-gray-100 text-gray-500{% endif %}">
+                  {{ item.verified_students }} Students
+                </span>
+              </td>
+  
+              <!-- Total Collected -->
+              <td class="py-3.5 px-4 text-right font-mono font-bold text-emerald-600 text-sm">
+                PKR {{ item.total_collected|default:"0.00" }}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="py-8 text-center text-gray-400 italic">No courses available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
     
     <!-- Left Column (2 Cols): Student Vouchers & Bank Receipts Verification -->
     <div class="lg:col-span-2 space-y-8">

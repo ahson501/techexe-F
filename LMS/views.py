@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from django.db.models import Prefetch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -30,6 +30,7 @@ from .models import (
     Question,
     Quiz,
     QuizAttempt,
+    StudentProfile,
     DiscussionTopic, 
     DiscussionPost,
     DiscussionComment,
@@ -70,6 +71,31 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         }
         return render(request, 'LMS/student_dashboard.html', context)
 
+
+class UploadStudentDocumentsView(LoginRequiredMixin, View):
+    """Allows enrolled students to submit CNIC/B-Form details and document files."""
+
+    def post(self, request):
+        cnic_number = request.POST.get('cnic_number', '').strip()
+        cnic_front = request.FILES.get('cnic_front')
+        cnic_back = request.FILES.get('cnic_back')
+
+        profile, _ = StudentProfile.objects.get_or_create(user=request.user)
+
+        if cnic_number:
+            profile.cnic_number = cnic_number
+        if cnic_front:
+            profile.cnic_front = cnic_front
+        if cnic_back:
+            profile.cnic_back = cnic_back
+
+        # Reset status to PENDING upon new submission
+        profile.verification_status = StudentProfile.VerificationStatus.PENDING
+        profile.save()
+
+        messages.success(request, "Your CNIC/B-Form documents have been uploaded successfully for review.")
+        return redirect('student_dashboard')
+
 class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Dashboard for Admissions Officers to review student registrations and documents."""
 
@@ -77,15 +103,36 @@ class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         return self.request.user.groups.filter(name='LMS_admissions_officer').exists() or self.request.user.is_staff
 
     def get(self, request):
-        # Fetch students belonging to LMS_Student group or pending admission approval
-        students = User.objects.filter(groups__name='LMS_Student').order_by('-date_joined')
+        students = User.objects.filter(groups__name='LMS_Student').select_related('student_profile').order_by('-date_joined')
         
         context = {
             'students': students,
             'total_students': students.count(),
         }
         return render(request, 'LMS/admissions_dashboard.html', context)
-    
+
+
+class VerifyStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows Admissions Officers to verify or reject CNIC/B-Form documents."""
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='LMS_admissions_officer').exists() or self.request.user.is_staff
+
+    def post(self, request, student_id):
+        action = request.POST.get('action')
+        student = get_object_or_404(User, id=student_id)
+        profile, _ = StudentProfile.objects.get_or_create(user=student)
+
+        if action == 'approve':
+            profile.verification_status = StudentProfile.VerificationStatus.VERIFIED
+            messages.success(request, f"Documents for {student.username} verified successfully.")
+        elif action == 'reject':
+            profile.verification_status = StudentProfile.VerificationStatus.REJECTED
+            messages.error(request, f"Documents for {student.username} marked as rejected.")
+
+        profile.save()
+        return redirect('admissions_dashboard')
+
 class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Instructor portal view displaying assigned courses and sections."""
     
@@ -102,7 +149,7 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             'sections': sections,
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
-    
+
 
 class HODDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Central administrative hub for HODs, Accountants, and Admissions Officers."""
@@ -117,13 +164,17 @@ class HODDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         pending_claims = VisitingFacultyClaim.objects.filter(
             status=VisitingFacultyClaim.Status.SUBMITTED
         ).select_related('faculty')
+
+        total_payout_pending = sum(
+            getattr(claim, 'total_amount', 0) for claim in pending_claims if getattr(claim, 'total_amount', None)
+        )
         
         context = {
             'sections': sections,
             'pending_claims': pending_claims,
             'total_sections': sections.count(),
             'total_claims_pending': pending_claims.count(),
-            'total_payout_pending': sum(claim.total_amount for claim in pending_claims),
+            'total_payout_pending': total_payout_pending,
         }
         return render(request, 'LMS/hod_dashboard.html', context)
 
@@ -151,80 +202,70 @@ class VisitingFacultyDashboardView(LoginRequiredMixin, UserPassesTestMixin, View
         }
         return render(request, 'LMS/visiting_faculty_dashboard.html', context)
 
+
 class AccountantDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Financial dashboard for Accountants to verify vouchers and execute payouts."""
-    
+    """Financial dashboard for Accountants to verify vouchers and review course revenue."""
+
     def test_func(self):
         return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
 
+    def handle_no_permission(self):
+        return redirect('student_dashboard')
+
     def get(self, request):
-        # 1. Base Queryset
-        qs = Enrollment.objects.select_related('student', 'course').order_by('-created_at')
+        # 1. Calculate Total Cleared Revenue directly from Active/Completed Enrollments
+        total_revenue_aggr = Enrollment.objects.filter(
+            status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+        ).aggregate(total=Sum('course__price'))['total']
+        
+        total_revenue = total_revenue_aggr if total_revenue_aggr is not None else Decimal('0.00')
 
-        # 2. Filter Pending vs Paid depending on available model fields
-        if hasattr(Enrollment, 'is_verified'):
-            pending_enrollments = qs.filter(is_verified=False)
-            cleared_enrollments = qs.filter(is_verified=True)
-        elif hasattr(Enrollment, 'is_paid'):
-            pending_enrollments = qs.filter(is_paid=False)
-            cleared_enrollments = qs.filter(is_paid=True)
-        elif hasattr(Enrollment, 'status'):
-            pending_enrollments = qs.filter(status__in=['PENDING', 'UNPAID'])
-            cleared_enrollments = qs.filter(status='PAID')
-        else:
-            pending_enrollments = qs
-            cleared_enrollments = Enrollment.objects.none()
+        # 2. Course-wise Financial Breakdown
+        course_revenue_list = Course.objects.annotate(
+            verified_students=Count(
+                'enrollments',
+                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED])
+            ),
+            total_collected=Sum(
+                'enrollments__course__price',
+                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED])
+            )
+        ).order_by('-total_collected')
 
-        # 3. Calculate total revenue from cleared enrollments
-        total_revenue_cleared = sum(
-            (e.course.price for e in cleared_enrollments if hasattr(e.course, 'price') and e.course.price),
-            Decimal('0.00')
-        )
-
-        # 4. Fetch HOD-approved faculty claims
-        approved_claims = VisitingFacultyClaim.objects.filter(
-            status=VisitingFacultyClaim.Status.HOD_APPROVED
-        ).select_related('faculty')
+        # 3. Pending payment vouchers
+        pending_vouchers = Enrollment.objects.filter(status=Enrollment.Status.PENDING)
 
         context = {
-            'pending_vouchers': pending_enrollments,
-            'pending_vouchers_count': pending_enrollments.count(),
-            'total_revenue_cleared': round(total_revenue_cleared, 2),
-            'approved_claims': approved_claims,
-            'approved_payouts_total': round(sum(c.total_amount for c in approved_claims), 2),
+            'total_cleared_revenue': total_revenue, # Primary key
+            'total_revenue': total_revenue,         # Legacy lookup backup
+            'course_revenue_list': course_revenue_list,
+            'pending_vouchers': pending_vouchers,
+            'pending_count': pending_vouchers.count(),
         }
         return render(request, 'LMS/accountant_dashboard.html', context)
     
 class VerifyVoucherPaymentView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Allows Accountants to approve student payments and activate course access."""
+    """View for accountants to verify student bank vouchers and activate course enrollment."""
 
     def test_func(self):
         return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
 
+    def handle_no_permission(self):
+        return redirect('student_dashboard')
+
     def post(self, request, voucher_id):
+        # Fetch enrollment record using the voucher ID
         enrollment = get_object_or_404(Enrollment, id=voucher_id)
         
-        # Update whichever verification field exists on Enrollment model
-        if hasattr(enrollment, 'is_verified'):
-            enrollment.is_verified = True
-        if hasattr(enrollment, 'is_paid'):
-            enrollment.is_paid = True
-        if hasattr(enrollment, 'status'):
-            enrollment.status = 'PAID'
-            
+        # Update enrollment status to ACTIVE
+        enrollment.status = Enrollment.Status.ACTIVE
         enrollment.save()
 
-        messages.success(
-            request, 
-            f"Payment for {enrollment.student.get_full_name() or enrollment.student.username} ({enrollment.course.title}) verified successfully."
-        )
+        messages.success(request, f"Payment verified for {enrollment.student.username}. Course access granted!")
         return redirect('accountant_dashboard')
-    
-
 # ==========================================
 # 1. COURSES & LESSON VIEWS
 # ==========================================
-
 
 class DownloadChallanView(LoginRequiredMixin, View):
     """Generates an official fee voucher / bank challan for offline manual payment."""
@@ -240,19 +281,36 @@ class DownloadChallanView(LoginRequiredMixin, View):
             'bank_name': 'Habib Bank Limited (HBL)',
             'account_title': 'TechExe LMS Fee Collection',
             'iban': 'PK36HABB0001234567890123',
-            'issue_date': enrollment.created_at if hasattr(enrollment, 'created_at') else timezone.now(),
+            'issue_date': getattr(enrollment, 'created_at', timezone.now()),
         }
         return render(request, 'LMS/fee_challan.html', context)
 
+
 class EnrollCourseView(LoginRequiredMixin, View):
-    def post(self, request, slug):
-        course = get_object_or_404(Course, slug=slug)
-        Enrollment.objects.get_or_create(student=request.user, course=course)
+    """Handles course enrollment requests via slug, PK, or UUID."""
+
+    def post(self, request, slug=None, course_id=None, *args, **kwargs):
+        identifier = slug or course_id or kwargs.get('pk') or kwargs.get('id')
         
-        first_lesson = Lesson.objects.filter(module__course=course).order_by('module__order', 'order').first()
-        if first_lesson:
-            return redirect('lesson_detail', pk=first_lesson.pk)
-        return redirect('course_detail', slug=course.slug)
+        if hasattr(Course, 'slug') and Course.objects.filter(slug=identifier).exists():
+            course = get_object_or_404(Course, slug=identifier)
+        else:
+            course = get_object_or_404(Course, pk=identifier)
+        
+        enrollment, created = Enrollment.objects.get_or_create(
+            student=request.user,
+            course=course,
+            defaults={'status': Enrollment.Status.PENDING}
+        )
+        
+        if created:
+            messages.success(request, f"Successfully enrolled in {course.title}. Please submit your fee challan for verification.")
+        else:
+            messages.info(request, f"You are already registered for {course.title}.")
+
+        if hasattr(course, 'slug') and course.slug:
+            return redirect('course_detail', slug=course.slug)
+        return redirect('course_detail', pk=course.pk)
 
 
 class CourseListView(ListView):
@@ -269,6 +327,7 @@ class CourseListView(ListView):
         )
 
 
+
 class CourseDetailView(DetailView):
     model = Course
     template_name = 'LMS/course_detail.html'
@@ -278,20 +337,46 @@ class CourseDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        context['modules'] = self.object.modules.prefetch_related('lessons').order_by('order')
         
-        is_enrolled = False
+        if hasattr(self.object, 'modules'):
+            context['modules'] = self.object.modules.prefetch_related('lessons').order_by('order')
+        
+        enrollment = None
         certificate = None
-        if user.is_authenticated:
-            is_enrolled = Enrollment.objects.filter(student=user, course=self.object).exists()
-            certificate = Certificate.objects.filter(student=user, course=self.object).first()
+        is_access_granted = False
+        is_course_completed = False
         
-        context['is_enrolled'] = is_enrolled
-        context['certificate'] = certificate
+        if user.is_authenticated:
+            enrollment = Enrollment.objects.filter(student=user, course=self.object).first()
+            
+            if enrollment:
+                is_access_granted = enrollment.status in [Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+
+                # Check actual progress matching total course lessons
+                total_lessons = Lesson.objects.filter(module__course=self.object).count()
+                completed_lessons = LessonProgress.objects.filter(
+                    student=user,
+                    lesson__module__course=self.object,
+                    is_completed=True
+                ).count()
+
+                if total_lessons > 0 and completed_lessons == total_lessons:
+                    is_course_completed = True
+                    certificate = Certificate.objects.filter(student=user, course=self.object).first()
+
+        # Staff or Course Instructor gets full access
+        if user.is_staff or getattr(self.object, 'instructor', None) == user:
+            is_access_granted = True
+
+        context['enrollment'] = enrollment
+        context['is_access_granted'] = is_access_granted
+        context['is_enrolled'] = enrollment is not None
+        context['certificate'] = certificate if is_course_completed else None
+        context['timezone'] = timezone
         return context
 
-
 class LessonDetailView(LoginRequiredMixin, DetailView):
+    """Displays lesson details with strict payment verification and progress tracking."""
     model = Lesson
     template_name = 'LMS/lesson_detail.html'
     context_object_name = 'lesson'
@@ -299,19 +384,48 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
 
     def dispatch(self, request, *args, **kwargs):
         lesson = self.get_object()
-        course = lesson.module.course
-        is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
-        if not is_enrolled and not lesson.is_preview:
-            return redirect('course_detail', slug=course.slug)
+        course = getattr(lesson, 'course', None) or lesson.module.course
+        user = request.user
+
+        def get_course_redirect():
+            if hasattr(course, 'slug') and course.slug:
+                return redirect('course_detail', slug=course.slug)
+            return redirect('course_detail', pk=course.pk)
+
+        # Allow Staff or Course Instructor
+        if user.is_staff or getattr(course, 'instructor', None) == user:
+            return super().dispatch(request, *args, **kwargs)
+
+        # Allow free preview lessons
+        if getattr(lesson, 'is_preview', False):
+            return super().dispatch(request, *args, **kwargs)
+
+        # Check Enrollment & Status
+        enrollment = Enrollment.objects.filter(student=user, course=course).first()
+
+        if not enrollment:
+            messages.error(request, "You must enroll in this course to access lessons.")
+            return get_course_redirect()
+
+        is_access_granted = enrollment.status in [Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+
+        if not is_access_granted:
+            messages.error(
+                request, 
+                "Access Restricted: Your payment for this course is pending accountant verification."
+            )
+            return get_course_redirect()
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         lesson = self.object
-        course = lesson.module.course
+        course = getattr(lesson, 'course', None) or lesson.module.course
         user = self.request.user
 
-        modules = course.modules.prefetch_related('lessons', 'quizzes').order_by('order')
+        modules = course.modules.prefetch_related('lessons', 'quizzes').order_by('order') if hasattr(course, 'modules') else []
+        
         completed_lesson_ids = set(
             LessonProgress.objects.filter(
                 student=user,
@@ -321,6 +435,7 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
         )
 
         progress, _ = LessonProgress.objects.get_or_create(student=user, lesson=lesson)
+
         context['course'] = course
         context['modules'] = modules
         context['completed_lesson_ids'] = completed_lesson_ids
@@ -329,20 +444,26 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
 
 
 class ToggleLessonCompleteView(LoginRequiredMixin, View):
+    """Toggles lesson completion status and issues certificate upon 100% completion."""
+
     def post(self, request, pk):
         lesson = get_object_or_404(Lesson, pk=pk)
+        course = getattr(lesson, 'course', None) or lesson.module.course
+        
         progress, _ = LessonProgress.objects.get_or_create(student=request.user, lesson=lesson)
         
         progress.is_completed = not progress.is_completed
         progress.completed_at = timezone.now() if progress.is_completed else None
         progress.save()
 
-        course = lesson.module.course
-        total_lessons = Lesson.objects.filter(module__course=course).count()
+        # Check total course completion
+        total_lessons = Lesson.objects.filter(module__course=course).count() if hasattr(lesson, 'module') else Lesson.objects.filter(course=course).count()
+        
         completed_lessons_count = LessonProgress.objects.filter(
             student=request.user,
-            lesson__module__course=course,
             is_completed=True
+        ).filter(
+            lesson__module__course=course if hasattr(lesson, 'module') else lesson__course
         ).count()
 
         if total_lessons > 0 and completed_lessons_count == total_lessons:
@@ -354,10 +475,11 @@ class ToggleLessonCompleteView(LoginRequiredMixin, View):
 
         return redirect('lesson_detail', pk=lesson.pk)
 
+
 class CreateDiscussionTopicView(LoginRequiredMixin, View):
     """Allows instructors and students to create new discussion topics."""
+
     def get(self, request):
-        # Instructors see their assigned courses; staff see all
         if request.user.groups.filter(name='LMS_Instructor').exists():
             courses = Course.objects.filter(instructor=request.user)
         else:
@@ -383,6 +505,7 @@ class CreateDiscussionTopicView(LoginRequiredMixin, View):
 
         messages.error(request, "Please fill in all required fields.")
         return redirect('create_discussion_topic')
+
 
 class DiscussionTopicDetailView(LoginRequiredMixin, View):
     """View details of a discussion topic and its replies."""
