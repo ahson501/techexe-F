@@ -70,9 +70,8 @@
               <!-- Course Title -->
               <td class="py-3.5 px-4">
                 <span class="font-bold text-gray-900 block">{{ item.title }}</span>
-                <span class="text-[11px] text-gray-400">Code/Slug: {{ item.slug }}</span>
+                <span class="text-[11px] text-gray-400 font-mono">{{ item.slug }}</span>
               </td>
-  
               <!-- Fee per Student -->
               <td class="py-3.5 px-4 text-center font-mono text-gray-700">
                 PKR {{ item.price|default:"0.00" }}

@@ -31,6 +31,7 @@ urlpatterns = [
     path('discussions/create/', views.CreateDiscussionTopicView.as_view(), name='create_discussion_topic'),
     path('lessons/<int:pk>/', views.LessonDetailView.as_view(), name='lesson_detail'),
     path('lessons/<int:pk>/toggle-complete/', views.ToggleLessonCompleteView.as_view(), name='toggle_lesson_complete'),
+    path('session/create/', views.CreateLiveSessionView.as_view(), name='create_live_session'),
     path('live/<int:session_id>/', views.LiveSessionRoomView.as_view(), name='live_session_room'),
     path('quizzes/<int:pk>/take/', views.QuizTakeView.as_view(), name='quiz_take'),
     path('quizzes/<int:pk>/latest-result/', views.LatestQuizResultRedirectView.as_view(), name='quiz_result_latest'),

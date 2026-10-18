@@ -1,58 +1,121 @@
 {% extends "LMS/base.html" %}
 
+{% block title %}HOD Dashboard | EduCore LMS{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
-  <h1 class="text-3xl font-bold text-gray-900 mb-6">🏛️ Department & Faculty Management</h1>
+  
+  <!-- Welcome Banner -->
+  <div class="mb-8 p-6 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">🏛️ Department & Faculty Management</h1>
+      <p class="text-xs text-emerald-100 mt-1">Manage departmental faculty, allocate course sections, and approve visiting faculty claims.</p>
+    </div>
+    <div class="mt-4 md:mt-0">
+      <span class="text-xs font-semibold px-3 py-1.5 bg-white/20 border border-white/30 rounded-full">
+        Welcome, {{ request.user.username }} (HOD)
+      </span>
+    </div>
+  </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <!-- Primary Management Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     
-    <!-- Faculty Invitations & Status -->
-    <div class="bg-white p-6 rounded-xl border shadow-sm">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-gray-900">👥 Faculty Invitations</h2>
-        <a href="{% url 'invite_faculty' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+    <!-- Faculty Invitations Card -->
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
+          <span>👥</span> Faculty Invitations
+        </h2>
+        <a href="{% url 'invite_faculty' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
           + Invite Faculty
         </a>
       </div>
-      <div class="space-y-3">
-        {% for invitation in faculty_invitations %}
-          <div class="p-3 border rounded-lg flex justify-between items-center bg-gray-50">
-            <div>
-              <p class="font-bold text-sm text-gray-800">{{ invitation.email }}</p>
-              <p class="text-xs text-gray-500">{{ invitation.department }} ({{ invitation.get_faculty_type_display }})</p>
-            </div>
-            <span class="text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-800">
-              {{ invitation.get_status_display }}
-            </span>
-          </div>
-        {% empty %}
-          <p class="text-xs text-gray-400 italic">No faculty invitations pending.</p>
-        {% endfor %}
-      </div>
+      {% if pending_invitations %}
+        <!-- Invitation list -->
+      {% else %}
+        <p class="text-xs text-gray-400 italic py-4">No pending faculty invitations.</p>
+      {% endif %}
     </div>
 
-    <!-- Visiting Faculty Payout Claims -->
-    <div class="bg-white p-6 rounded-xl border shadow-sm">
-      <h2 class="text-lg font-bold text-gray-900 mb-4">💰 Visiting Faculty Payout Claims</h2>
-      <div class="space-y-3">
-        {% for claim in pending_claims %}
-          <div class="p-3 border rounded-lg flex justify-between items-center bg-gray-50">
-            <div>
-              <p class="font-bold text-sm text-gray-800">{{ claim.faculty.get_full_name|default:claim.faculty.username }}</p>
-              <p class="text-xs text-gray-500">Total Hours: {{ claim.total_hours }} hrs | PKR {{ claim.total_amount }}</p>
-            </div>
-            <div class="space-x-2">
-              <a href="{% url 'approve_claim' claim.id %}" class="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-md font-bold">
-                Approve
-              </a>
-            </div>
-          </div>
-        {% empty %}
-          <p class="text-xs text-gray-400 italic">No pending payout claims requiring approval.</p>
-        {% endfor %}
+    <!-- Visiting Faculty Payout Claims Card -->
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <h2 class="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <span>💰</span> Visiting Faculty Payout Claims
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-gray-600">
+          <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+            <tr>
+              <th class="py-2.5 px-3">Faculty</th>
+              <th class="py-2.5 px-3">Sessions</th>
+              <th class="py-2.5 px-3">Amount</th>
+              <th class="py-2.5 px-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for claim in pending_claims %}
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-gray-900">{{ claim.faculty.username }}</td>
+                <td class="py-2.5 px-3">{{ claim.completed_sessions_count }}</td>
+                <td class="py-2.5 px-3 font-mono">PKR {{ claim.amount }}</td>
+                <td class="py-2.5 px-3 text-right">
+                  <form action="{% url 'approve_faculty_claim' claim.id %}" method="POST" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2.5 py-1 rounded">
+                      Approve
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="py-6 text-center text-gray-400 italic">No pending payout claims requiring approval.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
 
   </div>
+
+  <!-- Course Section Allocations -->
+  <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
+    <h2 class="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <span>📚</span> Departmental Course Section Allocations
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-gray-600">
+        <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+          <tr>
+            <th class="py-3 px-4">Course Title</th>
+            <th class="py-3 px-4">Section</th>
+            <th class="py-3 px-4">Assigned Instructor</th>
+            <th class="py-3 px-4 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for section in course_sections %}
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-bold text-gray-900">{{ section.course.title }}</td>
+              <td class="py-3 px-4 font-mono">{{ section.name }}</td>
+              <td class="py-3 px-4">{{ section.instructor.get_full_name|default:section.instructor.username }}</td>
+              <td class="py-3 px-4 text-center">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                  Active
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="py-6 text-center text-gray-400 italic">No active course sections found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

@@ -143,13 +143,62 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         user = request.user
         courses = Course.objects.filter(instructor=user)
         sections = CourseSection.objects.filter(instructor=user).select_related('course')
+        upcoming_sessions = LiveSession.objects.filter(
+            section__instructor=request.user,
+            status=LiveSession.Status.SCHEDULED
+        ).order_by('start_time')
         
         context = {
             'courses': courses,
             'sections': sections,
+            'upcoming_sessions': upcoming_sessions,
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
 
+# LMS/views.py
+
+from django.shortcuts import redirect, get_object_or_404
+from django.views.generic import View
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib import messages
+from .models import LiveSession, CourseSection
+
+class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows instructors to schedule live classroom sessions for their assigned sections."""
+
+    def test_func(self):
+        return (
+            self.request.user.is_staff or 
+            self.request.user.groups.filter(name='LMS_Faculty').exists() or
+            self.request.user.groups.filter(name='LMS_visiting_faculty').exists()
+        )
+
+    def handle_no_permission(self):
+        messages.error(self.request, "Unauthorized access: Instructor permissions required.")
+        return redirect('instructor_dashboard')
+
+    def post(self, request):
+        section_id = request.POST.get('section_id')
+        title = request.POST.get('title', '').strip()
+        meeting_link = request.POST.get('meeting_link', '').strip()
+        start_time = request.POST.get('start_time')
+
+        if not section_id or not title or not meeting_link or not start_time:
+            messages.error(request, "All fields are required to schedule a live session.")
+            return redirect('instructor_dashboard')
+
+        section = get_object_or_404(CourseSection, id=section_id, instructor=request.user)
+
+        LiveSession.objects.create(
+            section=section,
+            title=title,
+            meeting_link=meeting_link,
+            start_time=start_time,
+            status=LiveSession.Status.SCHEDULED
+        )
+
+        messages.success(request, f"Live session '{title}' scheduled successfully!")
+        return redirect('instructor_dashboard')
 
 class HODDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Central administrative hub for HODs, Accountants, and Admissions Officers."""

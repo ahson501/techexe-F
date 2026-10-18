@@ -9,7 +9,7 @@
   <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
     <div>
       <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">👨‍🏫 Instructor Command Center</h1>
-      <p class="text-xs text-gray-500 mt-1">Manage your active courses, section schedules, and student engagement tools.</p>
+      <p class="text-xs text-gray-500 mt-1">Manage your active courses, section schedules, live classes, and student engagement tools.</p>
     </div>
     <div class="mt-4 md:mt-0 flex items-center space-x-3">
       <a href="{% url 'discussion_board' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow transition">
@@ -28,7 +28,7 @@
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-bold text-gray-900">🏛️ Assigned Sections (HOD Allocations)</h2>
           <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-bold">
-            {{ sections.count }} Total Active Sections
+            {{ sections.count|default:sections|length }} Total Active Sections
           </span>
         </div>
 
@@ -105,9 +105,90 @@
 
     </div>
 
-    <!-- Right Column (1 Col): Quick Tools & Live Class Scheduler -->
+    <!-- Right Column (1 Col): Quick Tools, Session Scheduler & Upcoming Live Sessions -->
     <div class="space-y-6">
       
+      <!-- Live Session Scheduler Form -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <span>🎥</span> Schedule Upcoming Live Session
+        </h2>
+        <p class="text-xs text-gray-500 mb-4">Create a live classroom link for your assigned section students.</p>
+
+        <form action="{% url 'create_live_session' %}" method="POST" class="space-y-3.5">
+          {% csrf_token %}
+
+          <!-- Section Select -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Target Section</label>
+            <select name="section_id" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+              <option value="" disabled selected>Select assigned section...</option>
+              {% for section in sections %}
+                <option value="{{ section.id }}">{{ section.course.title }} - Section {{ section.name }}</option>
+              {% empty %}
+                <option value="" disabled>No assigned sections available</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Session Title -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Session Title</label>
+            <input type="text" name="title" placeholder="e.g. Interactive Q&A / Lecture 04" 
+                   class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+          </div>
+
+          <!-- Meeting URL -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Meeting Link (Zoom/Teams)</label>
+            <input type="url" name="meeting_link" placeholder="https://zoom.us/j/..." 
+                   class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+          </div>
+
+          <!-- Start Date & Time -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Scheduled Start Date & Time</label>
+            <input type="datetime-local" name="start_time" 
+                   class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+          </div>
+
+          <button type="submit" 
+                  class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition">
+            + Schedule Session
+          </button>
+        </form>
+      </div>
+
+      <!-- Upcoming Scheduled Sessions Widget -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <span>📅</span> Scheduled Live Classes
+        </h2>
+
+        <div class="space-y-3">
+          {% for session in upcoming_sessions %}
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs space-y-1">
+              <div class="flex justify-between items-start">
+                <h4 class="font-bold text-gray-900">{{ session.title }}</h4>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                  {{ session.section.name }}
+                </span>
+              </div>
+              <p class="text-[11px] text-gray-500">
+                🕒 {{ session.start_time|date:"M d, Y @ h:i A" }}
+              </p>
+              <div class="pt-1">
+                <a href="{{ session.meeting_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-bold text-[11px]">
+                  Launch Meeting →
+                </a>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic py-2">No upcoming live sessions scheduled.</p>
+          {% endfor %}
+        </div>
+      </div>
+
       <!-- Quick Action Panel -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-md font-bold text-gray-900 mb-4">⚡ Quick Actions</h2>
