@@ -1,0 +1,81 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Accept Faculty Invitation | TechExe LMS{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full bg-white rounded-2xl border border-gray-200 shadow-xl p-8 space-y-6">
+    
+    <!-- Header Badge & Title -->
+    <div class="text-center">
+      <span class="inline-block p-3 rounded-full bg-indigo-50 text-indigo-600 text-2xl mb-2">
+        🎓
+      </span>
+      <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Complete Faculty Setup</h2>
+      <p class="text-xs text-gray-500 mt-1">
+        You have been invited to join TechExe LMS as 
+        <span class="font-bold text-indigo-600">{{ invitation.get_faculty_type_display }}</span>.
+      </p>
+    </div>
+
+    <!-- Assigned Information Card -->
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs space-y-2">
+      <div class="flex justify-between">
+        <span class="text-gray-500 font-medium">Invited Email:</span>
+        <span class="font-bold text-gray-900">{{ invitation.email }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500 font-medium">Department:</span>
+        <span class="font-bold text-gray-900">{{ invitation.department }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500 font-medium">Role Assignment:</span>
+        <span class="font-bold text-emerald-600">{{ invitation.get_faculty_type_display }}</span>
+      </div>
+    </div>
+
+    <!-- Activation Form -->
+    <form action="{% url 'accept_faculty_invitation' token %}" method="POST" class="space-y-4">
+      {% csrf_token %}
+
+      <!-- Account Credentials -->
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Choose Username</label>
+        <input type="text" name="username" placeholder="e.g. dr_smith" 
+               class="w-full text-xs px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Create Password</label>
+        <input type="password" name="password" placeholder="••••••••" 
+               class="w-full text-xs px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+      </div>
+
+      <hr class="border-gray-200 my-2">
+
+      <!-- Faculty Profile Verification Details -->
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">CNIC or Passport Number</label>
+        <input type="text" name="cnic_or_passport" placeholder="42101-XXXXXXX-X" 
+               class="w-full text-xs px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Highest Qualification</label>
+        <input type="text" name="qualification" placeholder="e.g. Ph.D. in Computer Science" 
+               class="w-full text-xs px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+      </div>
+
+      <button type="submit" 
+              class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-md transition">
+        Activate Account & Access LMS →
+      </button>
+    </form>
+
+    <p class="text-center text-[11px] text-gray-400">
+      Need assistance? Contact your Department Head or LMS Administration.
+    </p>
+
+  </div>
+</div>
+{% endblock %}

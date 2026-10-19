@@ -1,29 +1,43 @@
+# Standard Library Imports
 import json
 import logging
-import requests
 import uuid
 from decimal import Decimal
 from io import BytesIO
+
+# Third-Party Imports
+import requests
 from PIL import Image, ImageDraw, ImageFont
 
+# Django Core & Auth Imports
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.models import Group
+from django.core.mail import send_mail
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
-from django.db.models import Sum, Count, Q
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 from django.views.generic import DetailView, ListView, View
-from .forms import QuizTakeForm, AssignFacultySectionForm
+
+# Local Application Imports
+from .forms import AssignFacultySectionForm, QuizTakeForm
 from .models import (
     AnswerChoice,
     Certificate,
     Course,
     CourseSection,
+    DiscussionComment,
+    DiscussionPost,
+    DiscussionTopic,
     Enrollment,
+    FacultyInvitation,
     Lesson,
     LessonProgress,
     LiveSession,
@@ -31,9 +45,6 @@ from .models import (
     Quiz,
     QuizAttempt,
     StudentProfile,
-    DiscussionTopic, 
-    DiscussionPost,
-    DiscussionComment,
     VisitingFacultyClaim,
 )
 
@@ -155,23 +166,50 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
 
-# LMS/views.py
 
-from django.shortcuts import redirect, get_object_or_404
-from django.views.generic import View
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib import messages
-from .models import LiveSession, CourseSection
 
-class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Allows instructors to schedule live classroom sessions for their assigned sections."""
+class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows instructors or staff to create new courses directly from the front-end."""
 
     def test_func(self):
-        return (
-            self.request.user.is_staff or 
-            self.request.user.groups.filter(name='LMS_Faculty').exists() or
-            self.request.user.groups.filter(name='LMS_visiting_faculty').exists()
+        return self.request.user.is_staff or self.request.user.groups.filter(name='LMS_Instructor').exists()
+
+    def post(self, request):
+        title = request.POST.get('title', '').strip()
+        price = request.POST.get('price', '0.00').strip()
+        status = request.POST.get('status', 'PUBLISHED')
+        
+        if not title:
+            messages.error(request, "Course title is required.")
+            return redirect('instructor_dashboard')
+
+        # Auto-generate a unique slug
+        slug = slugify(title)
+        if Course.objects.filter(slug=slug).exists():
+            slug = f"{slug}-{Course.objects.count() + 1}"
+
+        Course.objects.create(
+            title=title,
+            slug=slug,
+            price=price,
+            status=status,
+            instructor=request.user
         )
+
+        messages.success(request, f"Course '{title}' created successfully!")
+        return redirect('instructor_dashboard')
+
+class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows instructors to schedule live classroom sessions (Zoom, Teams, or built-in Jitsi)."""
+
+    def test_func(self):
+        user = self.request.user
+        if user.is_staff:
+            return True
+        allowed_groups = {
+            'LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD'
+        }
+        return bool(allowed_groups & set(user.groups.values_list('name', flat=True)))
 
     def handle_no_permission(self):
         messages.error(self.request, "Unauthorized access: Instructor permissions required.")
@@ -183,51 +221,111 @@ class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
         meeting_link = request.POST.get('meeting_link', '').strip()
         start_time = request.POST.get('start_time')
 
-        if not section_id or not title or not meeting_link or not start_time:
-            messages.error(request, "All fields are required to schedule a live session.")
+        if not section_id or not title or not start_time:
+            messages.error(request, "Section, title, and start time are required.")
             return redirect('instructor_dashboard')
 
-        section = get_object_or_404(CourseSection, id=section_id, instructor=request.user)
+        if request.user.is_staff or request.user.groups.filter(name='LMS_HOD').exists():
+            section = get_object_or_404(CourseSection, id=section_id)
+        else:
+            section = get_object_or_404(CourseSection, id=section_id, instructor=request.user)
 
+        # Map to 'join_url' and attach course from section
         LiveSession.objects.create(
+            course=section.course,
             section=section,
             title=title,
-            meeting_link=meeting_link,
+            join_url=meeting_link,  # Maps input link to join_url
             start_time=start_time,
-            status=LiveSession.Status.SCHEDULED
+            status=LiveSession.Status.SCHEDULED,
+            mode=LiveSession.Mode.ONLINE
         )
 
         messages.success(request, f"Live session '{title}' scheduled successfully!")
         return redirect('instructor_dashboard')
 
-class HODDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Central administrative hub for HODs, Accountants, and Admissions Officers."""
-    
+        
+
+User = get_user_model()
+
+
+class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Central administrative hub for HODs to allocate sections and approve faculty payout claims."""
+
     def test_func(self):
-        return self.request.user.groups.filter(
+        user = self.request.user
+        return user.is_staff or user.groups.filter(
             name__in=['LMS_HOD', 'LMS_Accountant', 'LMS_admissions_officer']
-        ).exists() or self.request.user.is_staff
+        ).exists()
+
+    def handle_no_permission(self):
+        messages.error(self.request, "Unauthorized access: HOD permissions required.")
+        return redirect('student_dashboard')
 
     def get(self, request):
-        sections = CourseSection.objects.select_related('course', 'instructor').all()
-        pending_claims = VisitingFacultyClaim.objects.filter(
-            status=VisitingFacultyClaim.Status.SUBMITTED
-        ).select_related('faculty')
+        # 1. Fetch all course sections
+        course_sections = CourseSection.objects.select_related('course', 'instructor').all()
 
+        # 2. Query ALL courses explicitly for the modal selection dropdown
+        courses = Course.objects.all().order_by('-id')
+
+        # 3. Query all active instructors (Faculty & Visiting Faculty)
+        instructors = User.objects.filter(
+            groups__name__in=['LMS_Instructor', 'LMS_VisitingFaculty']
+        ).distinct()
+
+        # 4. Pending faculty payout claims
+        pending_claims = VisitingFacultyClaim.objects.filter(
+            status='PENDING'
+        ) if hasattr(VisitingFacultyClaim, 'status') else []
+
+        # Calculate pending payout sum
         total_payout_pending = sum(
             getattr(claim, 'total_amount', 0) for claim in pending_claims if getattr(claim, 'total_amount', None)
         )
-        
+
         context = {
-            'sections': sections,
+            'course_sections': course_sections,
+            'courses': courses,
+            'instructors': instructors,
             'pending_claims': pending_claims,
-            'total_sections': sections.count(),
-            'total_claims_pending': pending_claims.count(),
+            'total_sections': course_sections.count(),
+            'total_claims_pending': len(pending_claims),
             'total_payout_pending': total_payout_pending,
         }
         return render(request, 'LMS/hod_dashboard.html', context)
+class CreateSectionView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows HOD or staff to create course sections and assign instructors."""
 
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.groups.filter(name='LMS_HOD').exists()
 
+    def handle_no_permission(self):
+        messages.error(self.request, "Unauthorized: HOD permissions required.")
+        return redirect('hod_dashboard')
+
+    def post(self, request):
+        course_id = request.POST.get('course_id')
+        name = request.POST.get('name', '').strip()
+        instructor_id = request.POST.get('instructor_id')
+
+        if not course_id or not name or not instructor_id:
+            messages.error(request, "All fields are required to create a section.")
+            return redirect('hod_dashboard')
+
+        course = get_object_or_404(Course, id=course_id)
+        instructor = get_object_or_404(User, id=instructor_id)
+
+        CourseSection.objects.create(
+            course=course,
+            name=name,
+            instructor=instructor,
+            confirmed_by_faculty=True
+        )
+
+        messages.success(request, f"Section '{name}' for '{course.title}' created and assigned to {instructor.username}!")
+        return redirect('hod_dashboard')
+    
 class VisitingFacultyDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Workspace for Visiting Faculty to view sections, classes, and claims."""
 
@@ -804,6 +902,7 @@ class AIChatAssistantView(LoginRequiredMixin, View):
 # 4. LIVE SESSIONS & HOD MANAGEMENT
 # ==========================================
 
+
 class InviteFacultyView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Allows HODs to generate or send email invitations for new permanent/visiting faculty."""
 
@@ -814,18 +913,126 @@ class InviteFacultyView(LoginRequiredMixin, UserPassesTestMixin, View):
         return render(request, 'LMS/invite_faculty.html')
 
     def post(self, request):
-        email = request.POST.get('email', '').strip()
-        faculty_type = request.POST.get('faculty_type', 'VISITING')
-        department = request.POST.get('department', 'Computer Science')
+        email = request.POST.get('email', '').strip().lower()
+        faculty_type = request.POST.get('faculty_type', FacultyInvitation.FacultyType.VISITING)
+        department = request.POST.get('department', 'Computer Science').strip()
 
-        if email:
-            # Here you can save to a FacultyInvitation model or trigger an email send
-            messages.success(request, f"Faculty invitation sent to {email} ({faculty_type}).")
-            return redirect('hod_dashboard')
+        if not email:
+            messages.error(request, "Please provide a valid email address.")
+            return render(request, 'LMS/invite_faculty.html')
 
-        messages.error(request, "Please provide a valid email address.")
-        return render(request, 'LMS/invite_faculty.html')
-    
+        # 1. Save or update the record in your FacultyInvitation model
+        invitation, created = FacultyInvitation.objects.update_or_create(
+            email=email,
+            defaults={
+                'department': department,
+                'faculty_type': faculty_type,
+                'status': FacultyInvitation.Status.INVITED
+            }
+        )
+
+        # 2. Generate a secure, time-stamped token based on the recipient email
+        signer = TimestampSigner()
+        signed_token = signer.sign(invitation.email)
+
+        # 3. Build the full absolute activation link
+        accept_url = request.build_absolute_uri(
+            reverse('accept_faculty_invitation', kwargs={'token': signed_token})
+        )
+
+        # 4. Dispatch email via Docker Compose SMTP settings
+        subject = f"Faculty Invitation: Join TechExe LMS ({invitation.get_faculty_type_display()})"
+        message = f"""Hello,
+
+You have been invited by the Department Head to join TechExe LMS as a {invitation.get_faculty_type_display()} in the {department} department.
+
+Please click the link below to accept your invitation and complete your account setup:
+{accept_url}
+
+Best regards,
+TechExe Academic Management
+"""
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'aitechexe.net@gmail.com'),
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            messages.success(request, f"Faculty invitation email sent to {email} ({invitation.get_faculty_type_display()}).")
+        except Exception as e:
+            messages.error(request, f"Failed to send email to {email}: {str(e)}")
+
+        return redirect('hod_dashboard')
+
+
+
+User = get_user_model()
+
+
+class AcceptFacultyInvitationView(View):
+    """Handles faculty activation and account setup via signed email links."""
+
+    def get_invitation_from_token(self, token):
+        signer = TimestampSigner()
+        try:
+            # Token valid for 7 days (604,800 seconds)
+            email = signer.unsign(token, max_age=604800)
+            return FacultyInvitation.objects.get(email=email, status=FacultyInvitation.Status.INVITED)
+        except (BadSignature, SignatureExpired, FacultyInvitation.DoesNotExist):
+            return None
+
+    def get(self, request, token):
+        invitation = self.get_invitation_from_token(token)
+        if not invitation:
+            messages.error(request, "This invitation link is invalid or has expired.")
+            return redirect('login')
+
+        return render(request, 'LMS/accept_invitation.html', {'invitation': invitation, 'token': token})
+
+    def post(self, request, token):
+        invitation = self.get_invitation_from_token(token)
+        if not invitation:
+            messages.error(request, "This invitation link is invalid or has expired.")
+            return redirect('login')
+
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        cnic = request.POST.get('cnic_or_passport', '').strip()
+        qualification = request.POST.get('qualification', '').strip()
+
+        if not username or not password:
+            messages.error(request, "Username and password are required.")
+            return render(request, 'LMS/accept_invitation.html', {'invitation': invitation, 'token': token})
+
+        # Create user account
+        user = User.objects.create_user(
+            username=username,
+            email=invitation.email,
+            password=password
+        )
+
+        # Map faculty_type to User Group
+        group_name = (
+            'LMS_VisitingFaculty'
+            if invitation.faculty_type == FacultyInvitation.FacultyType.VISITING
+            else 'LMS_Instructor'
+        )
+        group, _ = Group.objects.get_or_create(name=group_name)
+        user.groups.add(group)
+
+        # Update invitation and link to user
+        invitation.user = user
+        invitation.cnic_or_passport = cnic
+        invitation.qualification = qualification
+        invitation.status = FacultyInvitation.Status.ACTIVE
+        invitation.save()
+
+        messages.success(request, "Account created successfully! You can now log in.")
+        return redirect('login')
+
 class LiveSessionRoomView(LoginRequiredMixin, View):
     def get(self, request, session_id):
         session = get_object_or_404(LiveSession, id=session_id)

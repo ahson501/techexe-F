@@ -1,14 +1,16 @@
 {% extends "LMS/base.html" %}
 
-{% block title %}HOD Dashboard | EduCore LMS{% endblock %}
+{% block title %}HOD Dashboard | TechExe LMS{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
   
   <!-- Welcome Banner -->
-  <div class="mb-8 p-6 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between">
+  <div class="mb-8 p-6 bg-gradient-to-r from-emerald-700 to-teal-800 text-white rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between">
     <div>
-      <h1 class="text-2xl font-bold">🏛️ Department & Faculty Management</h1>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <span>🏛️</span> Department & Faculty Management
+      </h1>
       <p class="text-xs text-emerald-100 mt-1">Manage departmental faculty, allocate course sections, and approve visiting faculty claims.</p>
     </div>
     <div class="mt-4 md:mt-0">
@@ -27,7 +29,7 @@
         <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
           <span>👥</span> Faculty Invitations
         </h2>
-        <a href="{% url 'invite_faculty' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+        <a href="{% url 'invite_faculty' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition">
           + Invite Faculty
         </a>
       </div>
@@ -82,34 +84,46 @@
 
   <!-- Course Section Allocations -->
   <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
-    <h2 class="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
-      <span>📚</span> Departmental Course Section Allocations
-    </h2>
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
+          <span>📚</span> Departmental Course Section Allocations
+        </h2>
+        <p class="text-xs text-gray-500 mt-0.5">Assign course sections to active internal and visiting faculty members.</p>
+      </div>
+      
+      <!-- + ADD SECTION BUTTON -->
+      <button onclick="document.getElementById('addSectionModal').classList.remove('hidden')" 
+              class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+        <span>➕</span> Add Section
+      </button>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full text-left text-xs text-gray-600">
         <thead class="bg-gray-50 uppercase text-gray-500 border-b">
           <tr>
             <th class="py-3 px-4">Course Title</th>
-            <th class="py-3 px-4">Section</th>
+            <th class="py-3 px-4">Section Name</th>
             <th class="py-3 px-4">Assigned Instructor</th>
             <th class="py-3 px-4 text-center">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
           {% for section in course_sections %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-gray-50 transition">
               <td class="py-3 px-4 font-bold text-gray-900">{{ section.course.title }}</td>
-              <td class="py-3 px-4 font-mono">{{ section.name }}</td>
+              <td class="py-3 px-4 font-mono text-indigo-600 font-bold">{{ section.name }}</td>
               <td class="py-3 px-4">{{ section.instructor.get_full_name|default:section.instructor.username }}</td>
               <td class="py-3 px-4 text-center">
-                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
-                  Active
+                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+                  Active Allocation
                 </span>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="py-6 text-center text-gray-400 italic">No active course sections found.</td>
+              <td colspan="4" class="py-8 text-center text-gray-400 italic">No active course sections found. Click "+ Add Section" above to create one.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -117,5 +131,68 @@
     </div>
   </div>
 
+</div>
+
+<!-- 🛠️ CREATE SECTION MODAL -->
+<div id="addSectionModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-md w-full p-6 relative">
+    
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+        <span>📚</span> Create Course Section
+      </h3>
+      <button onclick="document.getElementById('addSectionModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-lg font-bold">
+        &times;
+      </button>
+    </div>
+
+    <form action="{% url 'create_section' %}" method="POST" class="space-y-4">
+      {% csrf_token %}
+
+      <!-- Select Course -->
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Target Course</label>
+        <select name="course_id" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+          <option value="" disabled selected>Select course...</option>
+          {% for course in courses %}
+            <option value="{{ course.id }}">{{ course.title }} ({{ course.slug }})</option>
+          {% empty %}
+            <option value="" disabled>No courses created yet</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Section Name -->
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Section Name / Code</label>
+        <input type="text" name="name" placeholder="e.g. Section A or SEC-101" 
+               class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+      </div>
+
+      <!-- Assign Instructor -->
+      <div>
+        <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Assign Instructor</label>
+        <select name="instructor_id" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+          <option value="" disabled selected>Select instructor...</option>
+          {% for inst in instructors %}
+            <option value="{{ inst.id }}">{{ inst.get_full_name|default:inst.username }} ({{ inst.email }})</option>
+          {% empty %}
+            <option value="" disabled>No instructors available</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="document.getElementById('addSectionModal').classList.add('hidden')" 
+                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition">
+          Save Section
+        </button>
+      </div>
+    </form>
+
+  </div>
 </div>
 {% endblock %}
