@@ -49,21 +49,25 @@
                 <span class="text-[11px] text-gray-400">{{ student.email|default:"No email provided" }}</span>
               </td>
 
-              <!-- Role Identification -->
+              <!-- Role Identification Column -->
               <td class="py-3 px-3 font-medium">
                 {% for group in student.groups.all %}
-                  {% if group.name == 'LMS_Instructor' %}
+                  {% if "instructor" in group.name|lower %}
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-800 rounded-full">
                       Instructor
                     </span>
-                  {% elif group.name == 'LMS_Student' %}
+                  {% elif "student" in group.name|lower %}
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-800 rounded-full">
                       Student
                     </span>
+                  {% else %}
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-700 rounded-full">
+                      {{ group.name }}
+                    </span>
                   {% endif %}
                 {% empty %}
-                  <span class="px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-600 rounded-full">
-                    User
+                  <span class="px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-400 rounded-full">
+                    No Role
                   </span>
                 {% endfor %}
               </td>
@@ -84,13 +88,13 @@
                     <a href="{{ student.student_profile.cnic_front.url }}"
                        target="_blank" rel="noopener noreferrer"
                        class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline inline-flex items-center gap-1">
-                        📄 Front
+                      📄 Front
                     </a>
                     {% if student.student_profile.cnic_back %}
                       <a href="{{ student.student_profile.cnic_back.url }}"
                          target="_blank" rel="noopener noreferrer"
                          class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline inline-flex items-center gap-1">
-                          📄 Back
+                        📄 Back
                       </a>
                     {% endif %}
                   </div>
@@ -129,60 +133,72 @@
                 {% endif %}
               </td>
 
-              <!-- ACTIONS COLUMN -->
-              <td class="py-3 px-3 text-right">
-                <div class="inline-flex items-center justify-end gap-1.5 flex-wrap">
-               
+              <!-- ACTIONS COLUMN (Fixed: Non-wrapping layout & no duplicate forms) -->
+              <td class="py-3 px-3 text-right whitespace-nowrap">
+                <div class="inline-flex items-center justify-end gap-1.5">
+             
                   <!-- Approve / Reject Form -->
                   <form action="{% url 'verify_student_document' student.id %}" method="POST" class="inline-flex gap-1.5">
                     {% csrf_token %}
                    
-                    <!-- ACCURATE CONTEXT BUTTON LABELS -->
-                    {% if student.student_profile and student.student_profile.cnic_front %}
-                      <button type="submit" name="action" value="approve"
-                              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
-                        ✓ Approve Document
+                    <!-- STATE 1: Documents Uploaded & Already Verified -> Disabled Button -->
+                    {% if student.student_profile and student.student_profile.cnic_front and student.student_profile.verification_status == 'VERIFIED' %}
+                      <button type="button" disabled
+                              class="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] px-2.5 py-1 rounded-lg cursor-not-allowed">
+                        ✓ Doc Verified
                       </button>
+
+                    <!-- STATE 2: Documents Uploaded & Pending Review -> Active "Approve Doc" Button -->
+                    {% elif student.student_profile and student.student_profile.cnic_front %}
+                      <button type="submit" name="action" value="approve"
+                              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow transition">
+                        ✓ Approve Doc
+                      </button>
+
+                    <!-- STATE 3: Account Active (No Documents) -> Disabled "Active" Button -->
                     {% elif student.is_active %}
                       <button type="button" disabled
-                              class="bg-gray-200 text-gray-500 font-bold text-[11px] px-3 py-1.5 rounded-lg cursor-not-allowed flex items-center gap-1">
-                        ✓ Account Active
+                              class="bg-gray-100 text-gray-500 font-bold text-[11px] px-2.5 py-1 rounded-lg cursor-not-allowed border border-gray-200">
+                        ✓ Active
                       </button>
+
+                    <!-- STATE 4: Account Inactive -> Active "Approve" Button -->
                     {% else %}
                       <button type="submit" name="action" value="approve"
-                              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
-                        ✓ Approve Account
+                              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow transition">
+                        ✓ Approve
                       </button>
                     {% endif %}
 
+                    <!-- Reject Button -->
                     <button type="submit" name="action" value="reject"
-                            class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
-                      ✕ Reject Account
+                            class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow transition">
+                      ✕ Reject
                     </button>
                   </form>
-           
+
                   <!-- Clear Documents Button (Only visible if files exist) -->
                   {% if student.student_profile and student.student_profile.cnic_front or student.student_profile and student.student_profile.cnic_back %}
                     <form action="{% url 'delete_student_document' student.id %}" method="POST" class="inline"
                           onsubmit="return confirm('Clear uploaded document files for {{ student.username }}?');">
                       {% csrf_token %}
                       <button type="submit"
-                              class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-1.5 rounded-lg border border-amber-200 transition flex items-center gap-1">
-                          🗑️ Clear Documents
+                              class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] px-2 py-1 rounded-lg border border-amber-200 transition">
+                        🗑️ Clear Docs
                       </button>
                     </form>
                   {% endif %}
-           
+
                   <!-- Permanent Delete User Button -->
                   <form action="{% url 'delete_student' student.id %}" method="POST" class="inline"
                         onsubmit="return confirm('Are you sure you want to permanently delete account {{ student.username }}?');">
                     {% csrf_token %}
                     <button type="submit"
-                            class="bg-gray-100 hover:bg-rose-100 text-gray-600 hover:text-rose-700 font-bold text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 transition flex items-center gap-1">
-                        ❌ Delete User
+                            class="bg-gray-100 hover:bg-rose-100 text-gray-600 hover:text-rose-700 font-bold text-[11px] px-2 py-1 rounded-lg border border-gray-200 transition">
+                      ❌ Delete
                     </button>
                   </form>
-           
+
                 </div>
               </td>
             </tr>

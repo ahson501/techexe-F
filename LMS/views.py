@@ -137,10 +137,10 @@ class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         return user.is_staff or user.groups.filter(name='LMS_admissions_officer').exists()
 
     def get(self, request):
-        # Added .distinct() to eliminate duplicate student rows in table rendering
+        # FIX: Use groups__name__in instead of groups__name for list filtering
         students = User.objects.filter(
-            groups__name='LMS_Student'
-        ).select_related('student_profile').order_by('-date_joined').distinct()
+            groups__name__in=['LMS_Instructor', 'LMS_Student']
+        ).select_related('student_profile').prefetch_related('groups').order_by('-date_joined').distinct()
 
         context = {
             'students': students,
@@ -148,9 +148,8 @@ class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         }
         return render(request, 'LMS/admissions_dashboard.html', context)
 
-
 class VerifyStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Handles Approve and Reject actions for pending Student and Instructor accounts."""
+    """Handles Account Activation and CNIC Document Verification for Students and Instructors."""
 
     def test_func(self):
         user = self.request.user
@@ -161,66 +160,94 @@ class VerifyStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
         profile, _ = StudentProfile.objects.get_or_create(user=student)
         action = request.POST.get('action')
 
-        # Dynamically detect user role
+        # Detect User Role
         is_instructor = student.groups.filter(name='LMS_Instructor').exists()
         role_label = "Instructor" if is_instructor else "Student"
 
         if action == 'approve':
-            profile.verification_status = StudentProfile.VerificationStatus.VERIFIED
-            profile.save()
+            has_documents = bool(profile.cnic_front or profile.cnic_back)
 
-            # ACTIVATE ACCOUNT
-            student.is_active = True
-            student.save()
+            # 1. DOCUMENT APPROVAL (If files are uploaded)
+            if has_documents:
+                profile.verification_status = StudentProfile.VerificationStatus.VERIFIED
+                profile.save()
+                student.is_active = True
+                student.save()
 
-            # Dispatch Activation Email
-            if student.email:
-                subject = f"Account Approved - Welcome to TechExe LMS as an {role_label}!"
-                message = f"""Hello {student.username},
+                if student.email:
+                    subject = f"Document Verified - TechExe LMS {role_label} Account"
+                    message = f"""Hello {student.username},
 
-Your {role_label.lower()} account and registration documents have been verified and approved.
+Great news! Your uploaded CNIC/B-Form identity documents have been reviewed and approved by Admissions.
 
-You can now log in at http://techexe.net/iccbs/login/
+Your {role_label.lower()} profile is now fully verified.
+
+Log in here: http://techexe.net/iccbs/login/
 
 Best regards,
 TechExe Academic Management
 """
-                try:
-                    send_mail(
-                        subject=subject,
-                        message=message,
-                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
-                        recipient_list=[student.email],
-                        fail_silently=True,
-                    )
-                except Exception:
-                    pass
+                    try:
+                        send_mail(
+                            subject=subject,
+                            message=message,
+                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
+                            recipient_list=[student.email],
+                            fail_silently=True,
+                        )
+                    except Exception:
+                        pass
 
-            messages.success(
-                request,
-                f"{role_label} '{student.username}' verified and account activated successfully!"
-            )
+                messages.success(
+                    request,
+                    f"Documents for {role_label.lower()} '{student.username}' verified and approved successfully!"
+                )
+
+            # 2. INITIAL ACCOUNT APPROVAL (No documents uploaded yet)
+            else:
+                student.is_active = True
+                student.save()
+
+                if student.email:
+                    subject = f"Account Approved - Welcome to TechExe LMS as an {role_label}!"
+                    message = f"""Hello {student.username},
+
+Your {role_label.lower()} account has been reviewed and approved by Admissions.
+
+You can now log in to your dashboard: http://techexe.net/iccbs/login/
+
+Best regards,
+TechExe Academic Management
+"""
+                    try:
+                        send_mail(
+                            subject=subject,
+                            message=message,
+                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
+                            recipient_list=[student.email],
+                            fail_silently=True,
+                        )
+                    except Exception:
+                        pass
+
+                messages.success(
+                    request,
+                    f"{role_label} account '{student.username}' activated successfully!"
+                )
 
         elif action == 'reject':
-            # 1. Update verification status
             profile.verification_status = StudentProfile.VerificationStatus.REJECTED
             profile.save()
-
-            # 2. OPTION A: Keep user active so they can log in and re-upload documents
-            # student.is_active = True
-
-            # OPTION B: Deactivate account upon rejection (Current behavior)
             student.is_active = False
             student.save()
 
-            # 3. Dispatch Rejection Email
             if student.email:
-                subject = f"Action Required: {role_label} Document Verification Rejected"
+                subject = f"Action Required: {role_label} Verification Rejected"
                 message = f"""Hello {student.username},
 
-Your uploaded identity/CNIC documents for your TechExe LMS {role_label.lower()} account have been reviewed and REJECTED by Admissions.
+Your registration documents for TechExe LMS have been rejected by Admissions.
 
-Please log in to re-upload clear and valid CNIC/B-Form document copies for re-review.
+Please contact support or re-submit clear document copies.
 
 Best regards,
 TechExe Academic Management
@@ -236,13 +263,13 @@ TechExe Academic Management
                 except Exception:
                     pass
 
-            # Explicit message reflecting document rejection and account deactivation
             messages.warning(
                 request,
-                f"Documents for {role_label.lower()} '{student.username}' marked as rejected and account deactivated."
+                f"Account and documents for {role_label.lower()} '{student.username}' marked as rejected."
             )
 
         return redirect('admissions_dashboard')
+       
 class DeleteStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Deletes uploaded document files safely and resets verification status to PENDING."""
 
@@ -489,7 +516,7 @@ class VisitingFacultyDashboardView(LoginRequiredMixin, UserPassesTestMixin, View
     """Workspace for Visiting Faculty to view sections, classes, and claims."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_VistingFaculty').exists() or self.request.user.is_staff
+        return self.request.user.groups.filter(name='LMS_VisitingFaculty').exists() or self.request.user.is_staff
 
     def get(self, request):
         user = request.user
@@ -1199,7 +1226,7 @@ class LiveSessionRoomView(LoginRequiredMixin, View):
         
         # Check both permanent instructors, visiting faculty, and HODs
         is_instructor = request.user.groups.filter(
-            name__in=['LMS_Instructor', 'LMS_VistingFaculty', 'LMS_HOD']
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
         ).exists()
         
         if not (is_enrolled or is_instructor or request.user.is_staff):
@@ -1260,7 +1287,7 @@ class VisitingFacultyClaimEngineView(LoginRequiredMixin, UserPassesTestMixin, Vi
     HOURLY_RATE_PKR = Decimal('3500.00')
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_VistingFaculty').exists() or self.request.user.is_staff
+        return self.request.user.groups.filter(name='LMS_VisitingFaculty').exists() or self.request.user.is_staff
 
     def get(self, request):
         user = request.user

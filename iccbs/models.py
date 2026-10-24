@@ -4,9 +4,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from ckeditor.fields import RichTextField
 
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    
+    must_change_password = models.BooleanField(default=True)
+
     # Profile Picture and Basic Info
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
     bio = RichTextField(blank=True, null=True, default='')
@@ -15,7 +17,6 @@ class Profile(models.Model):
     link2 = models.URLField(blank=True, null=True, verbose_name="Computational Experiments-02")
     link3 = models.URLField(blank=True, null=True, verbose_name="Computational Experiments-03")
 
-    # Add the designation field
     designation = models.CharField(max_length=100, blank=True, null=True)
 
     # Academic and Professional Details
@@ -27,7 +28,6 @@ class Profile(models.Model):
     research_interests = models.TextField(blank=True, null=True)
     publications = models.TextField(blank=True, null=True)
     projects = models.TextField(blank=True, null=True)
-    
 
     # Professional Skills and Certifications
     skills = models.TextField(blank=True, null=True)
@@ -57,22 +57,20 @@ class Profile(models.Model):
     tagline = models.CharField(max_length=150, blank=True, null=True)
     quote = models.CharField(max_length=200, blank=True, null=True)
 
-    # Contact Me Details
+    # Contact Details
     contact_email = models.EmailField(max_length=200, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
-    
+
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
-      
 
-# Automatically create or update the Profile when a User is created
+# SINGLE, SAFE SIGNAL HANDLER AT THE VERY END OF THE FILE
 @receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, created, **kwargs):
+def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
-    instance.profile.save()
+        Profile.objects.get_or_create(user=instance, defaults={'must_change_password': True})
 
 # ===================== NETWORK MONITORING MODELS =====================
 

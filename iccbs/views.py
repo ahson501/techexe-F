@@ -24,7 +24,33 @@ def iccbs_base(request):
 def iccbshome(request):
     """Render the home page for logged-in users."""
     return render(request, 'iccbs/iccbshome.html')
+# iccbs/views.py
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 
+@login_required
+def force_password_change(request):
+    """Force user to set a new password on initial login."""
+    if not request.user.profile.must_change_password:
+        return redirect('iccbs:iccbshome')
+
+    if request.method == 'POST':
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            # Prevent user from being logged out after password change
+            update_session_auth_hash(request, form.user)
+            
+            # Clear mandatory change flag
+            request.user.profile.must_change_password = False
+            request.user.profile.save()
+
+            messages.success(request, 'Your password has been changed successfully. You may now continue.')
+            return redirect('iccbs:iccbshome')
+    else:
+        form = PasswordChangeForm(user=request.user)
+
+    return render(request, 'iccbs/force_password_change.html', {'form': form})
 @login_required
 def profile(request):
     if request.method == 'POST':
@@ -81,6 +107,11 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
 
+            # 🚨 Check if first login requires password change
+            if getattr(user, 'profile', None) and user.profile.must_change_password:
+                messages.info(request, 'You are logging in for the first time. Please update your password.')
+                return redirect('iccbs:force_password_change')
+
             messages.success(request, f'Welcome, {user.username}!')
 
             # IT SERVICES & ENGINE ACTORS REDIRECT
@@ -109,7 +140,7 @@ def login_view(request):
                 return redirect('instructor_dashboard')
 
             # 💼 5. VISITING FACULTY
-            if user.groups.filter(name='LMS_VistingFaculty').exists():
+            if user.groups.filter(name='LMS_VisitingFaculty').exists():
                 return redirect('visiting_faculty_dashboard')
 
             # 🎓 6. STUDENT
