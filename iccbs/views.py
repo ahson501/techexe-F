@@ -156,3 +156,77 @@ def public_profile(request, username):
 def contact_me(request):
     return render(request, 'iccbs/contact_me.html')
 
+
+
+
+
+# iccbs/views.py
+
+from django.contrib import messages
+from django.contrib.auth.models import Group
+from django.core.mail import send_mail
+from django.conf import settings
+from .forms import RoleUserCreationForm
+
+
+class RegisterView(View):
+    template_name = 'iccbs/register.html'
+
+    def get(self, request):
+        form = RoleUserCreationForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = RoleUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            
+            # 1. MARK USER AS INACTIVE UNTIL APPROVED/VERIFIED
+            user.is_active = False  
+            user.save()
+
+            # 2. Assign Group
+            selected_role = form.cleaned_data.get('role')
+            group, _ = Group.objects.get_or_create(name=selected_role)
+            user.groups.add(group)
+
+            role_display = "Student" if selected_role == 'LMS_Student' else "Instructor"
+
+            # 3. Email Notification
+            subject = f"TechExe LMS - {role_display} Registration Received (Pending Approval)"
+            message = f"""Hello {user.username},
+
+Thank you for registering on TechExe LMS as a {role_display}.
+
+Your account has been created and is currently PENDING ADMINISTRATIVE APPROVAL. 
+You will not be able to log in until an administrator or admissions officer reviews and approves your account.
+
+Registered Email: {user.email}
+Account Type: {role_display}
+
+Best regards,
+TechExe Academic Management
+"""
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                messages.success(
+                    request,
+                    f"Registration submitted for {user.username}! Your account is pending approval. An email has been sent to {user.email}."
+                )
+            except Exception as e:
+                messages.warning(
+                    request,
+                    f"Registration submitted, but confirmation email failed: {str(e)}"
+                )
+
+            # Redirect to Login page (User cannot log in because is_active=False)
+            return redirect('login')
+
+        return render(request, self.template_name, {'form': form})

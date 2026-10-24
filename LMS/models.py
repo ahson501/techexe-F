@@ -5,6 +5,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 from django.utils import timezone
 from ckeditor_uploader.fields import RichTextUploadingField
+import os
+from django.conf import settings
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 User = get_user_model()
 
@@ -337,6 +341,96 @@ class StudentProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Student Profile ({self.verification_status})"
+
+# LMS/models.py
+
+
+def student_document_path(instance, filename):
+    """
+    Generates a clean file path for uploads:
+    media/student_documents/student_<id>/<uuid>_<filename>
+    """
+    ext = filename.split('.')[-1]
+    new_filename = f"{uuid.uuid4().hex[:10]}.{ext}"
+    return f"student_documents/student_{instance.student_id}/{new_filename}"
+
+
+class StudentRegistration(models.Model):
+    class VerificationStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending Verification'
+        APPROVED = 'APPROVED', 'Approved & Enrolled'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='registrations'
+    )
+    course = models.ForeignKey(
+        'Course',
+        on_delete=models.CASCADE,
+        related_name='student_registrations'
+    )
+    section = models.ForeignKey(
+        'CourseSection',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='student_registrations'
+    )
+    
+    # Document & Payment Proof Uploads
+    payment_receipt = models.FileField(
+        upload_to=student_document_path,
+        blank=True,
+        null=True,
+        help_text="Uploaded fee payment receipt or bank challan copy."
+    )
+    cnic_or_passport = models.FileField(
+        upload_to=student_document_path,
+        blank=True,
+        null=True,
+        help_text="Uploaded CNIC/Passport or Student ID copy."
+    )
+    
+    # Verification Details
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.PENDING
+    )
+    admin_remarks = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for rejection or verification notes from Admissions/Admin."
+    )
+    verified_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('student', 'course')
+        verbose_name = "Student Registration & Document Verification"
+        verbose_name_plural = "Student Registrations & Verifications"
+
+    def __str__(self):
+        return f"{self.student.username} - {self.course.title} ({self.get_verification_status_display()})"
+
+
+# ==============================================================================
+# AUTOMATIC FILE CLEANUP SIGNALS
+# Purges physical files from /app/media/ when deleted in Django Admin
+# ==============================================================================
+
+@receiver(post_delete, sender=StudentRegistration)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """Deletes uploaded document files from filesystem when record is deleted."""
+    for field_name in ['payment_receipt', 'cnic_or_passport']:
+        file_field = getattr(instance, field_name, None)
+        if file_field and file_field.name:
+            if os.path.isfile(file_field.path):
+                os.remove(file_field.path)
 
 class LessonProgress(TimeStampedModel):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lesson_progress')

@@ -7,11 +7,180 @@
     <title>Login</title>
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CDR8rDBf.css' %}">
+    <!-- ICCBS Logo Loader CSS -->
+    <style>
+        .iccbs-loader {
+            --ring-size: 200px;
+            --logo-size: 110px;
+            --ring-color: #009688;
+            --ring-rgb: 255, 59, 0;   /* same colour as R, G, B (used for glow) */
+
+            position: relative;
+            box-sizing: border-box;
+            width: var(--ring-size);
+            height: var(--ring-size);
+            display: grid;
+            place-items: center;
+            margin: 10px auto 20px;
+            isolation: isolate;
+        }
+
+        /* Bright arc that circles the outer ring */
+        .iccbs-loader::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            box-sizing: border-box;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--ring-color);
+            animation: iccbs-spin 3s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Spinning ring that carries the letters */
+        .iccbs-loader-ring {
+            position: absolute;
+            inset: 0;
+            box-sizing: border-box;
+            border: 2px solid rgba(var(--ring-rgb), 0.35);
+            border-radius: 50%;
+            animation: iccbs-spin 16s linear infinite;
+            will-change: transform;
+        }
+
+        /* Each letter: full-size box rotated around the exact centre.
+           Monospace font gives every letter the same width, so gaps stay even. */
+        .iccbs-loader-ring span {
+            position: absolute;
+            inset: 0;
+            box-sizing: border-box;
+            margin: 0;
+            padding-top: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--ring-color);
+
+            transform-origin: 50% 50%;
+            transform: rotate(calc(var(--i) * 360deg / var(--n)));
+        }
+
+        /* Logo: "cover" fills the whole circle, so no gap at the top or bottom */
+        .iccbs-loader-logo {
+            position: relative;
+            z-index: 1;
+            display: block;
+            flex: none;
+            margin: 0;
+            padding: 0;
+            width: var(--logo-size);
+            height: var(--logo-size);
+            min-width: var(--logo-size);
+            min-height: var(--logo-size);
+            max-width: none;
+            max-height: none;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            object-position: center;
+            border-radius: 50%;
+            background: transparent;
+            box-shadow: 0 0 0 2px rgba(var(--ring-rgb), 0.35),
+                        0 6px 20px rgba(var(--ring-rgb), 0.25);
+            animation: iccbs-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes iccbs-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes iccbs-glow {
+            50% {
+                box-shadow: 0 0 0 2px rgba(var(--ring-rgb), 0.5),
+                            0 6px 28px rgba(var(--ring-rgb), 0.45);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .iccbs-loader::after,
+            .iccbs-loader-ring,
+            .iccbs-loader-logo {
+                animation: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .iccbs-loader {
+                --ring-size: 170px;
+                --logo-size: 95px;
+            }
+
+            .iccbs-loader-ring span {
+                font-size: 10px;
+                padding-top: 4px;
+            }
+        }
+    </style>
 </head>
+
 <body class="login-page">
     <div class="login-container">
-        <img src="{% static 'images/services/ICCBS.jpeg' %}" alt="User Icon" >
-          <h2 >ICCBS Login</h2>
+        <!-- ICCBS Logo with Animated Text Ring -->
+        <div class="iccbs-loader">
+
+            <!-- "SySCon • EduCore • " repeated twice = 38 slots (spaces are empty slots).
+                 --n must always equal the total number of slots, so the letters close the circle evenly. -->
+            <div class="iccbs-loader-ring"
+                 aria-hidden="true"
+                 style="--n: 38">
+
+                <span style="--i:0">I</span>
+                <span style="--i:1">C</span>
+                <span style="--i:2">C</span>
+                <span style="--i:3">B</span>
+                <span style="--i:4">S</span>
+                <span style="--i:5">O</span>
+                <span style="--i:7">N</span>
+                <span style="--i:9">E</span>
+                <span style="--i:10">P</span>
+                <span style="--i:11">O</span>
+                <span style="--i:12">R</span>
+                <span style="--i:13">T</span>
+                <span style="--i:14">A</span>
+                <span style="--i:15">L</span>
+                <span style="--i:17">•</span>
+
+                <span style="--i:19">I</span>
+                <span style="--i:20">C</span>
+                <span style="--i:21">C</span>
+                <span style="--i:22">B</span>
+                <span style="--i:23">S</span>
+                <span style="--i:24">O</span>
+                <span style="--i:26">N</span>
+                <span style="--i:28">E</span>
+                <span style="--i:29">P</span>
+                <span style="--i:30">O</span>
+                <span style="--i:31">R</span>
+                <span style="--i:32">T</span>
+                <span style="--i:33">A</span>
+                <span style="--i:34">L</span>
+                <span style="--i:36">•</span>
+
+            </div>
+
+            <img
+                class="iccbs-loader-logo"
+                src="{% static 'images/services/ICCBS.jpeg' %}"
+                alt="International Center for Chemical and Biological Sciences"
+            >
+
+        </div>
+          <h2 ></h2>
         <form method="POST">
             {% csrf_token %}
             <input type="text" name="username" placeholder="Username..." required>

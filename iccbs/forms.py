@@ -35,3 +35,32 @@ class UpdateProfileForm(forms.ModelForm):
             'link2': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Computational Experiments-01'}),
             'link3': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Computational Experiments-01'}),
         }
+
+
+
+
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
+
+User = get_user_model()
+
+class RoleUserCreationForm(UserCreationForm):
+    ROLE_CHOICES = (
+        ('LMS_Student', 'Student'),
+        ('LMS_Instructor', 'Instructor'),
+    )
+   
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'placeholder': 'you@example.com'})
+    )
+    role = forms.ChoiceField(
+        choices=ROLE_CHOICES,
+        initial='LMS_Student',
+        label="Register As",
+        widget=forms.Select(attrs={'class': 'role-select'})
+    )
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email', 'role')

@@ -2,10 +2,10 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count
 from .models import (
-    Category, Course, Module, Lesson, Quiz,LiveSession, 
+    StudentRegistration, Category, Course, Module, Lesson,DiscussionTopic, DiscussionPost, Quiz,LiveSession, 
     Question, AnswerChoice, Enrollment, LessonProgress, QuizAttempt, Certificate
 )
-from .models import DiscussionTopic, DiscussionPost
+from django.utils import timezone
 
 # ==========================================
 # 1. INLINES FOR FAST NESTED EDITING
@@ -46,6 +46,69 @@ class QuestionInline(admin.StackedInline):
 # ==========================================
 # 2. MAIN LMS MODEL ADMINS
 # ==========================================
+
+@admin.register(StudentRegistration)
+class StudentRegistrationAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'student',
+        'course',
+        'verification_status',
+        'view_payment_receipt',
+        'view_id_document',
+        'created_at'
+    )
+    list_filter = ('verification_status', 'created_at', 'course')
+    search_fields = ('student__username', 'student__email', 'course__title')
+    readonly_fields = ('created_at', 'updated_at', 'view_payment_receipt_preview', 'view_id_preview')
+    actions = ['approve_registrations', 'reject_registrations']
+
+    # --- Clickable Link Columns in List View ---
+    def view_payment_receipt(self, obj):
+        if obj.payment_receipt:
+            return format_html(
+                '<a href="{}" target="_blank" style="color:#059669; font-weight:bold;">🧾 View Receipt</a>',
+                obj.payment_receipt.url
+            )
+        return "No Receipt"
+    view_payment_receipt.short_description = "Payment Proof"
+
+    def view_id_document(self, obj):
+        if obj.cnic_or_passport:
+            return format_html(
+                '<a href="{}" target="_blank" style="color:#2563EB; font-weight:bold;">🪪 View ID</a>',
+                obj.cnic_or_passport.url
+            )
+        return "No ID"
+    view_id_document.short_description = "ID Document"
+
+    # --- Previews inside Detail Form View ---
+    def view_payment_receipt_preview(self, obj):
+        if obj.payment_receipt:
+            return format_html('<a href="{}" target="_blank">Open Payment File ({})</a>', obj.payment_receipt.url, obj.payment_receipt.name)
+        return "No file attached"
+
+    def view_id_preview(self, obj):
+        if obj.cnic_or_passport:
+            return format_html('<a href="{}" target="_blank">Open ID File ({})</a>', obj.cnic_or_passport.url, obj.cnic_or_passport.name)
+        return "No file attached"
+
+    # --- Admin Quick Bulk Actions ---
+    def approve_registrations(self, request, queryset):
+        updated = queryset.update(
+            verification_status=StudentRegistration.VerificationStatus.APPROVED,
+            verified_at=timezone.now()
+        )
+        self.message_user(request, f"{updated} student registrations approved successfully.")
+    approve_registrations.short_description = "✅ Approve Selected Registrations"
+
+    def reject_registrations(self, request, queryset):
+        updated = queryset.update(
+            verification_status=StudentRegistration.VerificationStatus.REJECTED,
+            verified_at=timezone.now()
+        )
+        self.message_user(request, f"{updated} student registrations marked as rejected.")
+    reject_registrations.short_description = "❌ Reject Selected Registrations"
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

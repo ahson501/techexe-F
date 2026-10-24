@@ -1,4 +1,5 @@
 # Standard Library Imports
+import os
 import json
 import logging
 import uuid
@@ -14,6 +15,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import Group
 from django.core.mail import send_mail
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
@@ -47,6 +49,7 @@ from .models import (
     StudentProfile,
     VisitingFacultyClaim,
 )
+from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -60,11 +63,26 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Student portal view displaying enrolled courses and auto-generated payment vouchers."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_Student').exists() or self.request.user.is_staff
+        user = self.request.user
+        # Require user to be active AND belong to LMS_Student group (or staff)
+        return user.is_active and (user.groups.filter(name='LMS_Student').exists() or user.is_staff)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated and not self.request.user.is_active:
+            messages.error(
+                self.request,
+                "Your account is currently pending approval by Admissions. You cannot access the dashboard yet."
+            )
+        else:
+            messages.error(
+                self.request,
+                "Access restricted. You must be an approved student to view this page."
+            )
+        return redirect('login')
 
     def get(self, request):
         user = request.user
-        
+
         # 1. Fetch student enrollments
         enrollments = Enrollment.objects.filter(
             student=user
@@ -80,6 +98,7 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             'enrollments': enrollments,
             'vouchers': vouchers,
         }
+
         return render(request, 'LMS/student_dashboard.html', context)
 
 
@@ -106,16 +125,23 @@ class UploadStudentDocumentsView(LoginRequiredMixin, View):
 
         messages.success(request, "Your CNIC/B-Form documents have been uploaded successfully for review.")
         return redirect('student_dashboard')
+    
+User = get_user_model()
+
 
 class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Dashboard for Admissions Officers to review student registrations and documents."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_admissions_officer').exists() or self.request.user.is_staff
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name='LMS_admissions_officer').exists()
 
     def get(self, request):
-        students = User.objects.filter(groups__name='LMS_Student').select_related('student_profile').order_by('-date_joined')
-        
+        # Added .distinct() to eliminate duplicate student rows in table rendering
+        students = User.objects.filter(
+            groups__name='LMS_Student'
+        ).select_related('student_profile').order_by('-date_joined').distinct()
+
         context = {
             'students': students,
             'total_students': students.count(),
@@ -124,32 +150,165 @@ class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
 
 
 class VerifyStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Allows Admissions Officers to verify or reject CNIC/B-Form documents."""
+    """Handles Approve and Reject actions for pending Student and Instructor accounts."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_admissions_officer').exists() or self.request.user.is_staff
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name='LMS_admissions_officer').exists()
 
     def post(self, request, student_id):
-        action = request.POST.get('action')
         student = get_object_or_404(User, id=student_id)
         profile, _ = StudentProfile.objects.get_or_create(user=student)
+        action = request.POST.get('action')
+
+        # Dynamically detect user role
+        is_instructor = student.groups.filter(name='LMS_Instructor').exists()
+        role_label = "Instructor" if is_instructor else "Student"
 
         if action == 'approve':
             profile.verification_status = StudentProfile.VerificationStatus.VERIFIED
-            messages.success(request, f"Documents for {student.username} verified successfully.")
-        elif action == 'reject':
-            profile.verification_status = StudentProfile.VerificationStatus.REJECTED
-            messages.error(request, f"Documents for {student.username} marked as rejected.")
+            profile.save()
 
-        profile.save()
+            # ACTIVATE ACCOUNT
+            student.is_active = True
+            student.save()
+
+            # Dispatch Activation Email
+            if student.email:
+                subject = f"Account Approved - Welcome to TechExe LMS as an {role_label}!"
+                message = f"""Hello {student.username},
+
+Your {role_label.lower()} account and registration documents have been verified and approved.
+
+You can now log in at http://techexe.net/iccbs/login/
+
+Best regards,
+TechExe Academic Management
+"""
+                try:
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
+                        recipient_list=[student.email],
+                        fail_silently=True,
+                    )
+                except Exception:
+                    pass
+
+            messages.success(
+                request,
+                f"{role_label} '{student.username}' verified and account activated successfully!"
+            )
+
+        elif action == 'reject':
+            # 1. Update verification status
+            profile.verification_status = StudentProfile.VerificationStatus.REJECTED
+            profile.save()
+
+            # 2. OPTION A: Keep user active so they can log in and re-upload documents
+            # student.is_active = True
+
+            # OPTION B: Deactivate account upon rejection (Current behavior)
+            student.is_active = False
+            student.save()
+
+            # 3. Dispatch Rejection Email
+            if student.email:
+                subject = f"Action Required: {role_label} Document Verification Rejected"
+                message = f"""Hello {student.username},
+
+Your uploaded identity/CNIC documents for your TechExe LMS {role_label.lower()} account have been reviewed and REJECTED by Admissions.
+
+Please log in to re-upload clear and valid CNIC/B-Form document copies for re-review.
+
+Best regards,
+TechExe Academic Management
+"""
+                try:
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
+                        recipient_list=[student.email],
+                        fail_silently=True,
+                    )
+                except Exception:
+                    pass
+
+            # Explicit message reflecting document rejection and account deactivation
+            messages.warning(
+                request,
+                f"Documents for {role_label.lower()} '{student.username}' marked as rejected and account deactivated."
+            )
+
+        return redirect('admissions_dashboard')
+class DeleteStudentDocumentView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Deletes uploaded document files safely and resets verification status to PENDING."""
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name='LMS_admissions_officer').exists()
+
+    def post(self, request, student_id):
+        student = get_object_or_404(User, id=student_id)
+
+        if hasattr(student, 'student_profile') and student.student_profile:
+            profile = student.student_profile
+
+            # 1. Safely delete physical files from storage
+            if profile.cnic_front:
+                profile.cnic_front.delete(save=False)
+
+            if profile.cnic_back:
+                profile.cnic_back.delete(save=False)
+
+            # 2. RESET VERIFICATION STATUS BACK TO PENDING
+            profile.verification_status = StudentProfile.VerificationStatus.PENDING
+            profile.save()
+
+            # 3. (Optional) Deactivate user if re-verification is strictly mandatory
+            # student.is_active = False
+            # student.save()
+
+            messages.warning(request, f"Uploaded documents for '{student.username}' cleared and status reset to Pending.")
+        else:
+            messages.error(request, f"No profile found for '{student.username}'.")
+
+        return redirect('admissions_dashboard')
+class DeleteStudentView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Permanently deletes a student user account and cascades all associated data."""
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name='LMS_admissions_officer').exists()
+
+    def post(self, request, student_id):
+        student = get_object_or_404(User, id=student_id)
+        username = student.username
+
+        # Delete user (cascades to profile, documents, and registrations)
+        student.delete()
+
+        messages.error(request, f"Student account '{username}' has been permanently deleted.")
         return redirect('admissions_dashboard')
 
+
+
 class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Instructor portal view displaying assigned courses and sections."""
     
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_Instructor').exists() or self.request.user.is_staff
+        # Requires active account AND membership in LMS_Instructor group
+        return self.request.user.is_active and self.request.user.groups.filter(name='LMS_Instructor').exists()
 
+    def handle_no_permission(self):
+        messages.error(self.request, "Your instructor account is pending review by the Department Head.")
+        return redirect('login')
+
+    def get(self, request):
+        return render(request, 'LMS/instructor_dashboard.html')
+
+    
     def get(self, request):
         user = request.user
         courses = Course.objects.filter(instructor=user)
@@ -957,7 +1116,7 @@ TechExe Academic Management
             send_mail(
                 subject=subject,
                 message=message,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'aitechexe.net@gmail.com'),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'nsninsaan@gmail.com'),
                 recipient_list=[email],
                 fail_silently=False,
             )

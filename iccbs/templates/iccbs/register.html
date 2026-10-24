@@ -4,18 +4,499 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Create account | TechExe LMS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CDR8rDBf.css' %}">
+
+    <style>
+        /* ---------- Theme tokens ---------- */
+        .register-page {
+            --bg: #151c2e;
+            --panel: #1b2336;
+            --card: #242e45;
+            --field: #1b2336;
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #e8ecf6;
+            --muted: #a3aec8;
+            --accent: #d93200;
+            --accent-hover: #c22d00;
+            --accent-text: #ff7a52;
+            --accent-rgb: 255, 59, 0;
+            --error: #ff8a7a;
+            --success: #5fd39a;
+            --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        /* ---------- Page shell ---------- */
+        .register-page {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .register-page *,
+        .register-page *::before,
+        .register-page *::after { box-sizing: border-box; }
+
+        /* ---------- Left: brand panel ---------- */
+        .brand-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 48px;
+            padding: 56px 56px 40px;
+            background:
+                radial-gradient(520px 360px at 0% 0%, rgba(var(--accent-rgb), 0.18), transparent 70%),
+                var(--panel);
+            border-right: 1px solid var(--line);
+            overflow: hidden;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            display: grid;
+            place-items: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 11px;
+            background: var(--accent);
+            box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.35);
+        }
+
+        .brand-mark svg { width: 22px; height: 22px; }
+
+        .brand-copy h1 {
+            margin: 0 0 16px;
+            font-size: clamp(30px, 3.2vw, 44px);
+            line-height: 1.1;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            max-width: 14ch;
+        }
+
+        .brand-copy > p {
+            margin: 0 0 36px;
+            max-width: 42ch;
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .feature-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 20px;
+        }
+
+        .feature-list li {
+            display: grid;
+            grid-template-columns: 40px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .feature-icon {
+            display: grid;
+            place-items: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            color: var(--accent-text);
+            background: rgba(var(--accent-rgb), 0.12);
+            border: 1px solid rgba(var(--accent-rgb), 0.28);
+        }
+
+        .feature-icon svg { width: 20px; height: 20px; }
+
+        .feature-list strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .feature-list span {
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        .brand-footer {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        /* ---------- Right: form ---------- */
+        .form-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 460px;
+            padding: 40px 36px 32px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .register-container h2 {
+            margin: 0 0 6px;
+            font-size: 28px;
+            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .register-container .subtitle {
+            margin: 0 0 28px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        /* Flash messages */
+        .register-container .messages {
+            list-style: none;
+            margin: 0 0 22px;
+            padding: 0;
+            display: grid;
+            gap: 8px;
+        }
+
+        .register-container .messages li {
+            padding: 11px 14px;
+            font-size: 14px;
+            line-height: 1.45;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--line);
+            border-left-width: 4px;
+            border-radius: 10px;
+        }
+
+        .register-container .messages li.success { border-left-color: var(--success); background: rgba(95, 211, 154, 0.1); }
+        .register-container .messages li.error   { border-left-color: var(--error);   background: rgba(255, 90, 70, 0.12); }
+        .register-container .messages li.warning { border-left-color: #f2b84b;        background: rgba(242, 184, 75, 0.1); }
+        .register-container .messages li.info    { border-left-color: #6aa8ff;        background: rgba(106, 168, 255, 0.1); }
+
+        /* Django form paragraph fields */
+        .register-container form p {
+            margin: 0 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .register-container form p br { display: none; }
+
+        .register-container label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .register-container input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]),
+        .register-container select,
+        .register-container textarea {
+            width: 100%;
+            padding: 12px 14px;
+            font: inherit;
+            font-size: 15px;
+            color: var(--text);
+            background: var(--field);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 10px;
+            outline: 2px solid transparent;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .register-container input::placeholder,
+        .register-container textarea::placeholder { color: #7d89a6; }
+
+        .register-container input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):hover,
+        .register-container select:hover,
+        .register-container textarea:hover { border-color: rgba(255, 255, 255, 0.28); }
+
+        .register-container input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):focus,
+        .register-container select:focus,
+        .register-container textarea:focus {
+            border-color: rgb(var(--accent-rgb));
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.28);
+        }
+
+        /* Role dropdown */
+        .register-container select {
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 40px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3aec8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+
+        .register-container select option {
+            background-color: var(--card);
+            color: var(--text);
+        }
+
+        /* Autofill dark mode override */
+        .register-container input:-webkit-autofill {
+            -webkit-text-fill-color: var(--text);
+            caret-color: var(--text);
+            box-shadow: 0 0 0 1000px var(--field) inset;
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        /* Password field with show/hide toggle */
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 64px !important; }
+
+        .pw-toggle {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            padding: 6px 10px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-text);
+            background: transparent;
+            border: 0;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .pw-toggle:hover { text-decoration: underline; }
+
+        /* Help text and password rules */
+        .register-container .helptext {
+            display: block;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        .register-container .helptext ul {
+            margin: 4px 0 0;
+            padding-left: 18px;
+        }
+
+        /* Validation errors */
+        .register-container .errorlist {
+            list-style: none;
+            margin: 0 0 8px;
+            padding: 10px 12px;
+            font-size: 13.5px;
+            line-height: 1.45;
+            color: var(--error);
+            background: rgba(255, 90, 70, 0.12);
+            border: 1px solid rgba(255, 138, 122, 0.4);
+            border-radius: 10px;
+        }
+
+        /* Submit button */
+        .register-container button[type="submit"] {
+            width: 100%;
+            margin-top: 8px;
+            padding: 14px 18px;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--accent);
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.28);
+            transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .register-container button[type="submit"]:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 26px rgba(var(--accent-rgb), 0.34);
+        }
+
+        .register-container button[type="submit"]:active { transform: translateY(0); }
+
+        /* Login redirect */
+        .register-container .login-link {
+            margin: 24px 0 0;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 14.5px;
+            color: var(--muted);
+            border-top: 1px solid var(--line);
+        }
+
+        .register-container a {
+            color: var(--accent-text);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .register-container a:hover { text-decoration: underline; }
+
+        /* Keyboard focus */
+        .register-page a:focus-visible,
+        .register-page button:focus-visible {
+            outline: 2px solid rgb(var(--accent-rgb));
+            outline-offset: 2px;
+        }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 960px) {
+            .register-page { grid-template-columns: 1fr; }
+
+            .brand-panel {
+                padding: 28px 24px;
+                gap: 0;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .brand-copy,
+            .brand-footer { display: none; }
+
+            .form-panel { align-items: flex-start; padding: 28px 16px 40px; }
+        }
+
+        @media (max-width: 480px) {
+            .register-container { padding: 28px 20px 24px; border-radius: 14px; }
+            .register-container h2 { font-size: 24px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .register-page * { transition: none !important; }
+        }
+    </style>
 </head>
-<body>
-    <div class="register-container">
-        <h2>Register</h2>
-        <form method="POST">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Sign Up</button>
-        </form>
-        <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
-    </div>
+
+<body class="register-page">
+
+    <aside class="brand-panel">
+        <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 8.5 12 4l10 4.5-10 4.5L2 8.5Z"/>
+                    <path d="M6 10.8V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.2"/>
+                </svg>
+            </span>
+            TechExe LMS
+        </a>
+
+        <div class="brand-copy">
+            <h1>Learn, teach and track progress in one place.</h1>
+            <p>Create your account to join courses, submit work and follow your results without switching between tools.</p>
+
+            <ul class="feature-list">
+                <li>
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 21h15"/></svg>
+                    </span>
+                    <div>
+                        <strong>Courses and assignments</strong>
+                        <span>Find your materials, deadlines and submissions on one dashboard.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+                    </span>
+                    <div>
+                        <strong>Progress and grades</strong>
+                        <span>See your results update as soon as work is reviewed.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg>
+                    </span>
+                    <div>
+                        <strong>Views for every role</strong>
+                        <span>Students and instructors each get the tools they need.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="brand-footer">&copy; TechExe LMS</div>
+    </aside>
+
+    <main class="form-panel">
+        <div class="register-container">
+            <h2>Create your account</h2>
+            <p class="subtitle">Fill in your details to get started.</p>
+
+            <!-- Flash messages (SMTP status, system alerts) -->
+            {% if messages %}
+                <ul class="messages" role="status">
+                    {% for message in messages %}
+                        <li class="{{ message.tags }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <form method="POST" novalidate>
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Create account</button>
+            </form>
+
+            <p class="login-link">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+        </div>
+    </main>
+
+    <script>
+        // Add a show/hide toggle to every password field
+        document.querySelectorAll('.register-container input[type="password"]').forEach(function (input) {
+            var wrap = document.createElement('div');
+            wrap.className = 'pw-wrap';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pw-toggle';
+            btn.textContent = 'Show';
+            btn.setAttribute('aria-label', 'Show password');
+            btn.addEventListener('click', function () {
+                var hidden = input.type === 'password';
+                input.type = hidden ? 'text' : 'password';
+                btn.textContent = hidden ? 'Hide' : 'Show';
+                btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+            });
+            wrap.appendChild(btn);
+        });
+    </script>
 </body>
 </html>
