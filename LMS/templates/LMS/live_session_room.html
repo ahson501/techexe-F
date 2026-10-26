@@ -4,52 +4,127 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-6">
-  
+ 
   <!-- Navigation Header -->
-  <div class="mb-4 flex items-center justify-between">
+  <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
     <div>
-      <a href="{% url 'course_detail' course.slug %}" class="text-xs text-indigo-600 font-semibold hover:underline">
-        ← Back to {{ course.title }}
-      </a>
-      <h1 class="text-2xl font-bold text-gray-900 mt-1">🔴 Live: {{ session.title }}</h1>
+      {% if course and course.slug %}
+        <a href="{% url 'course_detail' course.slug %}" class="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1">
+          ← Back to {{ course.title }}
+        </a>
+      {% else %}
+        <a href="{% url 'student_dashboard' %}" class="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1">
+          ← Back to Dashboard
+        </a>
+      {% endif %}
+      <h1 class="text-2xl font-bold text-gray-900 mt-1 flex items-center gap-2">
+        📹 Live: {{ session.title }}
+      </h1>
+      <p class="text-xs text-gray-500 mt-0.5">
+        Instructor: {{ course.instructor.get_full_name|default:course.instructor.username|default:session.section.course.instructor.get_full_name|default:"Assigned Faculty" }}
+      </p>
     </div>
-    <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-      LIVE CLASSROOM
-    </span>
+
+    <div class="flex items-center gap-3">
+      <!-- Hybrid Mode Badge -->
+      {% if session.mode %}
+        <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1.5 rounded-full">
+          Mode: {{ session.get_mode_display|default:session.mode }}
+        </span>
+      {% endif %}
+
+      <!-- Live Indicator Badge -->
+      <span class="bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-full animate-pulse flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-white"></span> LIVE CLASSROOM
+      </span>
+    </div>
   </div>
 
-  <!-- Main Container: Embedded Classroom Stream -->
-  <div class="bg-black rounded-xl overflow-hidden shadow-2xl h-[650px] w-full relative">
-    <div id="jitsi-container" class="w-full h-full"></div>
-  </div>
+  {% if session.join_url %}
+    <!-- ================================================================= -->
+    <!-- EXTERNAL PLATFORM LAUNCH CONTAINER (Zoom / Teams / Meet / Webex)  -->
+    <!-- ================================================================= -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center mb-6">
+      <div class="max-w-2xl mx-auto">
+        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+          🚀
+        </div>
+
+        <h2 class="text-xl font-bold text-gray-900 mb-2">
+          This session is hosted on an External Platform
+        </h2>
+        <p class="text-xs text-gray-500 mb-6">
+          Your instructor has scheduled this class using an external conferencing service. Click below to launch the live meeting directly or join through the embedded web view if supported.
+        </p>
+
+        <!-- Direct Join Button for External Link -->
+        <a href="{{ session.join_url }}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-8 py-3.5 rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
+          <span>Launch External Classroom</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+          </svg>
+        </a>
+
+        <p class="text-[11px] text-gray-400 mt-3">
+          Note: Your attendance has already been automatically logged upon opening this page.
+        </p>
+      </div>
+    </div>
+
+    <!-- Optional Iframe Attempt for Platforms Allowing Embedding -->
+    <div class="bg-black rounded-2xl overflow-hidden shadow-2xl h-[550px] w-full relative">
+      <iframe
+        src="{{ session.join_url }}"
+        class="w-full h-full border-0"
+        allow="camera; microphone; display-capture; autoplay; clipboard-write"
+        title="External Live Class Stream">
+      </iframe>
+    </div>
+
+  {% else %}
+    <!-- ================================================================= -->
+    <!-- INTERNAL JITSI MEET EMBEDDED CLASSROOM                           -->
+    <!-- ================================================================= -->
+    <div class="bg-black rounded-2xl overflow-hidden shadow-2xl h-[650px] w-full relative">
+      <div id="jitsi-container" class="w-full h-full"></div>
+    </div>
+
+    <!-- Jitsi Meet Integration Script -->
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const domain = "meet.jit.si";
+        const options = {
+          roomName: "TechExe-LMS-Course-{{ course.id|default:'General' }}-Session-{{ session.id }}",
+          width: "100%",
+          height: "100%",
+          parentNode: document.querySelector('#jitsi-container'),
+          userInfo: {
+            displayName: "{{ user_display_name }}"
+          },
+          configOverwrite: {
+            startWithAudioMuted: true,
+            disableDeepLinking: true,
+            prejoinPageEnabled: false
+          },
+          interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: [
+              'microphone', 'camera', 'desktop', 'chat',
+              'raisehand', 'tileview', 'fullscreen'
+            ]
+          }
+        };
+
+        const api = new JitsiMeetExternalAPI(domain, options);
+
+        // Auto-handle conference start events
+        api.addEventListener('videoConferenceJoined', (response) => {
+          console.log('Successfully connected to Jitsi live classroom:', response);
+        });
+      });
+    </script>
+  {% endif %}
 
 </div>
-
-<!-- Jitsi Meet Iframe Script -->
-<script src="https://meet.jit.si/external_api.js"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const domain = "meet.jit.si";
-    const options = {
-      roomName: "TechExe-LMS-Course-{{ course.id }}-Session-{{ session.id }}",
-      width: "100%",
-      height: "100%",
-      parentNode: document.querySelector('#jitsi-container'),
-      userInfo: {
-        displayName: "{{ user_display_name }}"
-      },
-      configOverwrite: {
-        startWithAudioMuted: true,
-        disableDeepLinking: true
-      },
-      interfaceConfigOverwrite: {
-        TOOLBAR_BUTTONS: [
-          'microphone', 'camera', 'desktop', 'chat', 
-          'raisehand', 'tileview', 'fullscreen'
-        ]
-      }
-    };
-    const api = new JitsiMeetExternalAPI(domain, options);
-  });
-</script>
 {% endblock %}

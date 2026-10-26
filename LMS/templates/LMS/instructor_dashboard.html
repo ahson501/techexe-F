@@ -20,7 +20,7 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     
-    <!-- Left Column (2 Cols): Courses Teaching & Assigned Sections -->
+    <!-- Left Column (2 Cols): Assigned Sections, Courses, and Live Attendance Logs -->
     <div class="lg:col-span-2 space-y-8">
       
       <!-- Assigned Sections -->
@@ -96,6 +96,105 @@
               {% empty %}
                 <tr>
                   <td colspan="5" class="py-6 text-center text-gray-400 italic">No courses found under your account.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Scheduled Live Classes & Interactive Attendance Modal (Wide Table) -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            📹 Scheduled Live Classes & Attendance Logs
+          </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 uppercase text-gray-500 border-b">
+              <tr>
+                <th class="py-3 px-3">Session Title / Course</th>
+                <th class="py-3 px-3">Date & Time</th>
+                <th class="py-3 px-3">Attended Students</th>
+                <th class="py-3 px-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for session in live_sessions %}
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="py-3 px-3 font-bold text-gray-900">
+                    <div>{{ session.title }}</div>
+                    <div class="text-[11px] text-gray-500 font-normal">
+                      {{ session.section.course.title|default:session.course.title|default:"General Section" }}
+                    </div>
+                  </td>
+                  <td class="py-3 px-3">
+                    📅 {{ session.start_time|date:"M d, Y @ h:i A" }}
+                  </td>
+                  <td class="py-3 px-3">
+                    <!-- CLICKABLE BADGE: Opens interactive roster modal -->
+                    <button type="button" 
+                            onclick="document.getElementById('attendance-modal-{{ session.id }}').classList.remove('hidden')" 
+                            class="inline-flex items-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-full text-xs shadow-sm transition border border-emerald-300">
+                      👥 {{ session.attendances.all|length }} Student(s) Attended (View Roster)
+                    </button>
+
+                    <!-- ATTENDANCE ROSTER MODAL -->
+                    <div id="attendance-modal-{{ session.id }}" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                      <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 class="text-base font-bold text-gray-900">📋 Attendance Log: {{ session.title }}</h3>
+                          <button type="button" onclick="document.getElementById('attendance-modal-{{ session.id }}').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
+                        </div>
+                        
+                        <div class="max-h-60 overflow-y-auto">
+                          <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-100 uppercase text-gray-500">
+                              <tr>
+                                <th class="p-2">Student Name</th>
+                                <th class="p-2">Username</th>
+                                <th class="p-2">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for att in session.attendances.all %}
+                                <tr class="border-b">
+                                  <td class="p-2 font-bold text-gray-800">{{ att.student.get_full_name|default:att.student.username }}</td>
+                                  <td class="p-2 font-mono text-gray-500">{{ att.student.username }}</td>
+                                  <td class="p-2">
+                                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Joined Online</span>
+                                  </td>
+                                </tr>
+                              {% empty %}
+                                <tr>
+                                  <td colspan="3" class="p-4 text-center text-gray-400 italic">No students have joined this live session yet.</td>
+                                </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div class="mt-4 text-right">
+                          <button type="button" onclick="document.getElementById('attendance-modal-{{ session.id }}').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs px-4 py-2 rounded-xl transition">
+                            Close Window
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3">
+                    <a href="{% url 'join_live_session' session.id %}" target="_blank" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                      🚀 Launch Session
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="py-6 text-center text-gray-400 italic">
+                    No live sessions scheduled yet. Use the scheduler form to create one.
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -186,42 +285,6 @@
             + Schedule Session
           </button>
         </form>
-      </div>
-
-      <!-- Upcoming Scheduled Sessions Widget -->
-      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <span>📅</span> Scheduled Live Classes
-        </h2>
-
-        <div class="space-y-3">
-          {% for session in upcoming_sessions %}
-            <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs space-y-1">
-              <div class="flex justify-between items-start">
-                <h4 class="font-bold text-gray-900">{{ session.title }}</h4>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                  {{ session.section.name|default:"General" }}
-                </span>
-              </div>
-              <p class="text-[11px] text-gray-500">
-                🕒 {{ session.start_time|date:"M d, Y @ h:i A" }}
-              </p>
-              <div class="pt-1.5 flex items-center justify-between">
-                {% if session.join_url %}
-                  <a href="{{ session.join_url }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-bold text-[11px] flex items-center gap-1">
-                    🚀 Launch Zoom / Teams →
-                  </a>
-                {% else %}
-                  <a href="{% url 'live_session_room' session.id %}" class="text-emerald-600 hover:underline font-bold text-[11px] flex items-center gap-1">
-                    🔴 Launch Jitsi Stream →
-                  </a>
-                {% endif %}
-              </div>
-            </div>
-          {% empty %}
-            <p class="text-xs text-gray-400 italic py-2">No upcoming live sessions scheduled.</p>
-          {% endfor %}
-        </div>
       </div>
 
       <!-- Quick Action Panel -->

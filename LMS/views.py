@@ -33,6 +33,7 @@ from .forms import AssignFacultySectionForm, QuizTakeForm
 from .models import (
     AnswerChoice,
     Certificate,
+    Enrollment,
     Course,
     CourseSection,
     DiscussionComment,
@@ -43,6 +44,7 @@ from .models import (
     Lesson,
     LessonProgress,
     LiveSession,
+    SessionAttendance,
     Question,
     Quiz,
     QuizAttempt,
@@ -60,8 +62,7 @@ logger = logging.getLogger(__name__)
 # ==========================================
 
 class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Student portal view displaying enrolled courses and auto-generated payment vouchers."""
-
+   
     def test_func(self):
         user = self.request.user
         # Require user to be active AND belong to LMS_Student group (or staff)
@@ -88,19 +89,40 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             student=user
         ).select_related('course', 'course__instructor').order_by('-created_at')
 
-        # 2. Check if explicit reverse relation exists; fallback to enrollments list
+        # 2. Check fee vouchers
         if hasattr(user, 'vouchers') and user.vouchers.exists():
             vouchers = user.vouchers.select_related('course').order_by('-created_at')
         else:
-            vouchers = enrollments  # Treat enrollments as fee vouchers for manual payment tracking
+            vouchers = enrollments
+
+        # 3. Query Live Sessions for enrolled courses/sections
+        enrolled_course_ids = enrollments.values_list('course_id', flat=True)
+        section_ids = CourseSection.objects.filter(
+            course_id__in=enrolled_course_ids
+        ).values_list('id', flat=True)
+
+        live_sessions = LiveSession.objects.filter(
+            Q(section_id__in=section_ids) |
+            Q(course_id__in=enrolled_course_ids) |
+            Q(section__course_id__in=enrolled_course_ids)
+        ).distinct().select_related('section', 'course').order_by('-start_time')
+
+        # 4. Fetch list of session IDs the student actually joined
+        attended_session_ids = set(
+            SessionAttendance.objects.filter(
+                student=user, 
+                attended=True
+            ).values_list('session_id', flat=True)
+        )
 
         context = {
             'enrollments': enrollments,
             'vouchers': vouchers,
+            'live_sessions': live_sessions,
+            'attended_session_ids': attended_session_ids,  # Added to context
         }
 
         return render(request, 'LMS/student_dashboard.html', context)
-
 
 class UploadStudentDocumentsView(LoginRequiredMixin, View):
     """Allows enrolled students to submit CNIC/B-Form details and document files."""
@@ -320,12 +342,10 @@ class DeleteStudentView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.error(request, f"Student account '{username}' has been permanently deleted.")
         return redirect('admissions_dashboard')
 
-
-
 class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Dashboard for instructors to manage courses, sections, live sessions, and attendance."""
     
     def test_func(self):
-        # Requires active account AND membership in LMS_Instructor group
         return self.request.user.is_active and self.request.user.groups.filter(name='LMS_Instructor').exists()
 
     def handle_no_permission(self):
@@ -333,27 +353,23 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect('login')
 
     def get(self, request):
-        return render(request, 'LMS/instructor_dashboard.html')
-
-    
-    def get(self, request):
         user = request.user
         courses = Course.objects.filter(instructor=user)
         sections = CourseSection.objects.filter(instructor=user).select_related('course')
-        upcoming_sessions = LiveSession.objects.filter(
-            section__instructor=request.user,
-            status=LiveSession.Status.SCHEDULED
-        ).order_by('start_time')
         
+        # Query live sessions with attendance records pre-fetched
+        live_sessions = LiveSession.objects.filter(
+            Q(section__instructor=user) | Q(course__instructor=user)
+        ).distinct().prefetch_related('attendances__student').order_by('-start_time')
+
         context = {
             'courses': courses,
             'sections': sections,
-            'upcoming_sessions': upcoming_sessions,
+            'live_sessions': live_sessions,
+            'total_active_sections': sections.count(),  # Fixes "0 Total Active Sections" badge
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
-
-
-
+    
 class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Allows instructors or staff to create new courses directly from the front-end."""
 
@@ -404,6 +420,7 @@ class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
     def post(self, request):
         section_id = request.POST.get('section_id')
         title = request.POST.get('title', '').strip()
+        # Default to empty string "" to satisfy database NOT NULL constraint
         meeting_link = request.POST.get('meeting_link', '').strip()
         start_time = request.POST.get('start_time')
 
@@ -416,12 +433,12 @@ class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
         else:
             section = get_object_or_404(CourseSection, id=section_id, instructor=request.user)
 
-        # Map to 'join_url' and attach course from section
+        # Save session with course, section, and non-null join_url
         LiveSession.objects.create(
             course=section.course,
             section=section,
             title=title,
-            join_url=meeting_link,  # Maps input link to join_url
+            join_url=meeting_link,  # Stores "" for Jitsi, or external link for Zoom/Teams
             start_time=start_time,
             status=LiveSession.Status.SCHEDULED,
             mode=LiveSession.Mode.ONLINE
@@ -430,10 +447,40 @@ class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.success(request, f"Live session '{title}' scheduled successfully!")
         return redirect('instructor_dashboard')
 
-        
 
-User = get_user_model()
+@login_required
+def join_live_session(request, session_id):
+    """Logs student attendance and renders live classroom for Jitsi or external launch."""
+    session = get_object_or_404(
+        LiveSession.objects.select_related(
+            'course',
+            'course__instructor',
+            'section',
+            'section__course',
+            'section__course__instructor'
+        ), id=session_id
+    )
 
+    # 1. Log attendance automatically on join
+    SessionAttendance.objects.get_or_create(
+        session=session,
+        student=request.user,
+        defaults={
+            'attended': True,
+            'joined_via': SessionAttendance.ModeJoined.ONLINE
+        }
+    )
+
+    # 2. Derive course safely (whether linked via direct course FK or section)
+    course = getattr(session, 'course', None) or getattr(session.section, 'course', None)
+
+    # 3. Always render live_session_room.html (handles external links and Jitsi embeds)
+    context = {
+        'session': session,
+        'course': course,
+        'user_display_name': request.user.get_full_name() or request.user.username,
+    }
+    return render(request, 'LMS/live_session_room.html', context)
 
 class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Central administrative hub for HODs to allocate sections and approve faculty payout claims."""
@@ -1218,6 +1265,22 @@ class AcceptFacultyInvitationView(View):
 
         messages.success(request, "Account created successfully! You can now log in.")
         return redirect('login')
+
+
+
+def launch_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+    
+    # Only instructors/faculty assigned to the section can launch
+    if request.user == session.section.instructor or request.user.groups.filter(name__in=['lms_instructor', 'lms_vfaculty']).exists():
+        session.status = 'LIVE'  # or session.is_active = True
+        session.started_at = timezone.now()
+        session.save()
+
+    # Redirect to Jitsi room or external stream URL (Zoom/Teams)
+    if session.join_url:
+        return redirect(session.join_url)
+    return redirect('live_session_room', room_name=session.room_name)
 
 class LiveSessionRoomView(LoginRequiredMixin, View):
     def get(self, request, session_id):

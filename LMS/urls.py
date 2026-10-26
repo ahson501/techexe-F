@@ -37,6 +37,7 @@ urlpatterns = [
     path('lessons/<int:pk>/toggle-complete/', views.ToggleLessonCompleteView.as_view(), name='toggle_lesson_complete'),
     path('session/create/', views.CreateLiveSessionView.as_view(), name='create_live_session'),
     path('live/<int:session_id>/', views.LiveSessionRoomView.as_view(), name='live_session_room'),
+    path('live-session/<int:session_id>/join/', views.join_live_session, name='join_live_session'),
     path('hod/invite-faculty/', views.InviteFacultyView.as_view(), name='invite_faculty'),
     path('faculty/accept-invite/<str:token>/', views.AcceptFacultyInvitationView.as_view(), name='accept_faculty_invitation'),
     path('quizzes/<int:pk>/take/', views.QuizTakeView.as_view(), name='quiz_take'),
