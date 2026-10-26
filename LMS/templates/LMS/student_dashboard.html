@@ -54,18 +54,18 @@
                 {{ session.section.course.title|default:session.course.title|default:"Live Lecture" }}
               </span>
 
-              <!-- ATTENDANCE & LIVE STATUS BADGE -->
+              <!-- DYNAMIC ATTENDANCE & STATUS BADGE -->
               {% if session.id in attended_session_ids %}
                 <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap">
                   ✓ Attended
                 </span>
-              {% elif session.status == 'LIVE' or session.dynamic_status == 'LIVE' %}
+              {% elif session.is_currently_live %}
                 <span class="inline-flex items-center gap-1.5 bg-rose-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse whitespace-nowrap">
                   <span class="w-2 h-2 rounded-full bg-white"></span> LIVE NOW
                 </span>
-              {% elif session.status == 'COMPLETED' or session.dynamic_status == 'COMPLETED' %}
-                <span class="bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                  Completed
+              {% elif session.is_expired %}
+                <span class="bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-gray-300 whitespace-nowrap">
+                  Expired
                 </span>
               {% else %}
                 <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
@@ -80,18 +80,18 @@
             </p>
           </div>
 
-          <!-- ACTION BUTTON (ALWAYS VISIBLE ON MOBILE & DESKTOP) -->
-          <div class="mt-3 pt-2 border-t border-gray-200 w-full block">
+          <!-- DYNAMIC ACTION BUTTON -->
+          <div class="mt-2 pt-2 border-t border-gray-200 w-full block">
             {% if session.id in attended_session_ids %}
-              <a href="{% url 'join_live_session' session.id %}" target="_blank" class="w-full inline-flex justify-center items-center bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 text-xs font-bold py-2.5 px-3 rounded-lg transition text-center">
+              <a href="{% url 'join_live_session' session.id %}" target="_blank" class="w-full inline-flex justify-center items-center bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 text-xs font-bold py-2.5 rounded-lg transition text-center">
                 ✓ Attendance Marked (Re-join)
               </a>
-            {% elif session.status == 'COMPLETED' or session.dynamic_status == 'COMPLETED' %}
-              <button disabled class="w-full bg-gray-200 text-gray-500 text-xs font-bold py-2.5 px-3 rounded-lg cursor-not-allowed text-center">
-                Session Finished
+            {% elif session.is_expired %}
+              <button disabled class="w-full bg-gray-200 text-gray-500 text-xs font-bold py-2.5 rounded-lg cursor-not-allowed text-center">
+                Session Expired
               </button>
             {% else %}
-              <a href="{% url 'join_live_session' session.id %}" target="_blank" class="w-full inline-flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg shadow transition text-center">
+              <a href="{% url 'join_live_session' session.id %}" target="_blank" class="w-full inline-flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition text-center">
                 🚀 Join Live Session Now
               </a>
             {% endif %}
@@ -104,6 +104,7 @@
       {% endfor %}
     </div>
   </div>
+
   <!-- CNIC / B-Form Verification Upload Card -->
   <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6">
     <div class="flex items-center justify-between mb-4">

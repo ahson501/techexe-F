@@ -1,3 +1,4 @@
+import os
 import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -5,10 +6,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 from django.utils import timezone
 from ckeditor_uploader.fields import RichTextUploadingField
-import os
 from django.conf import settings
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from datetime import timedelta
 
 User = get_user_model()
 
@@ -516,10 +517,45 @@ class LiveSession(TimeStampedModel):
     join_url = models.URLField(max_length=500, blank=True, help_text="Instructor or Student Join Link")
     recording_url = models.URLField(max_length=500, blank=True, null=True, help_text="Link to session recording")
 
-    def is_live(self):
+    @property
+    def can_be_joined(self):
+        """
+        Returns True if:
+        1. Current time is within 15 minutes before start_time OR during the live duration window.
+        2. Status is explicitly HELD / LIVE.
+        """
         now = timezone.now()
-        end_time = self.start_time + timezone.timedelta(minutes=self.duration_minutes)
-        return self.start_time <= now <= end_time and self.status in [self.Status.SCHEDULED, self.Status.HELD]  # ✅ Lowercase 'self'
+        early_entry_time = self.start_time - timedelta(minutes=15)
+        
+        if self.status == self.Status.HELD:
+            return True
+            
+        # Allow entry starting 15 mins before start_time up until end_time
+        return early_entry_time <= now <= self.end_time and self.status == self.Status.SCHEDULED
+    
+    @property
+    def end_time(self):
+        """Calculates exact session end time."""
+        duration = self.duration_minutes if self.duration_minutes else 60
+        return self.start_time + timedelta(minutes=duration)
+
+    @property
+    def is_expired(self):
+        """Returns True if current time is past the end_time or status is explicitly COMPLETED/CANCELLED."""
+        if self.status in [self.Status.COMPLETED, self.Status.CANCELLED]:
+            return True
+        return timezone.now() > self.end_time
+
+    @property
+    def is_currently_live(self):
+        """Returns True if current time is within active start and end time window."""
+        now = timezone.now()
+        if self.status == self.Status.HELD:
+            return True
+        return self.start_time <= now <= self.end_time and self.status == self.Status.SCHEDULED
+
+    def is_live(self):
+        return self.is_currently_live
 
     def __str__(self):
         return f"{self.course.title} - {self.title} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"

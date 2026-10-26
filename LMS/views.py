@@ -80,7 +80,6 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
                 "Access restricted. You must be an approved student to view this page."
             )
         return redirect('login')
-
     def get(self, request):
         user = request.user
 
@@ -89,25 +88,28 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             student=user
         ).select_related('course', 'course__instructor').order_by('-created_at')
 
-        # 2. Check fee vouchers
+        # 2. Extract course IDs that are strictly PAID / ACTIVE (Uses valid status field)
+        paid_enrollments = enrollments.filter(status__in=['PAID', 'ACTIVE'])
+        paid_course_ids = paid_enrollments.values_list('course_id', flat=True)
+
+        # 3. Check fee vouchers
         if hasattr(user, 'vouchers') and user.vouchers.exists():
             vouchers = user.vouchers.select_related('course').order_by('-created_at')
         else:
             vouchers = enrollments
 
-        # 3. Query Live Sessions for enrolled courses/sections
-        enrolled_course_ids = enrollments.values_list('course_id', flat=True)
+        # 4. Query Live Sessions ONLY for PAID/ACTIVE courses & sections
         section_ids = CourseSection.objects.filter(
-            course_id__in=enrolled_course_ids
+            course_id__in=paid_course_ids
         ).values_list('id', flat=True)
 
         live_sessions = LiveSession.objects.filter(
             Q(section_id__in=section_ids) |
-            Q(course_id__in=enrolled_course_ids) |
-            Q(section__course_id__in=enrolled_course_ids)
+            Q(course_id__in=paid_course_ids) |
+            Q(section__course_id__in=paid_course_ids)
         ).distinct().select_related('section', 'course').order_by('-start_time')
 
-        # 4. Fetch list of session IDs the student actually joined
+        # 5. Fetch list of session IDs the student actually joined (Read-Only)
         attended_session_ids = set(
             SessionAttendance.objects.filter(
                 student=user, 
@@ -119,7 +121,8 @@ class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             'enrollments': enrollments,
             'vouchers': vouchers,
             'live_sessions': live_sessions,
-            'attended_session_ids': attended_session_ids,  # Added to context
+            'paid_course_ids': set(paid_course_ids),
+            'attended_session_ids': attended_session_ids,
         }
 
         return render(request, 'LMS/student_dashboard.html', context)
@@ -447,40 +450,13 @@ class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.success(request, f"Live session '{title}' scheduled successfully!")
         return redirect('instructor_dashboard')
 
-
 @login_required
 def join_live_session(request, session_id):
-    """Logs student attendance and renders live classroom for Jitsi or external launch."""
-    session = get_object_or_404(
-        LiveSession.objects.select_related(
-            'course',
-            'course__instructor',
-            'section',
-            'section__course',
-            'section__course__instructor'
-        ), id=session_id
-    )
-
-    # 1. Log attendance automatically on join
-    SessionAttendance.objects.get_or_create(
-        session=session,
-        student=request.user,
-        defaults={
-            'attended': True,
-            'joined_via': SessionAttendance.ModeJoined.ONLINE
-        }
-    )
-
-    # 2. Derive course safely (whether linked via direct course FK or section)
-    course = getattr(session, 'course', None) or getattr(session.section, 'course', None)
-
-    # 3. Always render live_session_room.html (handles external links and Jitsi embeds)
-    context = {
-        'session': session,
-        'course': course,
-        'user_display_name': request.user.get_full_name() or request.user.username,
-    }
-    return render(request, 'LMS/live_session_room.html', context)
+    """
+    Legacy functional endpoint wrapper. Routes through JoinLiveSessionView 
+    to enforce enrollment, timing guards, and dynamic attendance logging.
+    """
+    return JoinLiveSessionView.as_view()(request, session_id=session_id)
 
 class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Central administrative hub for HODs to allocate sections and approve faculty payout claims."""
@@ -1268,41 +1244,156 @@ class AcceptFacultyInvitationView(View):
 
 
 
-def launch_live_session(request, session_id):
-    session = get_object_or_404(LiveSession, id=session_id)
-    
-    # Only instructors/faculty assigned to the section can launch
-    if request.user == session.section.instructor or request.user.groups.filter(name__in=['lms_instructor', 'lms_vfaculty']).exists():
-        session.status = 'LIVE'  # or session.is_active = True
-        session.started_at = timezone.now()
-        session.save()
+# ==========================================
+# LAUNCH / JOIN LIVE SESSION VIEWS
+# ==========================================
+# ==========================================
+# LAUNCH / JOIN LIVE SESSION VIEWS
+# ==========================================
 
-    # Redirect to Jitsi room or external stream URL (Zoom/Teams)
+def launch_live_session(request, session_id):
+    """
+    Instructor endpoint to start a session. Sets status to HELD and routes 
+    to external URL or Jitsi stream room.
+    """
+    session = get_object_or_404(LiveSession, id=session_id)
+    user = request.user
+
+    is_section_instructor = session.section and session.section.instructor == user
+    is_course_instructor = session.course and session.course.instructor == user
+    is_authorized_faculty = is_section_instructor or is_course_instructor or user.groups.filter(
+        name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+    ).exists() or user.is_staff
+
+    # Mark session status as active HELD when launched by faculty
+    if is_authorized_faculty:
+        session.status = LiveSession.Status.HELD
+        session.save(update_fields=['status'])
+
+    # External stream URL (Zoom/Teams) vs Embedded Jitsi Room
     if session.join_url:
         return redirect(session.join_url)
-    return redirect('live_session_room', room_name=session.room_name)
+    return redirect('live_session_room', session_id=session.id)
 
-class LiveSessionRoomView(LoginRequiredMixin, View):
+
+class JoinLiveSessionView(LoginRequiredMixin, View):
+    """
+    Primary routing view for student entry. Checks enrollment, payment lock, timing guards, 
+    and logs attendance.
+    """
     def get(self, request, session_id):
         session = get_object_or_404(LiveSession, id=session_id)
-        is_enrolled = session.course.enrollments.filter(student=request.user).exists()
-        
-        # Check both permanent instructors, visiting faculty, and HODs
-        is_instructor = request.user.groups.filter(
+        user = request.user
+
+        is_instructor = user.is_staff or user.groups.filter(
             name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
         ).exists()
-        
-        if not (is_enrolled or is_instructor or request.user.is_staff):
+
+        # 1. Instructors bypass enrollment, payment, and timing guards
+        if is_instructor:
+            if session.join_url:
+                return redirect(session.join_url)
+            return redirect('live_session_room', session_id=session.id)
+
+        # 2. Check student enrollment
+        enrollment = session.course.enrollments.filter(student=user).first()
+        if not enrollment:
             return render(request, 'LMS/access_denied.html', {'reason': 'You are not enrolled in this course.'})
+
+        # 3. ENFORCE PAYMENT LOCK: Block students with pending fees
+        is_paid_or_active = getattr(enrollment, 'status', None) in ['PAID', 'ACTIVE']
+        if not is_paid_or_active:
+            messages.error(
+                request, 
+                "Access Denied: You have pending fees for this course. Please submit your payment to unlock live sessions."
+            )
+            return redirect('student_dashboard')
+
+        # 4. Check existing attendance record
+        has_attended = SessionAttendance.objects.filter(
+            session=session, student=user, attended=True
+        ).exists()
+
+        # 5. Block student if session is EXPIRED and they didn't attend live
+        if session.is_expired and not has_attended:
+            messages.error(request, "This live session has expired and is no longer accessible.")
+            return redirect('student_dashboard')
+
+        # 6. BLOCK premature student entry if class is not live yet
+        if not session.can_be_joined and not has_attended:
+            formatted_time = session.start_time.strftime('%b %d, %Y @ %I:%M %p')
+            messages.warning(
+                request, 
+                f"Class is not live yet! You can join starting 15 minutes prior to {formatted_time}."
+            )
+            return redirect('student_dashboard')
+
+        # 7. Auto-log student attendance ONLY when joining within valid live timeframe
+        SessionAttendance.objects.get_or_create(
+            session=session,
+            student=user,
+            defaults={'attended': True, 'joined_via': SessionAttendance.ModeJoined.ONLINE}
+        )
+
+        # 8. Redirect to external meeting URL or built-in Jitsi room
+        if session.join_url:
+            return redirect(session.join_url)
+        return redirect('live_session_room', session_id=session.id)
+
+
+class LiveSessionRoomView(LoginRequiredMixin, View):
+    """
+    Internal embedded room (Jitsi). Provides display access & security verification.
+    Attendance creation is handled upstream by JoinLiveSessionView to avoid duplication.
+    """
+    def get(self, request, session_id):
+        session = get_object_or_404(LiveSession, id=session_id)
+        user = request.user
+
+        is_instructor = user.is_staff or user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+
+        # 1. Check enrollment
+        enrollment = session.course.enrollments.filter(student=user).first()
+        if not (enrollment or is_instructor):
+            return render(request, 'LMS/access_denied.html', {'reason': 'You are not enrolled in this course.'})
+
+        # 2. ENFORCE PAYMENT LOCK (Direct URL Access Prevention)
+        if not is_instructor:
+            is_paid_or_active = getattr(enrollment, 'status', None) in ['PAID', 'ACTIVE']
+            if not is_paid_or_active:
+                messages.error(
+                    request, 
+                    "Access Denied: You have pending fees for this course. Please submit your payment to unlock live sessions."
+                )
+                return redirect('student_dashboard')
+
+        # 3. Check attendance history
+        has_attended = SessionAttendance.objects.filter(
+            session=session, student=user, attended=True
+        ).exists()
+
+        # 4. Block direct URL entry if expired AND didn't attend
+        if not is_instructor and session.is_expired and not has_attended:
+            messages.error(request, "This live session has expired and is no longer accessible.")
+            return redirect('student_dashboard')
+
+        # 5. Block direct URL entry if premature
+        if not is_instructor and not session.can_be_joined and not has_attended:
+            messages.warning(request, "This session is not live yet.")
+            return redirect('student_dashboard')
+
+        # 6. Derive course safely
+        course = getattr(session, 'course', None) or getattr(session.section, 'course', None)
 
         context = {
             'session': session,
-            'course': session.course,
-            'user_display_name': request.user.get_full_name() or request.user.username,
+            'course': course,
+            'user_display_name': user.get_full_name() or user.username,
         }
         return render(request, 'LMS/live_session_room.html', context)
-
-
+    
 class HODSectionAssignmentView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.groups.filter(name='LMS_HOD').exists() or self.request.user.is_staff
