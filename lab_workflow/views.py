@@ -116,9 +116,9 @@ BGE_EMBED_URL = "http://192.168.160.19:80/embed"        # embedding-bge pod IP
 QDRANT_URL    = "http://192.168.160.46:6333"            # qdrant pod IP
 
 LLM_CLUSTER_URLS = {
-    "qwen":     "http://192.168.224.182:8000/v1/chat/completions",
-    "mistral":  "http://192.168.166.136:8000/v1/chat/completions",
-    "deepseek": "http://192.168.160.61:8000/v1/chat/completions",
+    "qwen":     "http://192.168.224.164:8000/v1/chat/completions",
+    "mistral":  "http://192.168.166.175:8000/v1/chat/completions",
+    "deepseek": "http://192.168.160.13:8000/v1/chat/completions"
 }
 
 VLLM_MODEL_NAMES = {

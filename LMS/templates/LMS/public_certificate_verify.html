@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Verification - SysCon Educore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="p-6 text-center border-b border-gray-100">
+            <h1 class="text-xl font-bold text-gray-800">SysCon Educore</h1>
+            <p class="text-xs text-gray-500">Official Certificate Verification Portal</p>
+        </div>
+
+        <div class="p-6 text-center">
+            {% if is_valid %}
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">Authentic Certificate</span>
+
+                <div class="mt-6 text-left space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block">Issued To</span>
+                        <span class="text-base font-semibold text-gray-800">{{ student_name }}</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block">Course Completed</span>
+                        <span class="text-sm font-medium text-gray-700">{{ course_title }}</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block">Issue Date</span>
+                        <span class="text-xs text-gray-600">{{ issued_at|date:"F d, Y" }}</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block">Certificate UUID</span>
+                        <span class="text-xs font-mono text-gray-500 break-all">{{ certificate.id }}</span>
+                    </div>
+                </div>
+            {% else %}
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 text-red-600 rounded-full mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </div>
+                <span class="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
+                    {% if is_revoked %}Certificate Revoked{% else %}Invalid Record{% endif %}
+                </span>
+
+                <p class="mt-4 text-sm text-gray-600">
+                    {% if is_revoked %}
+                        Reason: {{ revocation_reason|default:"This certificate has been officially revoked by the university." }}
+                    {% else %}
+                        {{ error_message }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        </div>
+        <div class="bg-gray-50 p-4 text-center border-t border-gray-100">
+            <p class="text-xs text-gray-400">Powered by SysCon Educore LMS</p>
+        </div>
+    </div>
+</body>
+</html>

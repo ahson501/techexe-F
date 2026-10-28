@@ -3,12 +3,14 @@ import os
 import json
 import logging
 import uuid
+import qrcode
 from decimal import Decimal
 from io import BytesIO
 
 # Third-Party Imports
 import requests
 from PIL import Image, ImageDraw, ImageFont
+
 
 # Django Core & Auth Imports
 from django.conf import settings
@@ -17,6 +19,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import Group
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
@@ -404,6 +408,160 @@ class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.success(request, f"Course '{title}' created successfully!")
         return redirect('instructor_dashboard')
 
+# ==========================================
+# Predictive Analytics At-Risk Dashboard
+# ==========================================
+
+User = get_user_model()
+
+class InstructorAtRiskDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """
+    Predictive Analytics Dashboard: Identifies students at risk of failing 
+    based on live session attendance and assignment/quiz metrics.
+    """
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        enrollments = course.enrollments.filter(status__in=['PAID', 'ACTIVE']).select_related('student')
+        
+        # Total held live sessions for this course
+        total_sessions = LiveSession.objects.filter(
+            Q(course=course) | Q(section__course=course)
+        ).count()
+
+        at_risk_students = []
+
+        for enrollment in enrollments:
+            student = enrollment.student
+            
+            # 1. Attendance Metrics
+            attended_count = SessionAttendance.objects.filter(
+                session__course=course,
+                student=student,
+                attended=True
+            ).count()
+            
+            attendance_rate = (attended_count / total_sessions * 100) if total_sessions > 0 else 100.0
+
+            # 2. Derive At-Risk Score (Weighted: Attendance 70%, Activity 30%)
+            risk_score = 100.0 - attendance_rate
+            
+            if risk_score >= 50:
+                risk_level = "CRITICAL"
+                badge_color = "red"
+            elif risk_score >= 25:
+                risk_level = "WARNING"
+                badge_color = "amber"
+            else:
+                risk_level = "ON_TRACK"
+                badge_color = "emerald"
+
+            at_risk_students.append({
+                'student': student,
+                'attended_count': attended_count,
+                'total_sessions': total_sessions,
+                'attendance_rate': round(attendance_rate, 1),
+                'risk_score': round(risk_score, 1),
+                'risk_level': risk_level,
+                'badge_color': badge_color,
+            })
+
+        # Sort highest risk first
+        at_risk_students.sort(key=lambda x: x['risk_score'], reverse=True)
+
+        context = {
+            'course': course,
+            'at_risk_students': at_risk_students,
+            'critical_count': sum(1 for s in at_risk_students if s['risk_level'] == 'CRITICAL'),
+            'warning_count': sum(1 for s in at_risk_students if s['risk_level'] == 'WARNING'),
+        }
+        return render(request, 'LMS/at_risk_dashboard.html', context)
+    
+# ==========================================
+# Mobile Offline Synchronization APIs
+# ==========================================
+
+class MobileCourseSyncAPIView(LoginRequiredMixin, View):
+    """
+    Mobile Sync API: Package course details, modules, and lessons for offline caching.
+    """
+    def get(self, request):
+        user = request.user
+        
+        # Enrolled courses with active payment status
+        paid_course_ids = Enrollment.objects.filter(
+            student=user, status__in=['PAID', 'ACTIVE']
+        ).values_list('course_id', flat=True)
+
+        courses = Course.objects.filter(id__in=paid_course_ids).prefetch_related('modules__lessons')
+
+        payload = []
+        for course in courses:
+            course_data = {
+                "id": course.id,
+                "title": course.title,
+                "description": course.description,
+                "modules": []
+            }
+            for module in course.modules.all():
+                mod_data = {
+                    "id": module.id,
+                    "title": module.title,
+                    "lessons": [
+                        {
+                            "id": lesson.id,
+                            "title": lesson.title,
+                            "body_text": lesson.body_text[:1000],  # Concise body for local cache
+                        }
+                        for lesson in module.lessons.all()
+                    ]
+                }
+                course_data["modules"].append(mod_data)
+            payload.append(course_data)
+
+        return JsonResponse({"status": "success", "courses": payload}, safe=False)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MobileAttendanceSyncAPIView(LoginRequiredMixin, View):
+    """
+    Mobile Offline Queue Batch Sync API: Receive attendance queue gathered offline 
+    and log valid records.
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            offline_records = data.get('attendance_queue', [])
+            synced_count = 0
+
+            for item in offline_records:
+                session_id = item.get('session_id')
+                session = LiveSession.objects.filter(id=session_id).first()
+                
+                if session and session.can_be_joined:
+                    _, created = SessionAttendance.objects.get_or_create(
+                        session=session,
+                        student=request.user,
+                        defaults={
+                            'attended': True, 
+                            'joined_via': SessionAttendance.ModeJoined.ONLINE
+                        }
+                    )
+                    if created:
+                        synced_count += 1
+
+            return JsonResponse({
+                "status": "success",
+                "message": f"Successfully synchronized {synced_count} offline attendance records."
+            })
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+        
 class CreateLiveSessionView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Allows instructors to schedule live classroom sessions (Zoom, Teams, or built-in Jitsi)."""
 
@@ -988,13 +1146,13 @@ class LatestQuizResultRedirectView(LoginRequiredMixin, View):
 # 3. AI TEACHING ASSISTANT
 # ==========================================
 
-BGE_EMBED_URL = getattr(settings, "BGE_EMBED_URL", "http://192.168.160.19:80/embed")
-QDRANT_URL    = getattr(settings, "QDRANT_URL", "http://192.168.160.46:6333")
+BGE_EMBED_URL = getattr(settings, "BGE_EMBED_URL", "http://192.168.224.163:80/embed")
+QDRANT_URL    = getattr(settings, "QDRANT_URL", "http://192.168.160.63:6333")
 
 LLM_CLUSTER_URLS = {
-    "qwen":     "http://192.168.224.182:8000/v1/chat/completions",
-    "mistral":  "http://192.168.166.136:8000/v1/chat/completions",
-    "deepseek": "http://192.168.160.61:8000/v1/chat/completions"
+    "qwen":     "http://192.168.224.164:8000/v1/chat/completions",
+    "mistral":  "http://192.168.166.175:8000/v1/chat/completions",
+    "deepseek": "http://192.168.160.13:8000/v1/chat/completions"
 }
 
 VLLM_MODEL_NAMES = {
@@ -1244,9 +1402,7 @@ class AcceptFacultyInvitationView(View):
 
 
 
-# ==========================================
-# LAUNCH / JOIN LIVE SESSION VIEWS
-# ==========================================
+
 # ==========================================
 # LAUNCH / JOIN LIVE SESSION VIEWS
 # ==========================================
@@ -1556,24 +1712,40 @@ class CreateDiscussionTopicView(LoginRequiredMixin, View):
 # 6. CERTIFICATE GENERATION
 # ==========================================
 
-class DownloadCertificatePillowView(View):
-    def get(self, request, certificate_id):
-        cert = get_object_or_404(Certificate, id=certificate_id, student=request.user)
 
+class DownloadCertificatePillowView(View):
+    """Generates a high-resolution PDF certificate with an embedded verification QR code."""
+    
+    def get(self, request, certificate_id):
+        # 1. Fetch certificate ensuring student ownership (or allow staff)
+        cert = get_object_or_404(Certificate, id=certificate_id)
+        if not (request.user == cert.student or request.user.is_staff):
+            messages.error(request, "You do not have permission to download this certificate.")
+            return redirect('student_dashboard')
+
+        # 2. Block download if certificate is revoked
+        if getattr(cert, 'is_revoked', False):
+            messages.error(request, "This certificate has been revoked and cannot be downloaded.")
+            return redirect('student_dashboard')
+
+        # 3. Canvas Dimensions (300 DPI A4 Landscape)
         width, height = 3508, 2480
         img = Image.new('RGB', (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
+        # Color Palette
         NAVY = (30, 58, 138)
         GOLD = (202, 138, 4)
         CHARCOAL = (31, 41, 55)
         MUTED_GRAY = (100, 116, 139)
         BG_INNER = (250, 250, 249)
 
+        # Borders & Background
         draw.rectangle([80, 80, width - 80, height - 80], fill=BG_INNER)
         draw.rectangle([100, 100, width - 100, height - 100], outline=GOLD, width=12)
         draw.rectangle([130, 130, width - 130, height - 130], outline=NAVY, width=6)
 
+        # Fonts
         try:
             font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 90)
             font_subHeader = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
@@ -1586,18 +1758,22 @@ class DownloadCertificatePillowView(View):
 
         cx = width // 2
 
+        # Header Section
         draw.text((cx, 320), "TECHEXE INSTITUTE OF TECHNOLOGY", fill=NAVY, anchor="mm", font=font_subHeader)
         draw.text((cx, 480), "CERTIFICATE OF COMPLETION", fill=GOLD, anchor="mm", font=font_header)
         draw.line([(cx - 400, 560), (cx + 400, 560)], fill=NAVY, width=3)
 
+        # Recipient Section
         draw.text((cx, 720), "THIS IS PROUDLY PRESENTED TO", fill=MUTED_GRAY, anchor="mm", font=font_subHeader)
         full_name = cert.student.get_full_name() or cert.student.username.upper()
         draw.text((cx, 880), full_name, fill=CHARCOAL, anchor="mm", font=font_name)
         draw.line([(cx - 500, 960), (cx + 500, 960)], fill=GOLD, width=4)
 
+        # Course Section
         draw.text((cx, 1120), "for successfully completing the specialized professional program in", fill=MUTED_GRAY, anchor="mm", font=font_body)
         draw.text((cx, 1260), f'"{cert.course.title}"', fill=NAVY, anchor="mm", font=font_title)
 
+        # Signatures & Seal
         y_sign = 1850
         draw.line([(500, y_sign), (1100, y_sign)], fill=CHARCOAL, width=2)
         draw.text((800, y_sign + 30), "Lead Instructor", fill=CHARCOAL, anchor="mm", font=font_meta)
@@ -1609,14 +1785,55 @@ class DownloadCertificatePillowView(View):
         draw.ellipse([seal_cx - 90, seal_cy - 90, seal_cx + 90, seal_cy + 90], outline=GOLD, width=6, fill=(254, 243, 199))
         draw.text((seal_cx, seal_cy), "OFFICIAL\nSEAL", fill=GOLD, anchor="mm", font=font_meta, align="center")
 
-        issue_date = cert.created_at.strftime("%B %d, %Y") if hasattr(cert, 'created_at') else timezone.now().strftime("%B %d, %Y")
-        draw.text((350, 2220), f"Issue Date: {issue_date}", fill=MUTED_GRAY, font=font_meta)
-        draw.text((cx, 2220), f"Certificate Code: {cert.certificate_code}", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+        # Code & Dates
+        cert_code = getattr(cert, 'certificate_code', str(cert.id))
+        issue_date_obj = getattr(cert, 'issued_at', getattr(cert, 'created_at', timezone.now()))
+        issue_date = issue_date_obj.strftime("%B %d, %Y")
 
+        draw.text((350, 2220), f"Issue Date: {issue_date}", fill=MUTED_GRAY, font=font_meta)
+        draw.text((cx, 2220), f"Certificate Code: {cert_code}", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+
+        # 4. Generate & Embed Dynamic Verification QR Code
+        verify_url = request.build_absolute_uri(f"/LMS/verify/certificate/{cert.id}/")
+        qr = qrcode.QRCode(box_size=8, border=2)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+        
+        # Resize QR code and paste into bottom right margin
+        qr_img = qr_img.resize((240, 240))
+        img.paste(qr_img, (width - 600, 2080))
+        draw.text((width - 480, 2330), "Scan to Verify", fill=MUTED_GRAY, anchor="mm", font=font_meta)
+
+        # 5. Export to PDF Buffer
         pdf_buffer = BytesIO()
         img.save(pdf_buffer, format='PDF', resolution=300.0)
         pdf_buffer.seek(0)
 
         response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="Certificate_{cert.certificate_code}.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="Certificate_{cert_code}.pdf"'
         return response
+
+
+class PublicCertificateVerifyView(View):
+    """Publicly accessible verification endpoint (No login required)."""
+    
+    def get(self, request, certificate_id):
+        try:
+            cert = Certificate.objects.select_related('student', 'course', 'course__instructor').get(id=certificate_id)
+            context = {
+                'is_valid': not getattr(cert, 'is_revoked', False),
+                'certificate': cert,
+                'student_name': cert.student.get_full_name() or cert.student.username,
+                'course_title': cert.course.title,
+                'issued_at': getattr(cert, 'issued_at', getattr(cert, 'created_at', None)),
+                'is_revoked': getattr(cert, 'is_revoked', False),
+                'revocation_reason': getattr(cert, 'revocation_reason', None),
+            }
+        except (Certificate.DoesNotExist, ValueError):
+            context = {
+                'is_valid': False,
+                'error_message': 'Invalid or non-existent Certificate ID.'
+            }
+
+        return render(request, 'LMS/public_certificate_verify.html', context)

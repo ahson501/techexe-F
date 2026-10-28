@@ -462,24 +462,41 @@ class QuizAttempt(TimeStampedModel):
 # ==========================================
 # 5. CERTIFICATE
 # ==========================================
+import qrcode
+from io import BytesIO
+from django.core.files import File
 
 class Certificate(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certificates')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
-    issued_at = models.DateTimeField(auto_now_add=True)
     certificate_code = models.CharField(max_length=50, unique=True, blank=True)
+    issued_at = models.DateTimeField(default=timezone.now)
+    is_revoked = models.BooleanField(default=False)
+    revocation_reason = models.TextField(blank=True, null=True)
+    qr_code = models.ImageField(upload_to='certificates/qr_codes/', blank=True, null=True)
 
     class Meta:
         unique_together = ('student', 'course')
 
     def save(self, *args, **kwargs):
+        # 1. Generate unique human-readable certificate code
         if not self.certificate_code:
-            self.certificate_code = f"CERT-{self.issued_at.year if self.issued_at else '2026'}-{str(self.id)[:8].upper()}"
+            year_str = self.issued_at.year if self.issued_at else timezone.now().year
+            self.certificate_code = f"CERT-{year_str}-{str(self.id)[:8].upper()}"
+
+        # 2. Generate dynamic QR code pointing to public verification endpoint
+        if not self.qr_code:
+            verify_url = f"https://techexe.net/LMS/verify/certificate/{self.id}/"
+            qr_img = qrcode.make(verify_url)
+            buffer = BytesIO()
+            qr_img.save(buffer, format='PNG')
+            self.qr_code.save(f"qr_{self.id}.png", File(buffer), save=False)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Certificate for {self.student.username} - {self.course.title}"
+        return f"Certificate {self.certificate_code} - {self.student.username} ({self.course.title})"
 
 
 # ==========================================

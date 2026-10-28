@@ -52,13 +52,13 @@
             </div>
           {% empty %}
             <div class="col-span-2 text-center py-6 border border-dashed rounded-xl text-gray-400 text-xs italic">
-              No specific sections assigned by the HOD yet. Click "+ Add Section" on the HOD Dashboard to assign sections.
+              No specific sections assigned by the HOD yet.
             </div>
           {% endfor %}
         </div>
       </div>
 
-      <!-- Published & Draft Courses -->
+      <!-- Published & Teaching Courses with Integrated Risk Analytics CTA -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-lg font-bold text-gray-900 mb-4">📚 Courses Authored / Teaching</h2>
         
@@ -67,17 +67,15 @@
             <thead class="bg-gray-50 uppercase text-gray-500 border-b">
               <tr>
                 <th class="py-3 px-3">Course Title</th>
-                <th class="py-3 px-3">Category</th>
                 <th class="py-3 px-3">Price</th>
                 <th class="py-3 px-3">Status</th>
-                <th class="py-3 px-3">Action</th>
+                <th class="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for course in courses %}
                 <tr class="border-b hover:bg-gray-50">
                   <td class="py-3 px-3 font-bold text-gray-900">{{ course.title }}</td>
-                  <td class="py-3 px-3">{{ course.category.name|default:"Uncategorized" }}</td>
                   <td class="py-3 px-3 font-semibold text-gray-800">PKR {{ course.price }}</td>
                   <td class="py-3 px-3">
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
@@ -87,15 +85,22 @@
                       {{ course.get_status_display }}
                     </span>
                   </td>
-                  <td class="py-3 px-3">
-                    <a href="{% url 'course_detail' course.slug %}" class="text-indigo-600 hover:underline font-bold">
-                      View Page
-                    </a>
+                  <td class="py-3 px-3 text-right">
+                    <div class="inline-flex items-center gap-2">
+                      <!-- At-Risk Predictive Analytics Button -->
+                      <a href="{% url 'at_risk_dashboard' course.id %}" 
+                         class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] rounded-lg border border-indigo-200 transition">
+                        📊 Risk Analytics
+                      </a>
+                      <a href="{% url 'course_detail' course.slug %}" class="text-indigo-600 hover:underline font-bold px-2 py-1">
+                        View Course
+                      </a>
+                    </div>
                   </td>
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="5" class="py-6 text-center text-gray-400 italic">No courses found under your account.</td>
+                  <td colspan="4" class="py-6 text-center text-gray-400 italic">No courses found under your account.</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -103,7 +108,7 @@
         </div>
       </div>
 
-      <!-- Scheduled Live Classes & Interactive Attendance Modal (Wide Table) -->
+      <!-- Scheduled Live Classes & Attendance Logs -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -134,7 +139,6 @@
                     📅 {{ session.start_time|date:"M d, Y @ h:i A" }}
                   </td>
                   <td class="py-3 px-3">
-                    <!-- CLICKABLE BADGE: Opens interactive roster modal -->
                     <button type="button" 
                             onclick="document.getElementById('attendance-modal-{{ session.id }}').classList.remove('hidden')" 
                             class="inline-flex items-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-full text-xs shadow-sm transition border border-emerald-300">
@@ -185,7 +189,7 @@
                     </div>
                   </td>
                   <td class="py-3 px-3">
-                    <a href="{% url 'join_live_session' session.id %}" target="_blank" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
+                    <a href="{% url 'launch_live_session' session.id %}" target="_blank" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition">
                       🚀 Launch Session
                     </a>
                   </td>
@@ -233,7 +237,7 @@
         </form>
       </div>
 
-      <!-- Live Session Scheduler Form (Supports External Links + Optional Jitsi Fallback) -->
+      <!-- Live Session Scheduler Form -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-md font-bold text-gray-900 mb-1 flex items-center gap-2">
           <span>🎥</span> Schedule Upcoming Live Session
@@ -263,7 +267,7 @@
                    class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
           </div>
 
-          <!-- Meeting URL (Optional) -->
+          <!-- Meeting URL -->
           <div>
             <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">
               Meeting Link <span class="text-gray-400 font-normal font-sans">(Optional for Zoom/Teams)</span>

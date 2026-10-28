@@ -32,7 +32,7 @@ from django.contrib.auth import update_session_auth_hash
 def force_password_change(request):
     """Force user to set a new password on initial login."""
     if not request.user.profile.must_change_password:
-        return redirect('iccbs:iccbshome')
+        return redirect('iccbs:iccbs_login')
 
     if request.method == 'POST':
         form = PasswordChangeForm(user=request.user, data=request.POST)
@@ -176,7 +176,7 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         "We've emailed you instructions for resetting your password. "
         "If an account exists with the email entered, check your inbox (and spam folder)."
     )
-    success_url = reverse_lazy('iccbs:iccbs_base')
+    success_url = reverse_lazy('iccbs:password_reset_done')
 
 def public_profile(request, username):
     """Render a public profile page."""
