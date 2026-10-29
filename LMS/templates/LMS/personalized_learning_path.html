@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Personalized Study Path - {{ course.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="bg-white p-6 rounded-xl border shadow-sm">
+            <h1 class="text-2xl font-bold text-gray-900">Personalized Learning Hub</h1>
+            <p class="text-sm text-gray-500">Tailored study plan based on your progress in <strong>{{ course.title }}</strong></p>
+        </div>
+
+        {% if remedial_plan.recommended_lessons %}
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
+            <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                <span>🎯</span> Recommended Focus Areas
+            </h2>
+            <p class="text-sm text-amber-700 mt-1">
+                You have missed {{ remedial_plan.missed_session_count }} live session(s). Our adaptive engine recommends reviewing these lessons:
+            </p>
+
+            <div class="mt-4 space-y-3">
+                {% for rec in remedial_plan.recommended_lessons %}
+                <div class="bg-white p-4 rounded-lg border border-amber-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-sm">{{ rec.lesson_title }}</h4>
+                        <p class="text-xs text-gray-500">{{ rec.reason }}</p>
+                    </div>
+                    <a href="#" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg">
+                        Review Lesson
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-900">
+            <h2 class="text-lg font-bold">🌟 You are fully on track!</h2>
+            <p class="text-sm mt-1">No remedial lessons required. Keep up the good work!</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

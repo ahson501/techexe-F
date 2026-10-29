@@ -102,7 +102,7 @@
                   <span class="text-gray-400 italic">No files uploaded</span>
                 {% endif %}
               </td>
-
+              
               <!-- Joined Date -->
               <td class="py-3 px-3 text-gray-500">
                 {{ student.date_joined|date:"M d, Y" }}
@@ -111,58 +111,57 @@
               <!-- ACCURATE VERIFICATION STATUS BADGE -->
               <td class="py-3 px-3 whitespace-nowrap">
                 {% if student.is_active and student.student_profile.verification_status == 'VERIFIED' and student.student_profile.cnic_front %}
-                  <!-- Account active AND documents verified -->
                   <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full inline-block">
                     ✓ Active / Fully Verified
                   </span>
                 {% elif student.is_active and not student.student_profile.cnic_front %}
-                  <!-- Account active but documents not uploaded yet -->
                   <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full inline-block">
                     ℹ️ Active (Doc Pending)
                   </span>
                 {% elif student.student_profile.verification_status == 'REJECTED' %}
-                  <!-- Rejected -->
                   <span class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-full inline-block">
                     Rejected
                   </span>
                 {% else %}
-                  <!-- Pending Initial Review -->
                   <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full inline-block">
                     Pending Approval
                   </span>
                 {% endif %}
               </td>
 
-              <!-- ACTIONS COLUMN (Fixed: Non-wrapping layout & no duplicate forms) -->
+              <!-- ACTIONS COLUMN -->
               <td class="py-3 px-3 text-right whitespace-nowrap">
                 <div class="inline-flex items-center justify-end gap-1.5">
-             
+                  
+                  <!-- AI Screening Trigger Button -->
+                  <button type="button"
+                          onclick="screenApplicant('{{ student.id }}')"
+                          class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-[11px] px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                    ✨ AI Screening Note
+                  </button>
+
                   <!-- Approve / Reject Form -->
                   <form action="{% url 'verify_student_document' student.id %}" method="POST" class="inline-flex gap-1.5">
                     {% csrf_token %}
                    
-                    <!-- STATE 1: Documents Uploaded & Already Verified -> Disabled Button -->
                     {% if student.student_profile and student.student_profile.cnic_front and student.student_profile.verification_status == 'VERIFIED' %}
                       <button type="button" disabled
                               class="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] px-2.5 py-1 rounded-lg cursor-not-allowed">
                         ✓ Doc Verified
                       </button>
 
-                    <!-- STATE 2: Documents Uploaded & Pending Review -> Active "Approve Doc" Button -->
                     {% elif student.student_profile and student.student_profile.cnic_front %}
                       <button type="submit" name="action" value="approve"
                               class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow transition">
                         ✓ Approve Doc
                       </button>
 
-                    <!-- STATE 3: Account Active (No Documents) -> Disabled "Active" Button -->
                     {% elif student.is_active %}
                       <button type="button" disabled
                               class="bg-gray-100 text-gray-500 font-bold text-[11px] px-2.5 py-1 rounded-lg cursor-not-allowed border border-gray-200">
                         ✓ Active
                       </button>
 
-                    <!-- STATE 4: Account Inactive -> Active "Approve" Button -->
                     {% else %}
                       <button type="submit" name="action" value="approve"
                               class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow transition">
@@ -177,7 +176,7 @@
                     </button>
                   </form>
 
-                  <!-- Clear Documents Button (Only visible if files exist) -->
+                  <!-- Clear Documents Button -->
                   {% if student.student_profile and student.student_profile.cnic_front or student.student_profile and student.student_profile.cnic_back %}
                     <form action="{% url 'delete_student_document' student.id %}" method="POST" class="inline"
                           onsubmit="return confirm('Clear uploaded document files for {{ student.username }}?');">
@@ -189,7 +188,7 @@
                     </form>
                   {% endif %}
 
-                  <!-- Permanent Delete User Button -->
+                  <!-- Delete User Button -->
                   <form action="{% url 'delete_student' student.id %}" method="POST" class="inline"
                         onsubmit="return confirm('Are you sure you want to permanently delete account {{ student.username }}?');">
                     {% csrf_token %}
@@ -213,4 +212,28 @@
   </div>
 
 </div>
+
+<!-- Single Global JavaScript Block Placed Outside the Loop -->
+<script>
+async function screenApplicant(studentId) {
+  if (!studentId) {
+    alert("⚠️ Missing applicant ID.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/LMS/api/v1/ai/evaluate-admission/${studentId}/`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      alert("🤖 AI Admission Evaluation Note:\n\n" + data.evaluation);
+    } else {
+      alert("⚠️ Error generating note: " + (data.message || data.evaluation || "Unknown error from cluster."));
+    }
+  } catch (error) {
+    console.error("Screening request failed:", error);
+    alert("🚨 Failed to reach AI evaluation server.");
+  }
+}
+</script>
 {% endblock %}

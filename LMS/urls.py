@@ -12,7 +12,8 @@ urlpatterns = [
     path('courses/<slug:slug>/enroll/', views.EnrollCourseView.as_view(), name='enroll_course'),
     path('course/create/', views.CreateCourseView.as_view(), name='create_course'),
     path('section/create/', views.CreateSectionView.as_view(), name='create_section'),
-
+    path('course/<uuid:course_id>/personalized-path/', views.StudentPersonalizedPathView.as_view(), name='student_personalized_path'),
+    
     # Role Dashboards
     path('dashboard/student/', views.StudentDashboardView.as_view(), name='student_dashboard'),
     path('dashboard/instructor/', views.InstructorDashboardView.as_view(), name='instructor_dashboard'),
@@ -60,7 +61,11 @@ urlpatterns = [
     path('api/v1/mobile/sync/courses/', views.MobileCourseSyncAPIView.as_view(), name='mobile_course_sync_api'),
     path('api/v1/mobile/sync/attendance/', views.MobileAttendanceSyncAPIView.as_view(), name='mobile_attendance_sync_api'),
     path('api/ai-assistant/', views.AIChatAssistantView.as_view(), name='ai_assistant_api'),
-
+    path('api/v1/ai/generate-quiz/<int:lesson_id>/', views.AIQuizGeneratorView.as_view(), name='ai_generate_quiz'),
+    path('api/v1/ai/evaluate-admission/<int:student_id>/', views.AIAdmissionAssistantView.as_view(), name='ai_evaluate_admission'),
+    path('faculty/lesson/<int:lesson_id>/generate-quiz/', views.AIQuizGeneratorView.as_view(), name='ai_generate_quiz'),
+    path('support/ai-helpdesk/', views.AIAdminHelpdeskView.as_view(), name='ai_admin_helpdesk'),
+    
     # Certificates & Public QR Verification
     path('certificates/<uuid:certificate_id>/download/', views.DownloadCertificatePillowView.as_view(), name='download_certificate'),
     path('verify/certificate/<uuid:certificate_id>/', views.PublicCertificateVerifyView.as_view(), name='public_certificate_verify'),

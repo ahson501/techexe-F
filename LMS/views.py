@@ -31,6 +31,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.generic import DetailView, ListView, View
+# services
+from .services import AIAssistanceService
 
 # Local Application Imports
 from .forms import AssignFacultySectionForm, QuizTakeForm
@@ -1196,8 +1198,16 @@ class AIChatAssistantView(LoginRequiredMixin, View):
                 "You are an AI Teaching Assistant for this online course."
             )
 
+            # --- ADAPTIVE ENGINE INTEGRATION ---
+            # Run adaptive check for current student and course
+            engine = AdaptiveLearningEngine(student=request.user, course=lesson.module.course)
+            adaptive_data = engine.generate_personalized_remedial_plan()
+            adaptive_guidance = adaptive_data.get('ai_tutor_focus_prompt', '')
+
             system_instruction = (
                 f"{base_system_instruction}\n\n"
+                f"--- ADAPTIVE LEARNING GUIDANCE ---\n"
+                f"{adaptive_guidance}\n\n"
                 f"--- CURRENT COURSE & LESSON CONTEXT ---\n"
                 f"Course: {lesson.module.course.title}\n"
                 f"Module: {lesson.module.title}\n"
@@ -1264,7 +1274,75 @@ class AIChatAssistantView(LoginRequiredMixin, View):
             logger.warning(f"LMS RAG search skipped: {err}")
             return None
 
+class AIQuizGeneratorView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Faculty Tool: Automatically generates draft quiz questions for a lesson."""
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
 
+    def post(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+        questions = AIAssistanceService.generate_quiz_from_lesson(
+            lesson_title=lesson.title,
+            lesson_text=lesson.body_text
+        )
+        return JsonResponse({"status": "success", "questions": questions})
+
+
+
+User = get_user_model()
+
+class AIAdmissionAssistantView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """
+    Admin Tool: Provides automated preliminary evaluation for admissions staff
+    based on student user records and uploaded document profiles.
+    """
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name__in=['LMS_Admissions', 'LMS_admissions_officer']).exists()
+
+    def get(self, request, student_id):
+        student = get_object_or_404(User, id=student_id)
+        
+        profile = getattr(student, 'student_profile', None)
+        cnic_num = getattr(profile, 'cnic_number', 'Not Provided') if profile else 'Not Provided'
+        verification_status = getattr(profile, 'verification_status', 'PENDING') if profile else 'PENDING'
+        has_documents = bool(profile and profile.cnic_front)
+
+        bio_notes = (
+            f"CNIC/B-Form: {cnic_num} | "
+            f"Verification Status: {verification_status} | "
+            f"Document Files Uploaded: {'Yes' if has_documents else 'No'}"
+        )
+
+        try:
+            evaluation_notes = AIAssistanceService.analyze_admission_documents(
+                student_name=student.get_full_name() or student.username,
+                applied_course="General University Admission & Document Verification",
+                bio_notes=bio_notes
+            )
+            return JsonResponse({"status": "success", "evaluation": evaluation_notes})
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "evaluation": f"Evaluation error: {str(e)}"
+            }, status=200)
+
+
+class AIAdminHelpdeskView(LoginRequiredMixin, View):
+    """
+    Admin & Student Support: Auto-responds to admissions and fee queries.
+    """
+    def post(self, request):
+        user_query = request.POST.get('query', '').strip()
+        if not user_query:
+            return JsonResponse({"error": "Empty query provided"}, status=400)
+
+        response = AIAssistanceService.solve_admin_helpdesk_query(user_query)
+        return JsonResponse({"status": "success", "reply": response})
+    
 # ==========================================
 # 4. LIVE SESSIONS & HOD MANAGEMENT
 # ==========================================
@@ -1707,6 +1785,33 @@ class CreateDiscussionTopicView(LoginRequiredMixin, View):
         messages.error(request, "Please fill in all required fields.")
         return redirect('create_discussion_topic')
 
+
+# LMS/views.py
+from .services import AdaptiveLearningEngine
+
+class StudentPersonalizedPathView(LoginRequiredMixin, View):
+    """
+    Student View: Displays individualized adaptive recommendations 
+    and customized study focus areas.
+    """
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        
+        # Verify student enrollment
+        enrollment = course.enrollments.filter(student=request.user, status__in=['PAID', 'ACTIVE']).first()
+        if not enrollment:
+            messages.error(request, "You are not actively enrolled in this course.")
+            return redirect('student_dashboard')
+
+        # Run Adaptive Learning Engine
+        engine = AdaptiveLearningEngine(student=request.user, course=course)
+        remedial_plan = engine.generate_personalized_remedial_plan()
+
+        context = {
+            'course': course,
+            'remedial_plan': remedial_plan,
+        }
+        return render(request, 'LMS/personalized_learning_path.html', context)
 
 # ==========================================
 # 6. CERTIFICATE GENERATION

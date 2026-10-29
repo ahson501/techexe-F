@@ -9,7 +9,7 @@
   <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
     <div>
       <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">👨‍🏫 Instructor Command Center</h1>
-      <p class="text-xs text-gray-500 mt-1">Manage your active courses, section schedules, live classes, and student engagement tools.</p>
+      <p class="text-xs text-gray-500 mt-1">Manage active courses, section schedules, live classes, student engagement, and adaptive learning paths.</p>
     </div>
     <div class="mt-4 md:mt-0 flex items-center space-x-3">
       <a href="{% url 'discussion_board' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow transition">
@@ -58,7 +58,7 @@
         </div>
       </div>
 
-      <!-- Published & Teaching Courses with Integrated Risk Analytics CTA -->
+      <!-- Published & Teaching Courses with Integrated Adaptive & Risk Analytics -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-lg font-bold text-gray-900 mb-4">📚 Courses Authored / Teaching</h2>
         
@@ -75,7 +75,13 @@
             <tbody>
               {% for course in courses %}
                 <tr class="border-b hover:bg-gray-50">
-                  <td class="py-3 px-3 font-bold text-gray-900">{{ course.title }}</td>
+                  <td class="py-3 px-3 font-bold text-gray-900">
+                    <div>{{ course.title }}</div>
+                    <!-- Adaptive Engine & Enrollment Indicator -->
+                    <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5">
+                      <span>🎯</span> {{ course.enrollments.count }} Enrolled Student(s) · Adaptive Track Active
+                    </div>
+                  </td>
                   <td class="py-3 px-3 font-semibold text-gray-800">PKR {{ course.price }}</td>
                   <td class="py-3 px-3">
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
@@ -87,10 +93,11 @@
                   </td>
                   <td class="py-3 px-3 text-right">
                     <div class="inline-flex items-center gap-2">
-                      <!-- At-Risk Predictive Analytics Button -->
+                      <!-- Predictive Risk Analytics & Adaptive Path Engine CTA -->
                       <a href="{% url 'at_risk_dashboard' course.id %}" 
-                         class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] rounded-lg border border-indigo-200 transition">
-                        📊 Risk Analytics
+                         class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] rounded-lg border border-indigo-200 transition"
+                         title="View student risk scores and adaptive remedial paths">
+                        📊 Risk & Adaptive Engine
                       </a>
                       <a href="{% url 'course_detail' course.slug %}" class="text-indigo-600 hover:underline font-bold px-2 py-1">
                         View Course
@@ -208,9 +215,24 @@
 
     </div>
 
-    <!-- Right Column (1 Col): Course Creation, Session Scheduler & Quick Actions -->
+    <!-- Right Column (1 Col): Course Creation, Session Scheduler & AI Co-Pilot -->
     <div class="space-y-6">
       
+      <!-- Faculty AI Co-Pilot Widget -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h2 class="text-md font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <span>🤖</span> Faculty AI Assessment Co-Pilot
+        </h2>
+        <p class="text-xs text-gray-500 mb-4">Generate structured multiple-choice quiz questions from any lesson text instantly using local vLLM models.</p>
+        
+        <button type="button"
+                id="ai-quiz-btn"
+                onclick="triggerQuizGen(event)"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
+          <span>🤖</span> Auto-Generate Quiz from Lesson
+        </button>
+      </div>
+
       <!-- Create Course Widget -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -316,7 +338,7 @@
           </div>
         </div>
         <p class="text-xs text-indigo-200 leading-relaxed">
-          You are authenticated as an active instructor. Use your dashboard to monitor section enrollments and field student AI queries inside lesson modules.
+          You are authenticated as an active instructor. Use your dashboard to monitor section enrollments, inspect student adaptive focus areas, and field AI queries inside lesson modules.
         </p>
       </div>
 
@@ -324,4 +346,69 @@
 
   </div>
 </div>
+
+<!-- JavaScript Handler for Faculty AI Quiz Co-Pilot -->
+<script>
+async function triggerQuizGen(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const lessonId = prompt("Enter the Lesson ID to generate quiz questions from:");
+    if (!lessonId || !lessonId.trim()) return;
+
+    const btn = document.getElementById('ai-quiz-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Contacting AI Cluster...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`/LMS/api/v1/ai/generate-quiz/${lessonId.trim()}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken') || '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (data.status === 'success' && data.questions) {
+            let questionsText = "";
+            const questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
+            
+            questions.forEach((q, idx) => {
+                questionsText += `\nQ${idx+1}: ${q.question}\nOptions: ${q.options ? q.options.join(', ') : 'N/A'}\n`;
+            });
+
+            alert("✅ AI Generated Quiz Questions:\n" + (questionsText || JSON.stringify(data.questions, null, 2)));
+        } else {
+            alert("⚠️ Quiz generation error: " + (data.message || data.quiz_data || "Check vLLM cluster connection."));
+        }
+    } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        console.error("AI Quiz Error:", err);
+        alert("🚨 Error connecting to vLLM API endpoint.");
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}
