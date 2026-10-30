@@ -1,0 +1,87 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Course Curriculum Builder | {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+  
+  <!-- Header -->
+  <div class="flex justify-between items-center bg-white p-6 rounded-2xl border shadow-sm">
+    <div>
+      <span class="text-xs font-bold px-2.5 py-1 rounded-full {% if course.status == 'PUBLISHED' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+        {{ course.get_status_display }}
+      </span>
+      <h1 class="text-2xl font-bold text-gray-900 mt-2">📖 Curriculum Builder: {{ course.title }}</h1>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <a href="{% url 'instructor_dashboard' %}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition">
+        ← Back to Dashboard
+      </a>
+      {% if course.status != 'PUBLISHED' %}
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="publish_course">
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition">
+            🚀 Publish Course
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modules & Lessons List -->
+  <div class="space-y-6">
+    {% for module in modules %}
+      <div class="bg-white p-6 rounded-2xl border shadow-sm">
+        <h2 class="text-base font-bold text-gray-900 mb-4 pb-2 border-b flex justify-between items-center">
+          <span>📁 {{ module.title }}</span>
+        </h2>
+
+        <!-- Lessons in Module -->
+        <div class="space-y-2 mb-6">
+          {% for lesson in module.lessons.all %}
+            <div class="p-3 bg-gray-50 border rounded-xl flex justify-between items-center">
+              <div>
+                <span class="font-bold text-indigo-600 text-xs">[Lesson ID: {{ lesson.id }}]</span>
+                <span class="font-semibold text-gray-800 text-xs ml-2">{{ lesson.title }}</span>
+                <p class="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{{ lesson.body_text|truncatewords:15 }}</p>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-xs text-gray-400 italic py-2">No lessons in this module yet.</p>
+          {% endfor %}
+        </div>
+
+        <!-- Add Lesson Form -->
+        <form method="POST" class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_lesson">
+          <input type="hidden" name="module_id" value="{{ module.id }}">
+          
+          <h3 class="text-xs font-bold text-indigo-900">+ Add New Lesson to {{ module.title }}</h3>
+          <input type="text" name="lesson_title" placeholder="Lesson Title (e.g. Introduction to Variables)" class="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none" required>
+          <textarea name="body_text" rows="3" placeholder="Lesson Text / Study Content (Used by AI Quiz Co-Pilot to generate questions)..." class="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none" required></textarea>
+          
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+            + Save Lesson
+          </button>
+        </form>
+      </div>
+    {% endfor %}
+
+    <!-- Add Module Form -->
+    <div class="bg-white p-6 rounded-2xl border shadow-sm">
+      <form method="POST" class="flex gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_module">
+        <input type="text" name="module_title" placeholder="New Module Title (e.g. Module 2: Advanced Topics)" class="flex-1 text-xs px-3 py-2 border rounded-xl focus:outline-none" required>
+        <button type="submit" class="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition">
+          + Add Module
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

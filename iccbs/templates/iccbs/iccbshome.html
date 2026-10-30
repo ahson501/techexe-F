@@ -1,24 +1,196 @@
 {% load static %} 
-{% block title %}ICCBS {% endblock title%}
-{% block content %}
-    <div class="jumbotron">
-        <h1 class="display-4">Welcome</h1>
-        <!-- CSS -->
-        <link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CDR8rDBf.css' %}">
-        <p class="lead">
-            This is <b>user registration and login system</b> built with Django, 
-            a Python-based free and open-source web framework that follows the model–template–views architectural pattern.
-            {% comment %}<a href="{% url 'iccbs:public_profile' username=user.username %}">View Public Profile</a>{% endcomment %}
-        </p>
-        <P>If you want to access online free resources , you can access our library here:
-            <a href="https://doaj.org/" target="_blank">Visit Free Online Journals</a> |
-            <a href="https://academic.oup.com/dnaresearch/" target="_blank">Visit DNA Research Journals</a>
-            
+{% block title %}<a class="brand" href="https://vilabsacademy.uk/">
+    <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 8.5 12 4l10 4.5-10 4.5L2 8.5Z"></path>
+            <path d="M6 10.8V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.2"></path>
+        </svg>
+    </span>
+    SySCon EduCore
+                </a>{% endblock title%}
 
-        </P>
-        <hr class="my-4">
-        <p class="lead">
-            <a class="btn btn-primary btn-lg" href="{% url 'iccbs:iccbs_base' %}" role="button">Logout</a>
-        </p>
-    </div>
+{% block content %}
+<style>
+    /* ==========================================================================
+       Modern Login Portal & Hero Card Styles
+       ========================================================================== */
+
+    :root {
+      --primary-color: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg-gradient-start: #0f172a;
+      --bg-gradient-end: #1e293b;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --link-color: #2563eb;
+      --link-hover: #1d4ed8;
+      --border-color: rgba(226, 232, 240, 0.8);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      --shadow-button: 0 4px 14px 0 rgba(79, 70, 229, 0.39);
+    }
+
+    /* Page Background Setup */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Container / Jumbotron Card */
+    .jumbotron {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      max-width: 650px;
+      width: 90%;
+      margin: 2rem auto;
+      padding: 3rem 2.5rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      box-sizing: border-box;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .jumbotron:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.15), 0 12px 15px -6px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Main Heading */
+    .jumbotron .display-4 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.025em;
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #1e293b 0%, #4f46e5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Subheadings & Paragraphs */
+    .jumbotron p.lead {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+    }
+
+    .jumbotron p.lead b {
+      color: var(--text-main);
+      font-weight: 600;
+      text-transform: capitalize;
+      letter-spacing: 0.3px;
+    }
+
+    .jumbotron p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Links inside Content */
+    .jumbotron a {
+      color: var(--link-color);
+      font-weight: 600;
+      text-decoration: none;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .jumbotron a:hover {
+      color: var(--link-hover);
+      background-color: rgba(37, 99, 235, 0.08);
+      text-decoration: underline;
+    }
+
+    /* Separator Line */
+    .jumbotron hr.my-4 {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(203, 213, 225, 0.8), transparent);
+      margin: 2rem 0;
+    }
+
+    /* Action Button */
+    .jumbotron .btn-primary {
+      display: inline-block;
+      background-color: var(--primary-color);
+      color: #ffffff !important;
+      font-weight: 600;
+      font-size: 1.05rem;
+      padding: 0.85rem 2.5rem;
+      border-radius: 12px;
+      border: none;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-button);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .jumbotron .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 7px 20px 0 rgba(79, 70, 229, 0.45);
+      text-decoration: none;
+    }
+
+    .jumbotron .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px 0 rgba(79, 70, 229, 0.39);
+    }
+
+    /* Responsive Tweaks */
+    @media (max-width: 576px) {
+      .jumbotron {
+        padding: 2rem 1.5rem;
+        margin: 1rem;
+      }
+      
+      .jumbotron .display-4 {
+        font-size: 2.1rem;
+      }
+
+      .jumbotron .btn-primary {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+</style>
+
+<!-- Linked external stylesheet if still needed -->
+<link rel="stylesheet" href="{% static 'frontend/dist/assets/iccbs-CDR8rDBf.css' %}">
+
+<div class="jumbotron">
+    <h1 class="display-4">Welcome</h1>
+    
+    <p class="lead">
+        <b>user registration and login system</b> 
+        {% comment %}<a href="{% url 'iccbs:public_profile' username=user.username %}">View Public Profile</a>{% endcomment %}
+    </p>
+    
+    <p>
+        If you want to access online free resources, you can access our library here:<br>
+        <a href="https://doaj.org/" target="_blank">Visit Free Online Journals</a> |
+        <a href="https://academic.oup.com/dnaresearch/" target="_blank">Visit DNA Research Journals</a> |
+        <a href="https://vilabsacademy.uk/courses/free-course/lessons/what-is-automation/" target="_blank">vilabsacademy</a>
+    </p>
+    
+    <hr class="my-4">
+    
+    <p class="lead">
+        <a class="btn btn-primary btn-lg" href="{% url 'iccbs:iccbs_base' %}" role="button">Access Portal</a>
+    </p>
+</div>
 {% endblock content %}

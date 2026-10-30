@@ -40,6 +40,7 @@ from .models import (
     AnswerChoice,
     Certificate,
     Enrollment,
+    Module,
     Course,
     CourseSection,
     DiscussionComment,
@@ -363,10 +364,23 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request):
         user = request.user
+        
+        # 1. Fetch direct courses and assigned CourseSections
         courses = Course.objects.filter(instructor=user)
         sections = CourseSection.objects.filter(instructor=user).select_related('course')
         
-        # Query live sessions with attendance records pre-fetched
+        # 2. Extract parent courses from assigned sections (e.g. BioInformatics)
+        section_courses = Course.objects.filter(sections__in=sections)
+        
+        # 3. Combine both course sources (Owned Courses + Assigned Sections)
+        all_instructor_courses = (courses | section_courses).distinct()
+
+        # 4. Fetch all lessons belonging to these courses
+        all_lessons = Lesson.objects.filter(
+            module__course__in=all_instructor_courses
+        ).select_related('module__course').distinct()
+
+        # 5. Query live sessions with attendance records pre-fetched
         live_sessions = LiveSession.objects.filter(
             Q(section__instructor=user) | Q(course__instructor=user)
         ).distinct().prefetch_related('attendances__student').order_by('-start_time')
@@ -374,42 +388,122 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         context = {
             'courses': courses,
             'sections': sections,
+            'all_lessons': all_lessons,  
             'live_sessions': live_sessions,
-            'total_active_sections': sections.count(),  # Fixes "0 Total Active Sections" badge
+            'total_active_sections': sections.count(),
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
-    
+
+
 class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Allows instructors or staff to create new courses directly from the front-end."""
+    """Allows instructors to create course containers and proceed to curriculum editing."""
 
     def test_func(self):
-        return self.request.user.is_staff or self.request.user.groups.filter(name='LMS_Instructor').exists()
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name__in=['LMS_Instructor', 'LMS_HOD']).exists()
 
     def post(self, request):
         title = request.POST.get('title', '').strip()
         price = request.POST.get('price', '0.00').strip()
-        status = request.POST.get('status', 'PUBLISHED')
         
         if not title:
             messages.error(request, "Course title is required.")
             return redirect('instructor_dashboard')
 
-        # Auto-generate a unique slug
         slug = slugify(title)
         if Course.objects.filter(slug=slug).exists():
             slug = f"{slug}-{Course.objects.count() + 1}"
 
-        Course.objects.create(
+        # 1. Create course as DRAFT by default (Standard practice)
+        course = Course.objects.create(
             title=title,
             slug=slug,
             price=price,
-            status=status,
+            status='DRAFT',
             instructor=request.user
         )
 
-        messages.success(request, f"Course '{title}' created successfully!")
-        return redirect('instructor_dashboard')
+        # 2. Auto-create a default starting Module
+        default_module = Module.objects.create(
+            course=course,
+            title="Module 1: Getting Started"
+        )
 
+        messages.success(request, f"Course '{title}' initialized in Draft status. Add your first lesson below!")
+        
+        # 3. Redirect to course builder / detail page to add content
+        return redirect('course_builder', course_id=course.id)
+    
+
+# LMS/views.py
+from django.db.models import Max
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views import View
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from .models import Course, Module, Lesson
+
+class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Curriculum builder for adding modules, lessons, and managing publication state."""
+    
+    def test_func(self):
+        user = self.request.user
+        return user.is_staff or user.groups.filter(name__in=['LMS_Instructor', 'LMS_HOD']).exists()
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        modules = course.modules.prefetch_related('lessons').all()
+        
+        return render(request, 'LMS/course_builder.html', {
+            'course': course,
+            'modules': modules
+        })
+
+    def post(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        action = request.POST.get('action')
+
+        if action == 'add_module':
+            module_title = request.POST.get('module_title', '').strip()
+            if module_title:
+                # Calculate next module order if applicable
+                max_mod_order = Module.objects.filter(course=course).aggregate(Max('order'))['order__max'] or 0
+                Module.objects.create(
+                    course=course, 
+                    title=module_title,
+                    order=max_mod_order + 1
+                )
+                messages.success(request, f"Module '{module_title}' added.")
+
+        elif action == 'add_lesson':
+            module_id = request.POST.get('module_id')
+            lesson_title = request.POST.get('lesson_title', '').strip()
+            body_text = request.POST.get('body_text', '').strip()
+            
+            module = get_object_or_404(Module, id=module_id, course=course)
+            if lesson_title:
+                # Calculate the next sequence order number for lessons inside this module
+                max_order = Lesson.objects.filter(module=module).aggregate(Max('order'))['order__max'] or 0
+                next_order = max_order + 1
+
+                lesson = Lesson.objects.create(
+                    module=module,
+                    title=lesson_title,
+                    body_text=body_text,
+                    order=next_order  # <--- Fixes duplicate key (module_id, order)=(8, 1) constraint
+                )
+                messages.success(request, f"Lesson '{lesson_title}' (ID: {lesson.id}) created successfully!")
+
+        elif action == 'publish_course':
+            has_lessons = Lesson.objects.filter(module__course=course).exists()
+            if not has_lessons:
+                messages.error(request, "Cannot publish course without at least one lesson!")
+            else:
+                course.status = 'PUBLISHED'
+                course.save()
+                messages.success(request, f"Course '{course.title}' is now live and published!")
+
+        return redirect('course_builder', course_id=course.id)
 # ==========================================
 # Predictive Analytics At-Risk Dashboard
 # ==========================================
@@ -1284,9 +1378,20 @@ class AIQuizGeneratorView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def post(self, request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
+        
+        # Parse question count from request body or query parameter
+        question_count = 3
+        try:
+            if request.body:
+                body = json.loads(request.body)
+                question_count = body.get('question_count', 3)
+        except json.JSONDecodeError:
+            question_count = request.GET.get('count', 3)
+
         questions = AIAssistanceService.generate_quiz_from_lesson(
             lesson_title=lesson.title,
-            lesson_text=lesson.body_text
+            lesson_text=lesson.body_text,
+            question_count=question_count
         )
         return JsonResponse({"status": "success", "questions": questions})
 

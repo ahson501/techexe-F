@@ -81,9 +81,16 @@ class AIAssistanceService:
     @classmethod
     def generate_quiz_from_lesson(cls, lesson_title, lesson_text, question_count=3):
         """Generates structured multiple-choice questions from lesson text."""
+        # Ensure question_count is a valid integer between 1 and 20
+        try:
+            question_count = int(question_count)
+            question_count = max(1, min(question_count, 20))
+        except (ValueError, TypeError):
+            question_count = 3
+
         prompt = (
             f"You are an expert academic assessment generator.\n"
-            f"Based on the following lesson text, generate {question_count} multiple-choice questions.\n"
+            f"Based on the following lesson text, generate exactly {question_count} multiple-choice questions.\n"
             f"Respond ONLY with valid JSON in this exact structure:\n"
             f"[\n"
             f"  {{\n"
@@ -94,7 +101,7 @@ class AIAssistanceService:
             f"  }}\n"
             f"]\n\n"
             f"Lesson Title: {lesson_title}\n"
-            f"Lesson Text:\n{lesson_text[:2000]}"
+            f"Lesson Text:\n{lesson_text[:3000]}"
         )
 
         payload = {
@@ -104,7 +111,7 @@ class AIAssistanceService:
         }
 
         try:
-            response = requests.post(cls.get_llm_url("qwen"), json=payload, timeout=60)
+            response = requests.post(cls.get_llm_url("qwen"), json=payload, timeout=90)
             if response.status_code == 200:
                 raw_reply = response.json()["choices"][0]["message"]["content"]
                 clean_json = raw_reply.strip()

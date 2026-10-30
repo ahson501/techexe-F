@@ -58,7 +58,7 @@
         </div>
       </div>
 
-      <!-- Published & Teaching Courses with Integrated Adaptive & Risk Analytics -->
+      <!-- Published & Teaching Courses -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-lg font-bold text-gray-900 mb-4">📚 Courses Authored / Teaching</h2>
         
@@ -77,7 +77,6 @@
                 <tr class="border-b hover:bg-gray-50">
                   <td class="py-3 px-3 font-bold text-gray-900">
                     <div>{{ course.title }}</div>
-                    <!-- Adaptive Engine & Enrollment Indicator -->
                     <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5">
                       <span>🎯</span> {{ course.enrollments.count }} Enrolled Student(s) · Adaptive Track Active
                     </div>
@@ -93,7 +92,6 @@
                   </td>
                   <td class="py-3 px-3 text-right">
                     <div class="inline-flex items-center gap-2">
-                      <!-- Predictive Risk Analytics & Adaptive Path Engine CTA -->
                       <a href="{% url 'at_risk_dashboard' course.id %}" 
                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] rounded-lg border border-indigo-200 transition"
                          title="View student risk scores and adaptive remedial paths">
@@ -215,7 +213,7 @@
 
     </div>
 
-    <!-- Right Column (1 Col): Course Creation, Session Scheduler & AI Co-Pilot -->
+    <!-- Right Column (1 Col): AI Co-Pilot, Course Creation, Live Session Scheduler -->
     <div class="space-y-6">
       
       <!-- Faculty AI Co-Pilot Widget -->
@@ -223,14 +221,30 @@
         <h2 class="text-md font-bold text-gray-900 mb-2 flex items-center gap-2">
           <span>🤖</span> Faculty AI Assessment Co-Pilot
         </h2>
-        <p class="text-xs text-gray-500 mb-4">Generate structured multiple-choice quiz questions from any lesson text instantly using local vLLM models.</p>
+        <p class="text-xs text-gray-500 mb-3">Select a lesson from your assigned courses to auto-generate multiple-choice quiz questions.</p>
         
-        <button type="button"
-                id="ai-quiz-btn"
-                onclick="triggerQuizGen(event)"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
-          <span>🤖</span> Auto-Generate Quiz from Lesson
-        </button>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Select Lesson</label>
+            <select id="ai-lesson-select" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="" disabled selected>-- Choose a Lesson --</option>
+              {% for lesson in all_lessons %}
+                <option value="{{ lesson.id }}">
+                  {{ lesson.module.course.title }} → {{ lesson.title }} (ID: {{ lesson.id }})
+                </option>
+              {% empty %}
+                <option value="" disabled>No lessons found under your active courses</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <button type="button"
+                  id="ai-quiz-btn"
+                  onclick="triggerQuizGen(event)"
+                  class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
+            <span>🤖</span> Auto-Generate Quiz
+          </button>
+        </div>
       </div>
 
       <!-- Create Course Widget -->
@@ -254,7 +268,7 @@
           </div>
 
           <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow transition">
-            Create & Publish Course
+            Initialize Course & Add Lessons
           </button>
         </form>
       </div>
@@ -269,7 +283,6 @@
         <form action="{% url 'create_live_session' %}" method="POST" class="space-y-3.5">
           {% csrf_token %}
 
-          <!-- Section Select -->
           <div>
             <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Target Section</label>
             <select name="section_id" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
@@ -282,14 +295,12 @@
             </select>
           </div>
 
-          <!-- Session Title -->
           <div>
             <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Session Title</label>
             <input type="text" name="title" placeholder="e.g. Interactive Q&A / Lecture 04" 
                    class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
           </div>
 
-          <!-- Meeting URL -->
           <div>
             <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">
               Meeting Link <span class="text-gray-400 font-normal font-sans">(Optional for Zoom/Teams)</span>
@@ -299,7 +310,6 @@
             <p class="text-[10px] text-gray-400 mt-1">Leave blank to automatically use built-in Jitsi stream.</p>
           </div>
 
-          <!-- Start Date & Time -->
           <div>
             <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Scheduled Start Date & Time</label>
             <input type="datetime-local" name="start_time" 
@@ -347,53 +357,144 @@
   </div>
 </div>
 
+<!-- AI Quiz Output Modal -->
+<div id="ai-quiz-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
+    <!-- Modal Header -->
+    <div class="flex justify-between items-center pb-3 border-b">
+      <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+        <span>🤖</span> Generated AI Quiz Questions
+      </h3>
+      <button type="button" onclick="closeQuizModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+    </div>
+
+    <!-- Generated Content Display -->
+    <div class="my-4 overflow-y-auto flex-1 bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <textarea id="quiz-text-content" readonly class="w-full h-64 bg-transparent text-xs font-mono text-gray-800 border-none focus:outline-none resize-none"></textarea>
+    </div>
+
+    <!-- Action Buttons: Copy, Download, Close -->
+    <div class="pt-3 border-t flex items-center justify-end gap-3">
+      <button type="button" onclick="copyQuizToClipboard()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition flex items-center gap-1">
+        📋 Copy to Clipboard
+      </button>
+      <button type="button" onclick="downloadQuizFile()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1">
+        📥 Download File (.txt)
+      </button>
+      <button type="button" onclick="closeQuizModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- JavaScript Handler for Faculty AI Quiz Co-Pilot -->
 <script>
+let lastGeneratedQuiz = "";
+
 async function triggerQuizGen(event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
 
-    const lessonId = prompt("Enter the Lesson ID to generate quiz questions from:");
-    if (!lessonId || !lessonId.trim()) return;
+    // 1. Get selected lesson from dropdown
+    const selectElem = document.getElementById('ai-lesson-select');
+    let lessonId = selectElem ? selectElem.value : null;
+
+    // 2. Prompt for manual Lesson ID if nothing selected in dropdown
+    if (!lessonId) {
+        lessonId = prompt("Enter the Lesson ID to generate quiz questions from:");
+    }
+
+    if (!lessonId || !lessonId.trim()) {
+        alert("⚠️ Please select a lesson from the dropdown menu.");
+        return;
+    }
+
+    // 3. Prompt for Question Count
+    const countInput = prompt("How many quiz questions would you like to generate?", "5");
+    if (!countInput || !countInput.trim()) return;
+
+    const questionCount = parseInt(countInput.trim(), 10) || 5;
 
     const btn = document.getElementById('ai-quiz-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Contacting AI Cluster...';
-    btn.disabled = true;
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = `⏳ Generating ${questionCount} Questions...`;
+        btn.disabled = true;
+    }
 
     try {
-        const response = await fetch(`/LMS/api/v1/ai/generate-quiz/${lessonId.trim()}/`, {
+        const response = await fetch(`/LMS/api/v1/ai/generate-quiz/${lessonId.toString().trim()}/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken') || '{{ csrf_token }}',
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ question_count: questionCount })
         });
 
         const data = await response.json();
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
 
-        if (data.status === 'success' && data.questions) {
-            let questionsText = "";
+        if (data.status === 'success' && data.questions && data.questions.length > 0) {
+            let questionsFormatted = "";
             const questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
             
             questions.forEach((q, idx) => {
-                questionsText += `\nQ${idx+1}: ${q.question}\nOptions: ${q.options ? q.options.join(', ') : 'N/A'}\n`;
+                if (q.options && q.options.length > 0) {
+                    questionsFormatted += `Q${idx+1}: ${q.question}\n`;
+                    q.options.forEach((opt, oIdx) => {
+                        questionsFormatted += `   ${String.fromCharCode(65 + oIdx)}) ${opt}\n`;
+                    });
+                    if (q.correct_answer) questionsFormatted += `Answer: ${q.correct_answer}\n`;
+                    if (q.explanation) questionsFormatted += `Explanation: ${q.explanation}\n`;
+                    questionsFormatted += `\n--------------------------------------------------\n\n`;
+                } else {
+                    questionsFormatted += `${q.question || q}\n\n`;
+                }
             });
 
-            alert("✅ AI Generated Quiz Questions:\n" + (questionsText || JSON.stringify(data.questions, null, 2)));
+            lastGeneratedQuiz = questionsFormatted;
+            document.getElementById('quiz-text-content').value = questionsFormatted;
+            document.getElementById('ai-quiz-modal').classList.remove('hidden');
         } else {
-            alert("⚠️ Quiz generation error: " + (data.message || data.quiz_data || "Check vLLM cluster connection."));
+            alert("⚠️ " + (data.message || "Failed to generate quiz. Verify lesson content exists."));
         }
     } catch (err) {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
         console.error("AI Quiz Error:", err);
         alert("🚨 Error connecting to vLLM API endpoint.");
     }
+}
+
+function closeQuizModal() {
+    document.getElementById('ai-quiz-modal').classList.add('hidden');
+}
+
+function copyQuizToClipboard() {
+    const textarea = document.getElementById('quiz-text-content');
+    textarea.select();
+    document.execCommand('copy');
+    alert("✅ Quiz questions copied to clipboard!");
+}
+
+function downloadQuizFile() {
+    if (!lastGeneratedQuiz) return;
+    const blob = new Blob([lastGeneratedQuiz], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AI_Quiz_Questions.txt`;
+    a.click();
+    window.URL.revokeObjectURL(url);
 }
 
 function getCookie(name) {
