@@ -2,6 +2,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('offline/', views.offline_view, name='offline_view'),
+    path('Appserviceworker.js', views.service_worker, name='service_worker'),
+    path('Appmanifest.json', views.manifest_view, name='manifest_view'),
+    
     # Default Index Routes
     path('', views.CourseListView.as_view(), name='lms_index'),
     path('lessons/', views.CourseListView.as_view(), name='lessons_index'),

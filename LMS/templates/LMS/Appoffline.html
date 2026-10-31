@@ -1,0 +1,16 @@
+{% extends "LMS/base.html" %}
+
+{% block title %}Offline Mode | TechExe LMS{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-16 text-center bg-white p-8 rounded-2xl border shadow-sm">
+  <div class="text-5xl mb-4">📡</div>
+  <h1 class="text-xl font-bold text-gray-900 mb-2">You are currently offline</h1>
+  <p class="text-xs text-gray-500 mb-6">
+    No active network connection detected. Previously viewed lessons and cached course content remain accessible.
+  </p>
+  <button onclick="window.location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition">
+    🔄 Retry Connection
+  </button>
+</div>
+{% endblock %}

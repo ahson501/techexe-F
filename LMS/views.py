@@ -24,7 +24,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum, Max
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -60,9 +60,38 @@ from .models import (
 )
 from django.contrib.auth.decorators import login_required
 
+def manifest_view(request):
+    manifest_path = os.path.join(settings.STATIC_ROOT, 'Appmanifest.json')
+    if not os.path.exists(manifest_path):
+        manifest_path = os.path.join(settings.BASE_DIR, 'LMS', 'static', 'Appmanifest.json')
+
+    if os.path.exists(manifest_path):
+        with open(manifest_path, 'r') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='application/manifest+json')
+    return HttpResponse("{}", content_type='application/manifest+json', status=404)
+
+def offline_view(request):
+    return render(request, 'LMS/Appoffline.html')
+
+
+def service_worker(request):
+    """Serve Appserviceworker.js from static root with global site scope permissions."""
+    sw_path = os.path.join(settings.STATIC_ROOT, 'Appserviceworker.js')
+    
+    # Fallback to app static dir if collectstatic hasn't run yet
+    if not os.path.exists(sw_path):
+        sw_path = os.path.join(settings.BASE_DIR, 'LMS', 'static', 'Appserviceworker.js')
+
+    with open(sw_path, 'r') as f:
+        content = f.read()
+
+    response = HttpResponse(content, content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/'
+    return response
+
 User = get_user_model()
 logger = logging.getLogger(__name__)
-
 
 # ==========================================
 # 0. DASHBOARDS
@@ -435,13 +464,7 @@ class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect('course_builder', course_id=course.id)
     
 
-# LMS/views.py
-from django.db.models import Max
-from django.shortcuts import get_object_or_404, render, redirect
-from django.views import View
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from .models import Course, Module, Lesson
+
 
 class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Curriculum builder for adding modules, lessons, and managing publication state."""
@@ -450,9 +473,18 @@ class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
         user = self.request.user
         return user.is_staff or user.groups.filter(name__in=['LMS_Instructor', 'LMS_HOD']).exists()
 
+    def handle_no_permission(self):
+        messages.error(self.request, "You do not have permission to build this course.")
+        return redirect('instructor_dashboard')
+
     def get(self, request, course_id):
-        course = get_object_or_404(Course, id=course_id, instructor=request.user)
-        modules = course.modules.prefetch_related('lessons').all()
+        # Fetch course owned by instructor or accessible by staff
+        if request.user.is_staff:
+            course = get_object_or_404(Course, id=course_id)
+        else:
+            course = get_object_or_404(Course, id=course_id, instructor=request.user)
+
+        modules = course.modules.prefetch_related('lessons').all().order_by('order', 'id')
         
         return render(request, 'LMS/course_builder.html', {
             'course': course,
@@ -460,13 +492,16 @@ class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
         })
 
     def post(self, request, course_id):
-        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        if request.user.is_staff:
+            course = get_object_or_404(Course, id=course_id)
+        else:
+            course = get_object_or_404(Course, id=course_id, instructor=request.user)
+
         action = request.POST.get('action')
 
         if action == 'add_module':
             module_title = request.POST.get('module_title', '').strip()
             if module_title:
-                # Calculate next module order if applicable
                 max_mod_order = Module.objects.filter(course=course).aggregate(Max('order'))['order__max'] or 0
                 Module.objects.create(
                     course=course, 
@@ -482,15 +517,12 @@ class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
             
             module = get_object_or_404(Module, id=module_id, course=course)
             if lesson_title:
-                # Calculate the next sequence order number for lessons inside this module
                 max_order = Lesson.objects.filter(module=module).aggregate(Max('order'))['order__max'] or 0
-                next_order = max_order + 1
-
                 lesson = Lesson.objects.create(
                     module=module,
                     title=lesson_title,
                     body_text=body_text,
-                    order=next_order  # <--- Fixes duplicate key (module_id, order)=(8, 1) constraint
+                    order=max_order + 1
                 )
                 messages.success(request, f"Lesson '{lesson_title}' (ID: {lesson.id}) created successfully!")
 

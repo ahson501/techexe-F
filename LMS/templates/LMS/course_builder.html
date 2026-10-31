@@ -1,17 +1,22 @@
 {% extends "LMS/base.html" %}
 
-{% block title %}Course Curriculum Builder | {{ course.title }}{% endblock %}
+{% block title %}Course Builder | {{ course.title }}{% endblock %}
 
 {% block content %}
+<!-- Quill.js Editor Assets -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-6">
   
-  <!-- Header -->
-  <div class="flex justify-between items-center bg-white p-6 rounded-2xl border shadow-sm">
+  <!-- Top Banner -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm gap-4">
     <div>
       <span class="text-xs font-bold px-2.5 py-1 rounded-full {% if course.status == 'PUBLISHED' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
         {{ course.get_status_display }}
       </span>
       <h1 class="text-2xl font-bold text-gray-900 mt-2">📖 Curriculum Builder: {{ course.title }}</h1>
+      <p class="text-xs text-gray-500 mt-1">Course Fee: PKR {{ course.price }}</p>
     </div>
     
     <div class="flex items-center gap-3">
@@ -30,52 +35,65 @@
     </div>
   </div>
 
-  <!-- Modules & Lessons List -->
+  <!-- Modules List -->
   <div class="space-y-6">
     {% for module in modules %}
-      <div class="bg-white p-6 rounded-2xl border shadow-sm">
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-base font-bold text-gray-900 mb-4 pb-2 border-b flex justify-between items-center">
           <span>📁 {{ module.title }}</span>
         </h2>
 
-        <!-- Lessons in Module -->
+        <!-- Existing Lessons inside Module -->
         <div class="space-y-2 mb-6">
           {% for lesson in module.lessons.all %}
             <div class="p-3 bg-gray-50 border rounded-xl flex justify-between items-center">
               <div>
                 <span class="font-bold text-indigo-600 text-xs">[Lesson ID: {{ lesson.id }}]</span>
                 <span class="font-semibold text-gray-800 text-xs ml-2">{{ lesson.title }}</span>
-                <p class="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{{ lesson.body_text|truncatewords:15 }}</p>
+                <div class="text-[11px] text-gray-500 mt-1 line-clamp-2">
+                  {{ lesson.body_text|striptags|truncatewords:20 }}
+                </div>
               </div>
             </div>
           {% empty %}
-            <p class="text-xs text-gray-400 italic py-2">No lessons in this module yet.</p>
+            <p class="text-xs text-gray-400 italic py-2">No lessons created in this module yet.</p>
           {% endfor %}
         </div>
 
-        <!-- Add Lesson Form -->
-        <form method="POST" class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+        <!-- Add New Lesson Form -->
+        <form method="POST" id="lesson-form-{{ module.id }}" onsubmit="syncQuillContent('{{ module.id }}')" class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
           {% csrf_token %}
           <input type="hidden" name="action" value="add_lesson">
           <input type="hidden" name="module_id" value="{{ module.id }}">
-          
+          <input type="hidden" name="body_text" id="hidden-body-{{ module.id }}">
+
           <h3 class="text-xs font-bold text-indigo-900">+ Add New Lesson to {{ module.title }}</h3>
-          <input type="text" name="lesson_title" placeholder="Lesson Title (e.g. Introduction to Variables)" class="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none" required>
-          <textarea name="body_text" rows="3" placeholder="Lesson Text / Study Content (Used by AI Quiz Co-Pilot to generate questions)..." class="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none" required></textarea>
+          <input type="text" name="lesson_title" placeholder="Lesson Title (e.g. Introduction to Variables)" class="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none bg-white" required>
           
+          <div>
+            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Lesson Content (Rich Text / AI Context Source)</label>
+            <div class="bg-white rounded-xl border overflow-hidden">
+              <div id="quill-editor-{{ module.id }}" class="min-h-[140px] text-xs"></div>
+            </div>
+          </div>
+
           <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
             + Save Lesson
           </button>
         </form>
       </div>
+    {% empty %}
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 text-center py-8">
+        <p class="text-xs text-gray-400 italic">No modules created yet. Add your first module below!</p>
+      </div>
     {% endfor %}
 
     <!-- Add Module Form -->
-    <div class="bg-white p-6 rounded-2xl border shadow-sm">
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
       <form method="POST" class="flex gap-3">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_module">
-        <input type="text" name="module_title" placeholder="New Module Title (e.g. Module 2: Advanced Topics)" class="flex-1 text-xs px-3 py-2 border rounded-xl focus:outline-none" required>
+        <input type="text" name="module_title" placeholder="New Module Title (e.g. Module 2: Advanced Topics)" class="flex-1 text-xs px-3 py-2 border border-gray-200 rounded-xl focus:outline-none" required>
         <button type="submit" class="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition">
           + Add Module
         </button>
@@ -84,4 +102,33 @@
   </div>
 
 </div>
+
+<script>
+  const quillInstances = {};
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[id^="quill-editor-"]').forEach(function(editorEl) {
+      const moduleId = editorEl.id.replace('quill-editor-', '');
+      quillInstances[moduleId] = new Quill('#' + editorEl.id, {
+        theme: 'snow',
+        placeholder: 'Enter lesson text, headings, bullet points...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'code-block'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'clean']
+          ]
+        }
+      });
+    });
+  });
+
+  function syncQuillContent(moduleId) {
+    if (quillInstances[moduleId]) {
+      const htmlContent = quillInstances[moduleId].root.innerHTML;
+      document.getElementById('hidden-body-' + moduleId).value = htmlContent;
+    }
+  }
+</script>
 {% endblock %}

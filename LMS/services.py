@@ -80,6 +80,8 @@ class AIAssistanceService:
 
     @classmethod
     def generate_quiz_from_lesson(cls, lesson_title, lesson_text, question_count=3):
+        clean_lesson_text = re.sub(r'<[^>]+>', ' ', lesson_text or '')
+        clean_lesson_text = ' '.join(clean_lesson_text.split())
         """Generates structured multiple-choice questions from lesson text."""
         # Ensure question_count is a valid integer between 1 and 20
         try:
