@@ -27,53 +27,65 @@
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
   <!-- LMS Top Navigation -->
-  <nav class="bg-gray-900 text-white border-b border-gray-800">
-    <div class="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
-      
-      <!-- Brand -->
-      <a href="{% url 'course_list' %}" class="text-xl font-bold tracking-wide text-emerald-400">
-        🎓 SySCon Educore
-      </a>
+<nav class="bg-gray-900 text-white border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
+    
+    <!-- Brand -->
+    <a href="{% url 'course_list' %}" class="text-xl font-bold tracking-wide text-emerald-400">
+      🎓 SySCon Educore
+    </a>
 
-      <!-- Navigation Links -->
-      <div class="flex items-center space-x-6 text-sm font-medium">
-        <a href="{% url 'course_list' %}" class="hover:text-emerald-400">Courses</a>
+    <!-- Navigation Links -->
+    <div class="flex items-center space-x-6 text-sm font-medium">
+      <a href="{% url 'course_list' %}" class="hover:text-emerald-400">Courses</a>
 
-        {% if user.is_authenticated %}
-          <!-- Student Links -->
-          {% if "lms_student" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'STUDENT' %}
-            <a href="{% url 'student_dashboard' %}" class="hover:text-emerald-400">My Dashboard</a>
-          {% endif %}
-
-          <!-- Instructor & Visiting Faculty Links -->
-          {% if "lms_instructor" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'INSTRUCTOR' or user.lms_profile.role == 'VISITING' %}
-            <a href="{% url 'discussion_board' %}" class="hover:text-emerald-400">Class Discussions</a>
-            {% if user.lms_profile.role == 'VISITING' %}
-              <a href="{% url 'faculty_claims' %}" class="hover:text-emerald-400">Payout Claims</a>
-            {% endif %}
-          {% endif %}
-
-          <!-- HOD & Admin Links -->
-          {% if "hod" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'HOD' or user.is_staff %}
-            <a href="{% url 'hod_section_assignment' %}" class="text-indigo-400 hover:text-indigo-300">HOD Management</a>
-          {% endif %}
-
-          <!-- User Badge & Logout -->
-          <span class="text-xs bg-gray-800 px-3 py-1.5 rounded-full border border-gray-700">
-            👤 {{ user.get_full_name|default:user.username }}
-          </span>
-          <form method="POST" action="{% url 'logout' %}" class="inline">
-            {% csrf_token %}
-            <button type="submit" class="text-red-400 hover:text-red-300 text-xs font-semibold bg-transparent border-0 cursor-pointer p-0">
-              Logout
-            </button>
-          </form>
-          <a href="{% url 'login' %}" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-white font-semibold">Login</a>
+      {% if user.is_authenticated %}
+        <!-- Student Links -->
+        {% if "lms_student" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'STUDENT' %}
+          <a href="{% url 'student_dashboard' %}" class="hover:text-emerald-400">My Dashboard</a>
         {% endif %}
-      </div>
-    </div>
-  </nav>
 
+        <!-- Instructor & Visiting Faculty Links -->
+        {% if "lms_instructor" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'INSTRUCTOR' or user.lms_profile.role == 'VISITING' %}
+          <a href="{% url 'discussion_board' %}" class="hover:text-emerald-400">Class Discussions</a>
+          {% if user.lms_profile.role == 'VISITING' %}
+            <a href="{% url 'faculty_claims' %}" class="hover:text-emerald-400">Payout Claims</a>
+          {% endif %}
+        {% endif %}
+
+        <!-- HOD & Admin Links -->
+        {% if "hod" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'HOD' or user.is_staff %}
+          <a href="{% url 'hod_section_assignment' %}" class="text-indigo-400 hover:text-indigo-300">HOD Management</a>
+        {% endif %}
+
+        <!-- User Badge -->
+        <span class="text-xs bg-gray-800 px-3 py-1.5 rounded-full border border-gray-700">
+          👤 {{ user.get_full_name|default:user.username }}
+        </span>
+
+        <!-- Change Password Link -->
+        <a href="{% url 'iccbs:password_change' %}" class="text-gray-300 hover:text-white text-xs font-semibold">
+          🔒 Change Password
+        </a>
+
+        <!-- Single Post-Based Logout Form -->
+        <form method="POST" action="{% url 'logout' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="text-red-400 hover:text-red-300 text-xs font-semibold bg-transparent border-0 cursor-pointer p-0">
+            Logout
+          </button>
+        </form>
+
+      {% else %}
+        <!-- Unauthenticated Public Visitor -->
+        <a href="{% url 'login' %}" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-white font-semibold">
+          Login
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+      
   <!-- Flash Messages -->
   {% if messages %}
     <div class="max-w-7xl mx-auto px-4 mt-4 w-full">

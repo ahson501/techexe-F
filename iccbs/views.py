@@ -9,7 +9,8 @@ from django.contrib.auth.views import PasswordResetView
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from .forms import UpdateUserForm, UpdateProfileForm
-
+from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from django.contrib.auth import update_session_auth_hash
 
 
 
@@ -27,6 +28,7 @@ def iccbshome(request):
 # iccbs/views.py
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 @login_required
 def force_password_change(request):
@@ -70,6 +72,24 @@ def profile(request):
         'profile_form': profile_form
     }
     return render(request, 'iccbs/profile.html', context)
+
+
+
+class ChangePasswordView(LoginRequiredMixin, SuccessMessageMixin, PasswordChangeView):
+    """Allows logged-in users to change their password."""
+    template_name = 'iccbs/change_password.html'
+    success_message = "Your password was successfully updated!"
+    success_url = reverse_lazy('iccbs:password_change_done')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Keeps the user logged in after password change
+        # update_session_auth_hash(self.request, self.user)
+        return response
+
+class ChangePasswordDoneView(LoginRequiredMixin, PasswordChangeDoneView):
+    """Renders success confirmation after password change."""
+    template_name = 'iccbs/change_password_done.html'
 
 # Registration View
 class RegisterView(View):
@@ -158,12 +178,13 @@ def login_view(request):
     return render(request, 'iccbs/login.html', {'form': form})
 
 
-# Logout View
 def logout_view(request):
-    """Handle user logout."""
+    """Handle user logout and redirect to login page."""
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('iccbs:iccbs_base')
+    
+    # Redirect directly to your login view name
+    return redirect('iccbs:iccbs_login')  
 
 
 # Password Reset View
@@ -177,6 +198,12 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
         "If an account exists with the email entered, check your inbox (and spam folder)."
     )
     success_url = reverse_lazy('iccbs:password_reset_done')
+
+def get_email_context_data(self):
+        context = super().get_email_context_data()
+        # Dynamically grabs host (e.g., techexe.net or 172.16.2.35)
+        context['domain'] = self.request.get_host()
+        return context
 
 def public_profile(request, username):
     """Render a public profile page."""
@@ -193,11 +220,15 @@ def contact_me(request):
 
 # iccbs/views.py
 
-from django.contrib import messages
+import logging
+
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.mail import send_mail
-from django.conf import settings
+
 from .forms import RoleUserCreationForm
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(View):
@@ -209,55 +240,88 @@ class RegisterView(View):
 
     def post(self, request):
         form = RoleUserCreationForm(request.POST)
+
         if form.is_valid():
             user = form.save(commit=False)
-            
-            # 1. MARK USER AS INACTIVE UNTIL APPROVED/VERIFIED
-            user.is_active = False  
+
+            # 1. Keep account inactive until admin approval
+            user.is_active = False
             user.save()
 
-            # 2. Assign Group
+            # 2. Assign selected role
             selected_role = form.cleaned_data.get('role')
             group, _ = Group.objects.get_or_create(name=selected_role)
             user.groups.add(group)
 
-            role_display = "Student" if selected_role == 'LMS_Student' else "Instructor"
+            role_display = (
+                "Student" if selected_role == 'LMS_Student'
+                else "Instructor"
+            )
 
-            # 3. Email Notification
-            subject = f"TechExe LMS - {role_display} Registration Received (Pending Approval)"
-            message = f"""Hello {user.username},
+            # 3. Prepare email notification
+            subject = (
+                f"TechExe LMS - {role_display} Registration Received"
+            )
+
+            email_message = f"""Hello {user.username},
 
 Thank you for registering on TechExe LMS as a {role_display}.
 
-Your account has been created and is currently PENDING ADMINISTRATIVE APPROVAL. 
-You will not be able to log in until an administrator or admissions officer reviews and approves your account.
+Your registration request has been received successfully.
+
+Your account is currently pending administrative approval. 
+You will be able to log in once an administrator or admissions 
+officer reviews and activates your account.
 
 Registered Email: {user.email}
 Account Type: {role_display}
+
+We appreciate your patience.
 
 Best regards,
 TechExe Academic Management
 """
 
+            # 4. Send email and display appropriate notification
             try:
-                send_mail(
+                sent = send_mail(
                     subject=subject,
-                    message=message,
+                    message=email_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[user.email],
                     fail_silently=False,
                 )
-                messages.success(
-                    request,
-                    f"Registration submitted for {user.username}! Your account is pending approval. An email has been sent to {user.email}."
-                )
-            except Exception as e:
-                messages.warning(
-                    request,
-                    f"Registration submitted, but confirmation email failed: {str(e)}"
+
+                if sent:
+                    messages.success(
+                        request,
+                        "Your registration request has been received "
+                        "successfully! Please check your email for "
+                        "confirmation and further instructions. "
+                        "Your account is awaiting administrative approval."
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "Your registration request has been received, "
+                        "but the confirmation email could not be sent. "
+                        "Please contact the administration for assistance."
+                    )
+
+            except Exception:
+                logger.exception(
+                    "Registration confirmation email failed for %s",
+                    user.email
                 )
 
-            # Redirect to Login page (User cannot log in because is_active=False)
-            return redirect('login')
+                messages.warning(
+                    request,
+                    "Your registration request has been received, "
+                    "but we could not send the confirmation email. "
+                    "Please contact the administration for assistance."
+                )
+
+            # 5. Redirect back to registration page
+            return redirect(request.path)
 
         return render(request, self.template_name, {'form': form})
