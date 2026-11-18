@@ -4,6 +4,7 @@ import json
 import logging
 import uuid
 import qrcode
+import csv
 from decimal import Decimal
 from io import BytesIO
 
@@ -17,15 +18,15 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import Group
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q, Sum, Max
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Count, Prefetch, Q, Sum, Max, OuterRef, Subquery, IntegerField, Value
+from django.db.models.functions import Coalesce
+from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -37,7 +38,6 @@ from .services import AIAssistanceService
 # Local Application Imports
 from .forms import AssignFacultySectionForm, QuizTakeForm
 from .models import (
-    AnswerChoice,
     Certificate,
     Enrollment,
     Module,
@@ -57,8 +57,39 @@ from .models import (
     QuizAttempt,
     StudentProfile,
     VisitingFacultyClaim,
+    CourseReview, 
+    LectureRecording,
+    BenefitCategory,
+    FacultyPayroll, 
+    FacultyPayrollPerk, 
+    ActivityLog
 )
 from django.contrib.auth.decorators import login_required
+
+
+FACULTY_AND_HOD_GROUPS = ['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+COURSE_VIEWER_GROUPS = ['LMS_Student', 'LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+
+def get_lms_role_flags(user):
+    if not user.is_authenticated:
+        return {
+            'can_view_courses': False,
+            'is_faculty_or_hod': False,
+            'is_student': False,
+        }
+    user_groups = set(user.groups.values_list('name', flat=True))
+    is_faculty_or_hod = bool(user_groups.intersection(FACULTY_AND_HOD_GROUPS))
+    is_student = 'LMS_Student' in user_groups and not is_faculty_or_hod
+    can_view_courses = is_student or is_faculty_or_hod
+    return {
+        'can_view_courses': can_view_courses,
+        'is_faculty_or_hod': is_faculty_or_hod,
+        'is_student': is_student,
+    }
+
+# ==========================================
+# PWA
+# ==========================================
 
 def manifest_view(request):
     manifest_path = os.path.join(settings.STATIC_ROOT, 'Appmanifest.json')
@@ -93,11 +124,148 @@ def service_worker(request):
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+
+class CourseRoleMixin:
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        role_flags = get_lms_role_flags(self.request.user)
+        context.update(role_flags)
+
+        if not role_flags['can_view_courses']:
+            context['courses'] = Course.objects.none()
+        elif 'courses' not in context:
+            context['courses'] = Course.objects.filter(status='PUBLISHED')
+
+        return context
+
 # ==========================================
 # 0. DASHBOARDS
 # ==========================================
+# --- D. Universal User Profile (Opened from User Icon) ---
 
-class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+class UserProfileView(LoginRequiredMixin, View):
+    def get(self, request):
+        user = request.user
+        flags = get_lms_role_flags(user)
+        roles = list(user.groups.values_list('name', flat=True))
+        role_display = ", ".join(roles) if roles else ("Admin/Staff" if user.is_staff else "User")
+
+        # Safely count completed lessons per course via Subquery
+        progress_filters = {'student': user, 'lesson__module__course': OuterRef('course_id')}
+        progress_field_names = {f.name for f in LessonProgress._meta.get_fields()}
+        if 'is_completed' in progress_field_names:
+            progress_filters['is_completed'] = True
+        elif 'completed' in progress_field_names:
+            progress_filters['completed'] = True
+
+        completed_subquery = (
+            LessonProgress.objects.filter(**progress_filters)
+            .values('lesson__module__course')
+            .annotate(cnt=Count('lesson_id', distinct=True))
+            .values('cnt')
+        )
+
+        enrolled_courses = (
+            Enrollment.objects.filter(student=user)
+            .select_related('course')
+            .annotate(
+                total_lessons=Count('course__modules__lessons', distinct=True),
+                completed_lessons=Coalesce(
+                    Subquery(completed_subquery, output_field=IntegerField()),
+                    Value(0)
+                ),
+            )
+        )
+
+        assigned_courses = Course.objects.filter(
+            Q(instructor=user) | Q(sections__instructor=user)
+        ).distinct()
+
+        attendance_records = (
+            SessionAttendance.objects.filter(student=user)
+            .select_related('session', 'session__course', 'session__section')
+            .order_by('-session__start_time')
+        )
+        certificates = Certificate.objects.filter(student=user).select_related('course')
+
+        # Live session attendance calculation
+        total_sessions = LiveSession.objects.filter(
+            course__enrollments__student=user,
+            status=LiveSession.Status.COMPLETED
+        ).distinct().count()
+        present_count = attendance_records.count()
+        attendance_pct = round((present_count / total_sessions * 100), 1) if total_sessions > 0 else None
+
+        conducted_sessions = (
+            LiveSession.objects.filter(
+                Q(section__instructor=user) | Q(course__instructor=user)
+            )
+            .select_related('course', 'section')
+            .annotate(attendee_count=Count('attendances', distinct=True))
+            .distinct()
+            .order_by('-start_time')
+        )
+
+        context = {
+            'profile_user': user,
+            'role_display': role_display,
+            'enrolled_courses': enrolled_courses,
+            'assigned_courses': assigned_courses,
+            'attendance_records': attendance_records,
+            'total_sessions': total_sessions,
+            'present_count': present_count,
+            'attendance_pct': attendance_pct,
+            'conducted_sessions': conducted_sessions,
+            'certificates': certificates,
+        }
+        context.update(flags)
+        return render(request, 'LMS/user_profile.html', context)
+       
+# --- E. Clickable Enrolled Student Details (Instructor Dashboard) ---
+class InstructorStudentDetailView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+
+    def get(self, request, course_id, student_id):
+        course = get_object_or_404(Course, id=course_id)
+        student = get_object_or_404(User, id=student_id)
+        enrollment = get_object_or_404(Enrollment, course=course, student=student)
+
+        attendance = SessionAttendance.objects.filter(
+            student=student,
+            session__course=course
+        ).select_related('session').order_by('-session__start_time')
+
+        student_quiz_attempts = QuizAttempt.objects.filter(
+            student=student,
+            quiz__module__course=course
+        ).select_related('quiz', 'quiz__lesson').order_by('-created_at')
+
+        return render(request, 'LMS/instructor_student_detail.html', {
+            'course': course,
+            'student': student,
+            'profile': getattr(student, 'student_profile', None),
+            'enrollment': enrollment,
+            'attendance': attendance,
+            'student_quiz_attempts': student_quiz_attempts,
+        })
+
+
+# --- F. Lecture Recordings Page (Student Dashboard) ---
+class CourseRecordingsView(LoginRequiredMixin, View):
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        # Verify paid/active enrollment
+        get_object_or_404(Enrollment, student=request.user, course=course, status__in=['PAID', 'ACTIVE'])
+        recordings = LectureRecording.objects.filter(course=course).order_by('-recorded_at')
+        return render(request, 'LMS/lecture_recordings.html', {
+            'course': course,
+            'recordings': recordings,
+        })
+    
+class StudentDashboardView(LoginRequiredMixin, UserPassesTestMixin,CourseRoleMixin, View):
    
     def test_func(self):
         user = self.request.user
@@ -381,9 +549,8 @@ class DeleteStudentView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.error(request, f"Student account '{username}' has been permanently deleted.")
         return redirect('admissions_dashboard')
 
-class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Dashboard for instructors to manage courses, sections, live sessions, and attendance."""
-    
+class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, CourseRoleMixin, View):
+
     def test_func(self):
         return self.request.user.is_active and self.request.user.groups.filter(name='LMS_Instructor').exists()
 
@@ -393,16 +560,16 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request):
         user = request.user
-        
-        # 1. Fetch direct courses and assigned CourseSections
-        courses = Course.objects.filter(instructor=user)
+
+        # 1. Fetch direct courses (with prefetched enrollments & students) and assigned CourseSections
+        courses = Course.objects.filter(instructor=user).prefetch_related('enrollments__student')
         sections = CourseSection.objects.filter(instructor=user).select_related('course')
-        
+
         # 2. Extract parent courses from assigned sections (e.g. BioInformatics)
-        section_courses = Course.objects.filter(sections__in=sections)
-        
+        section_courses = Course.objects.filter(sections__in=sections).prefetch_related('enrollments__student')
+
         # 3. Combine both course sources (Owned Courses + Assigned Sections)
-        all_instructor_courses = (courses | section_courses).distinct()
+        all_instructor_courses = (courses | section_courses).distinct().prefetch_related('enrollments__student')
 
         # 4. Fetch all lessons belonging to these courses
         all_lessons = Lesson.objects.filter(
@@ -414,15 +581,40 @@ class InstructorDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             Q(section__instructor=user) | Q(course__instructor=user)
         ).distinct().prefetch_related('attendances__student').order_by('-start_time')
 
+        # 6. Fetch all manual & AI quizzes created across owned and section-assigned courses
+        quiz_filter = Q(module__course__in=all_instructor_courses)
+        if hasattr(Quiz, 'course'):
+            quiz_filter |= Q(course__in=all_instructor_courses)
+
+        instructor_quizzes = (
+            Quiz.objects.filter(quiz_filter)
+            .select_related('module', 'module__course', 'lesson')
+            .prefetch_related('questions__choices')
+            .distinct()
+            .order_by('-id')
+        )
+
+        # 7. Fetch all quiz attempts across all owned and section-assigned courses
+        quiz_attempts = QuizAttempt.objects.filter(
+            quiz__module__course__in=all_instructor_courses
+        ).select_related(
+            'student',
+            'quiz',
+            'quiz__lesson',
+            'quiz__module__course'
+        ).order_by('-created_at')
+
         context = {
             'courses': courses,
+            'all_instructor_courses': all_instructor_courses,
             'sections': sections,
-            'all_lessons': all_lessons,  
+            'all_lessons': all_lessons,
             'live_sessions': live_sessions,
             'total_active_sections': sections.count(),
+            'instructor_quizzes': instructor_quizzes,
+            'quiz_attempts': quiz_attempts,
         }
         return render(request, 'LMS/instructor_dashboard.html', context)
-
 
 class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Allows instructors to create course containers and proceed to curriculum editing."""
@@ -609,6 +801,90 @@ class InstructorAtRiskDashboardView(LoginRequiredMixin, UserPassesTestMixin, Vie
             'warning_count': sum(1 for s in at_risk_students if s['risk_level'] == 'WARNING'),
         }
         return render(request, 'LMS/at_risk_dashboard.html', context)
+
+
+# --- C. Download Attendance CSV (Live Sessions + Self-Paced Course Progress) ---
+class DownloadCourseAttendanceView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{course.title}_attendance.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Student Username',
+            'Full Name',
+            'Email',
+            'Activity / Session Title',
+            'Type',
+            'Date',
+            'Attended / Completed',
+        ])
+
+        enrollments = Enrollment.objects.filter(course=course).select_related('student')
+        total_lessons = Lesson.objects.filter(module__course=course).count()
+
+        # 1. Live Sessions (direct or section-linked)
+        sessions = LiveSession.objects.filter(
+            Q(course=course) | Q(section__course=course)
+        ).distinct().order_by('start_time')
+
+        attendance_map = {
+            (att.session_id, att.student_id): att
+            for att in SessionAttendance.objects.filter(session__in=sessions)
+        }
+
+        for enrollment in enrollments:
+            student = enrollment.student
+
+            # A. Export Live Session Attendance rows (if live sessions exist)
+            for session in sessions:
+                att_record = attendance_map.get((session.id, student.id))
+                attended = att_record.attended if att_record else False
+                writer.writerow([
+                    student.username,
+                    student.get_full_name() or student.username,
+                    student.email,
+                    session.title,
+                    'Live Session',
+                    session.start_time.strftime('%Y-%m-%d %H:%M') if session.start_time else 'N/A',
+                    'Yes' if attended else 'No',
+                ])
+
+            # B. Export Self-Paced Course / Lesson Completion Summary row
+            completed_lessons = LessonProgress.objects.filter(
+                student=student,
+                lesson__module__course=course,
+                is_completed=True
+            ).count()
+
+            passed_quizzes = QuizAttempt.objects.filter(
+                student=student,
+                quiz__module__course=course,
+                passed=True
+            ).values('quiz_id').distinct().count()
+
+            is_course_completed = getattr(enrollment, 'is_completed', False) or (
+                total_lessons > 0 and completed_lessons >= total_lessons
+            )
+            completed_date = getattr(enrollment, 'completed_at', None)
+
+            writer.writerow([
+                student.username,
+                student.get_full_name() or student.username,
+                student.email,
+                f"Course Progress ({completed_lessons}/{total_lessons} Lessons, {passed_quizzes} Quizzes Passed)",
+                'Self-Paced Course',
+                completed_date.strftime('%Y-%m-%d %H:%M') if completed_date else '-',
+                'Yes' if is_course_completed else 'In Progress',
+            ])
+
+        return response
     
 # ==========================================
 # Mobile Offline Synchronization APIs
@@ -844,62 +1120,179 @@ class VisitingFacultyDashboardView(LoginRequiredMixin, UserPassesTestMixin, View
         }
         return render(request, 'LMS/visiting_faculty_dashboard.html', context)
 
-
 class AccountantDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """Financial dashboard for Accountants to verify vouchers and review course revenue."""
+    """Unified Financial Hub: Course Fees, Vouchers, Benefit Categories & Faculty Payroll."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
+        return (
+            self.request.user.is_staff
+            or self.request.user.groups.filter(name__in=['LMS_Accountant', 'LMS_Accounts']).exists()
+        )
 
     def handle_no_permission(self):
         return redirect('student_dashboard')
 
     def get(self, request):
-        # 1. Calculate Total Cleared Revenue directly from Active/Completed Enrollments
-        total_revenue_aggr = Enrollment.objects.filter(
-            status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
-        ).aggregate(total=Sum('course__price'))['total']
-        
-        total_revenue = total_revenue_aggr if total_revenue_aggr is not None else Decimal('0.00')
+        # 1. Total Cleared Revenue from Active/Completed Enrollments
+        total_revenue = (
+            Enrollment.objects.filter(
+                status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+            ).aggregate(total=Sum('course__price'))['total']
+            or Decimal('0.00')
+        )
 
         # 2. Course-wise Financial Breakdown
         course_revenue_list = Course.objects.annotate(
             verified_students=Count(
                 'enrollments',
-                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED])
+                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]),
+                distinct=True,
             ),
             total_collected=Sum(
                 'enrollments__course__price',
-                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED])
-            )
+                filter=Q(enrollments__status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]),
+            ),
         ).order_by('-total_collected')
 
-        # 3. Pending payment vouchers
-        pending_vouchers = Enrollment.objects.filter(status=Enrollment.Status.PENDING)
+        # 3. Pending Student Payment Vouchers
+        pending_vouchers = Enrollment.objects.filter(
+            status=Enrollment.Status.PENDING
+        ).select_related('student', 'course')
+
+        
+        # 4. Faculty List (Instructors + Visiting Faculty) with Conducted Session Counts & Minutes
+        completed_sessions_subquery = (
+            LiveSession.objects.filter(
+                Q(section__instructor=OuterRef('pk')) | Q(course__instructor=OuterRef('pk')),
+                status='COMPLETED',
+            )
+            .values('status')
+            .annotate(
+                cnt=Count('id', distinct=True),
+                mins=Coalesce(Sum('duration_minutes'), 0),
+            )
+        )
+
+        faculty_list = (
+            User.objects.filter(groups__name__in=['LMS_Instructor', 'LMS_VisitingFaculty'])
+            .annotate(
+                sessions_taught=Coalesce(
+                    Subquery(completed_sessions_subquery.values('cnt')[:1], output_field=IntegerField()),
+                    Value(0),
+                ),
+                logged_minutes=Coalesce(
+                    Subquery(completed_sessions_subquery.values('mins')[:1], output_field=IntegerField()),
+                    Value(0),
+                ),
+            )
+            .distinct()
+        )
+        
+        # 5. Benefit Categories & Calculated Payroll Records
+        benefit_categories = BenefitCategory.objects.all().order_by('name')
+        payrolls = (
+            FacultyPayroll.objects.select_related('faculty')
+            .prefetch_related('perk_items__category')
+            .order_by('-month', '-id')
+        )
+        total_payroll_disbursed = (
+            payrolls.aggregate(total=Sum('net_salary'))['total'] or Decimal('0.00')
+        )
 
         context = {
-            'total_cleared_revenue': total_revenue, # Primary key
-            'total_revenue': total_revenue,         # Legacy lookup backup
+            'total_cleared_revenue': total_revenue,
+            'total_revenue': total_revenue,
             'course_revenue_list': course_revenue_list,
             'pending_vouchers': pending_vouchers,
             'pending_count': pending_vouchers.count(),
+            'pending_vouchers_count': pending_vouchers.count(),
+            'faculty_list': faculty_list,
+            'benefit_categories': benefit_categories,
+            'payrolls': payrolls,
+            'total_payroll_disbursed': total_payroll_disbursed,
         }
         return render(request, 'LMS/accountant_dashboard.html', context)
+
+    def post(self, request):
+        action = request.POST.get('action')
+
+        # A. Define a New Benefit / Perk Category
+        if action == 'create_benefit':
+            name = request.POST.get('name', '').strip()
+            if name:
+                BenefitCategory.objects.create(
+                    name=name,
+                    default_amount=Decimal(request.POST.get('default_amount') or '0'),
+                    is_percentage=bool(request.POST.get('is_percentage')),
+                    description=request.POST.get('description', '').strip(),
+                )
+                messages.success(request, f"Benefit category '{name}' added.")
+            return redirect('accountant_dashboard')
+
+        # B. Delete a Benefit Category
+        elif action == 'delete_benefit':
+            cat = get_object_or_404(BenefitCategory, id=request.POST.get('benefit_id'))
+            cat.delete()
+            messages.info(request, f"Benefit category '{cat.name}' removed.")
+            return redirect('accountant_dashboard')
+
+        # C. Calculate Instructor / Visiting Faculty Salary (Per Credit Hour) + Perks
+        elif action == 'calculate_payroll':
+            faculty = get_object_or_404(User, id=request.POST.get('faculty_id'))
+            credit_hours = Decimal(request.POST.get('credit_hours') or '0')
+            rate = Decimal(request.POST.get('rate_per_credit_hour') or '0')
+            month = request.POST.get('month')  # YYYY-MM-DD
+
+            payroll = FacultyPayroll.objects.create(
+                faculty=faculty,
+                month=month,
+                credit_hours_taught=credit_hours,
+                rate_per_credit_hour=rate,
+            )
+            base_pay = credit_hours * rate
+
+            for b_id in request.POST.getlist('benefits'):
+                cat = BenefitCategory.objects.filter(id=b_id).first()
+                if cat:
+                    amount = (
+                        (base_pay * cat.default_amount / Decimal('100'))
+                        if cat.is_percentage
+                        else cat.default_amount
+                    )
+                    FacultyPayrollPerk.objects.create(
+                        payroll=payroll,
+                        category=cat,
+                        calculated_amount=amount,
+                    )
+
+            payroll.calculate_totals()
+            ActivityLog.objects.create(
+                user=request.user,
+                role="Accounts",
+                action=f"Calculated payroll for {faculty.username} (PKR {payroll.net_salary})",
+            )
+            messages.success(
+                request,
+                f"Payroll calculated for {faculty.get_full_name() or faculty.username}: PKR {payroll.net_salary}",
+            )
+            return redirect('accountant_dashboard')
+
+        return redirect('accountant_dashboard')
     
 class VerifyVoucherPaymentView(LoginRequiredMixin, UserPassesTestMixin, View):
     """View for accountants to verify student bank vouchers and activate course enrollment."""
 
     def test_func(self):
-        return self.request.user.groups.filter(name='LMS_Accountant').exists() or self.request.user.is_staff
+        return (
+            self.request.user.is_staff
+            or self.request.user.groups.filter(name__in=['LMS_Accountant', 'LMS_Accounts']).exists()
+        )
 
     def handle_no_permission(self):
         return redirect('student_dashboard')
 
     def post(self, request, voucher_id):
-        # Fetch enrollment record using the voucher ID
         enrollment = get_object_or_404(Enrollment, id=voucher_id)
-        
-        # Update enrollment status to ACTIVE
         enrollment.status = Enrollment.Status.ACTIVE
         enrollment.save()
 
@@ -927,35 +1320,58 @@ class DownloadChallanView(LoginRequiredMixin, View):
         }
         return render(request, 'LMS/fee_challan.html', context)
 
-
 class EnrollCourseView(LoginRequiredMixin, View):
     """Handles course enrollment requests via slug, PK, or UUID."""
 
-    def post(self, request, slug=None, course_id=None, *args, **kwargs):
+    def _get_course(self, slug=None, course_id=None, **kwargs):
         identifier = slug or course_id or kwargs.get('pk') or kwargs.get('id')
-        
+        if not identifier:
+            raise Http404("Course identifier is missing.")
         if hasattr(Course, 'slug') and Course.objects.filter(slug=identifier).exists():
-            course = get_object_or_404(Course, slug=identifier)
-        else:
-            course = get_object_or_404(Course, pk=identifier)
-        
+            return get_object_or_404(Course, slug=identifier)
+        return get_object_or_404(Course, pk=identifier)
+
+    def _redirect_to_course(self, course):
+        if getattr(course, 'slug', None):
+            return redirect('course_detail', slug=course.slug)
+        return redirect('course_detail', pk=course.pk)
+
+    def get(self, request, slug=None, course_id=None, *args, **kwargs):
+        course = self._get_course(slug=slug, course_id=course_id, **kwargs)
+        return self._redirect_to_course(course)
+
+    def post(self, request, slug=None, course_id=None, *args, **kwargs):
+        course = self._get_course(slug=slug, course_id=course_id, **kwargs)
+
+        # 1. Block Instructors, Visiting Faculty, HODs, and non-student staff from enrolling
+        role_flags = get_lms_role_flags(request.user)
+        if role_flags['is_faculty_or_hod'] or not role_flags['is_student']:
+            messages.error(request, "Instructors, Visiting Faculty, and HODs cannot enroll as students.")
+            return self._redirect_to_course(course)
+
+        # 2. Ensure only published courses can be enrolled in
+        if hasattr(course, 'status') and course.status != 'PUBLISHED':
+            messages.error(request, "This course is not currently open for enrollment.")
+            return self._redirect_to_course(course)
+
+        # 3. Create or retrieve pending enrollment for challan verification
         enrollment, created = Enrollment.objects.get_or_create(
             student=request.user,
             course=course,
             defaults={'status': Enrollment.Status.PENDING}
         )
-        
+
         if created:
-            messages.success(request, f"Successfully enrolled in {course.title}. Please submit your fee challan for verification.")
+            messages.success(
+                request,
+                f"Successfully enrolled in {course.title}. Please submit your fee challan for verification."
+            )
         else:
             messages.info(request, f"You are already registered for {course.title}.")
 
-        if hasattr(course, 'slug') and course.slug:
-            return redirect('course_detail', slug=course.slug)
-        return redirect('course_detail', pk=course.pk)
-
-
-class CourseListView(ListView):
+        return self._redirect_to_course(course)
+    
+class CourseListView(LoginRequiredMixin, ListView):
     model = Course
     template_name = 'LMS/course_list.html'
     context_object_name = 'courses'
@@ -968,9 +1384,24 @@ class CourseListView(ListView):
             .order_by('-created_at')
         )
 
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        flags = get_lms_role_flags(request.user)
+        if not flags['can_view_courses']:
+            messages.error(request, "Course catalog access is restricted to Students, Faculty, and HODs.")
+            referer = request.META.get('HTTP_REFERER')
+            if referer and '/courses/' not in referer:
+                return redirect(referer)
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(get_lms_role_flags(self.request.user))
+        return context
 
-class CourseDetailView(DetailView):
+class CourseDetailView(LoginRequiredMixin, CourseRoleMixin, DetailView):
     model = Course
     template_name = 'LMS/course_detail.html'
     context_object_name = 'course'
@@ -978,6 +1409,7 @@ class CourseDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context.update(get_lms_role_flags(self.request.user))
         user = self.request.user
         
         if hasattr(self.object, 'modules'):
@@ -1018,7 +1450,7 @@ class CourseDetailView(DetailView):
         return context
 
 class LessonDetailView(LoginRequiredMixin, DetailView):
-    """Displays lesson details with strict payment verification and progress tracking."""
+    """Displays lesson details with strict payment verification, progress tracking, and published course reviews."""
     model = Lesson
     template_name = 'LMS/lesson_detail.html'
     context_object_name = 'lesson'
@@ -1078,10 +1510,32 @@ class LessonDetailView(LoginRequiredMixin, DetailView):
 
         progress, _ = LessonProgress.objects.get_or_create(student=user, lesson=lesson)
 
+        # Check active enrollment for course reviews
+        is_enrolled = Enrollment.objects.filter(
+            student=user,
+            course=course,
+            status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+        ).exists()
+
+        # Fetch published course reviews for enrolled students (and staff/instructor)
+        if is_enrolled or user.is_staff or getattr(course, 'instructor', None) == user:
+            published_reviews = CourseReview.objects.filter(
+                course=course,
+                is_published=True
+            ).select_related('student').order_by('-created_at')
+        else:
+            published_reviews = CourseReview.objects.none()
+
+        # Check if current student already submitted a review
+        user_review = CourseReview.objects.filter(course=course, student=user).first() if is_enrolled else None
+
         context['course'] = course
         context['modules'] = modules
         context['completed_lesson_ids'] = completed_lesson_ids
         context['is_completed'] = progress.is_completed
+        context['published_reviews'] = published_reviews
+        context['is_enrolled'] = is_enrolled
+        context['user_review'] = user_review
         return context
 
 
@@ -1179,20 +1633,120 @@ class AddDiscussionCommentView(LoginRequiredMixin, View):
 # 2. QUIZ VIEWS
 # ==========================================
 
+
+
+class ManualQuizCreateView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Faculty Tool: Creates a manual quiz/test compatible with QuizTakeView."""
+
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+
+    def post(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON payload."}, status=400)
+
+        questions_data = data.get('questions', [])
+        if not questions_data:
+            return JsonResponse({"status": "error", "message": "At least one question is required."}, status=400)
+
+        quiz = Quiz.objects.create(
+            module=lesson.module,
+            lesson=lesson,
+            title=data.get('title') or f"{lesson.title} - Quiz",
+            instructions=data.get('instructions', ''),
+            pass_mark_percentage=int(data.get('pass_mark_percentage', 70)),
+            time_limit_minutes=int(data.get('time_limit_minutes', 0)),
+            max_attempts=int(data.get('max_attempts', 3)),
+            is_manual=True
+        )
+
+        for q in questions_data:
+            q_text = (q.get('question_text') or q.get('text') or '').strip()
+            if not q_text:
+                return JsonResponse({"status": "error", "message": "Question text cannot be empty."}, status=400)
+
+            options = q.get('options') or q.get('choices') or []
+            if len(options) < 2:
+                return JsonResponse({"status": "error", "message": f"Question '{q_text[:30]}' needs at least 2 options."}, status=400)
+
+            if not any(bool(opt.get('is_correct')) for opt in options):
+                return JsonResponse({"status": "error", "message": f"Select a correct answer for: '{q_text[:30]}'."}, status=400)
+
+            question = Question.objects.create(
+                quiz=quiz,
+                text=q_text,
+                question_type=q.get('question_type', Question.QuestionType.SINGLE_CHOICE),
+                points=int(q.get('points', 1))
+            )
+            for opt in options:
+                opt_text = (opt.get('text') or opt.get('label') or '').strip()
+                if opt_text:
+                    # Uses the exact reverse relation queried by QuizTakeView ('choices')
+                    question.choices.create(
+                        text=opt_text,
+                        is_correct=bool(opt.get('is_correct', False))
+                    )
+
+        ActivityLog.objects.create(
+            user=request.user,
+            role="Instructor",
+            action=f"Created manual quiz '{quiz.title}'",
+            details=f"Lesson ID: {lesson.id}, Questions: {len(questions_data)}"
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "quiz_id": quiz.id,
+            "take_url": reverse('quiz_take', kwargs={'pk': quiz.pk})
+        })
+class DownloadActivityReportView(LoginRequiredMixin, View):
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="activity_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'User', 'Role', 'Action', 'Details'])
+
+        logs = (
+            ActivityLog.objects.all().order_by('-created_at')
+            if request.user.is_staff
+            else ActivityLog.objects.filter(user=request.user).order_by('-created_at')
+        )
+
+        for log in logs:
+            writer.writerow([
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '',
+                log.user.username if log.user else 'System',
+                log.role,
+                log.action,
+                log.details
+            ])
+        return response
+    
 class QuizTakeView(LoginRequiredMixin, View):
     template_name = 'LMS/quiz_take.html'
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
         quiz = self.get_quiz(kwargs['pk'])
         course = quiz.module.course
-        
-        is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
-        if not is_enrolled:
-            return redirect('course_detail', slug=course.slug)
+        flags = get_lms_role_flags(request.user)
 
-        attempt_count = QuizAttempt.objects.filter(student=request.user, quiz=quiz).count()
-        if quiz.max_attempts > 0 and attempt_count >= quiz.max_attempts:
-            return redirect('quiz_result_latest', pk=quiz.pk)
+        # Allow Faculty/HODs to preview without student enrollment; enforce enrollment & attempt limits for students
+        if not flags['is_faculty_or_hod']:
+            is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+            if not is_enrolled:
+                return redirect('course_detail', slug=course.slug)
+
+            attempt_count = QuizAttempt.objects.filter(student=request.user, quiz=quiz).count()
+            if quiz.max_attempts > 0 and attempt_count >= quiz.max_attempts:
+                return redirect('quiz_result_latest', pk=quiz.pk)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1206,37 +1760,63 @@ class QuizTakeView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         quiz = self.get_quiz(pk)
+        flags = get_lms_role_flags(request.user)
         form = QuizTakeForm(quiz=quiz)
-        return render(request, self.template_name, {'quiz': quiz, 'form': form})
+        return render(request, self.template_name, {
+            'quiz': quiz,
+            'form': form,
+            'is_preview_mode': flags['is_faculty_or_hod'],
+        })
 
     def post(self, request, pk):
+        flags = get_lms_role_flags(request.user)
+        if flags['is_faculty_or_hod']:
+            messages.warning(request, "Quiz submission is disabled in Faculty/HOD preview mode.")
+            return redirect('quiz_take', pk=pk)
+
         quiz = self.get_quiz(pk)
         form = QuizTakeForm(request.POST, quiz=quiz)
 
         if not form.is_valid():
-            return render(request, self.template_name, {'quiz': quiz, 'form': form})
+            return render(request, self.template_name, {
+                'quiz': quiz,
+                'form': form,
+                'is_preview_mode': False,
+            })
 
         total_points = 0
         earned_points = 0
+        all_selected_choice_ids = []
 
         for question in quiz.questions.all():
             field_name = f"question_{question.id}"
             user_answer = form.cleaned_data.get(field_name)
-            correct_choice_ids = set(question.choices.filter(is_correct=True).values_list('id', flat=True))
+
+            # Uses already-prefetched choices (avoids N+1 DB queries)
+            correct_choice_ids = {
+                c.id for c in question.choices.all() if c.is_correct
+            }
             total_points += question.points
 
-            if question.question_type in [Question.QuestionType.SINGLE_CHOICE, Question.QuestionType.TRUE_FALSE]:
-                if user_answer and int(user_answer) in correct_choice_ids:
+            if not user_answer:
+                continue
+
+            # Normalize user_answer whether RadioSelect (str/int) or CheckboxSelectMultiple (list)
+            if isinstance(user_answer, (list, tuple, set)):
+                selected_ids = {int(cid) for cid in user_answer if str(cid).isdigit()}
+                all_selected_choice_ids.extend(selected_ids)
+                if correct_choice_ids and selected_ids == correct_choice_ids:
                     earned_points += question.points
-            elif question.question_type == Question.QuestionType.MULTIPLE_CHOICE:
-                selected_ids = set(int(cid) for cid in user_answer) if user_answer else set()
-                if selected_ids == correct_choice_ids:
+            elif str(user_answer).isdigit():
+                cid = int(user_answer)
+                all_selected_choice_ids.append(cid)
+                if correct_choice_ids and cid in correct_choice_ids:
                     earned_points += question.points
 
         score_percentage = (earned_points / total_points * 100) if total_points > 0 else 0.0
         passed = score_percentage >= quiz.pass_mark_percentage
         previous_attempts = QuizAttempt.objects.filter(student=request.user, quiz=quiz).count()
-        
+
         attempt = QuizAttempt.objects.create(
             student=request.user,
             quiz=quiz,
@@ -1245,9 +1825,13 @@ class QuizTakeView(LoginRequiredMixin, View):
             attempt_number=previous_attempts + 1
         )
 
+        # Store selected choice IDs in session keyed by attempt ID (no DB migration required)
+        attempt_selections = request.session.get('quiz_attempt_selections', {})
+        attempt_selections[str(attempt.pk)] = all_selected_choice_ids
+        request.session['quiz_attempt_selections'] = attempt_selections
+        request.session.modified = True
+
         return redirect('quiz_result_detail', pk=attempt.pk)
-
-
 class QuizResultDetailView(LoginRequiredMixin, DetailView):
     model = QuizAttempt
     template_name = 'LMS/quiz_result.html'
@@ -1255,20 +1839,54 @@ class QuizResultDetailView(LoginRequiredMixin, DetailView):
     pk_url_kwarg = 'pk'
 
     def get_queryset(self):
-        return (
-            QuizAttempt.objects.filter(student=self.request.user)
-            .select_related('quiz', 'quiz__module__course')
-            .order_by('-created_at')
-        )
+        user = self.request.user
+        base_qs = QuizAttempt.objects.select_related(
+            'quiz', 'quiz__module__course', 'student'
+        ).prefetch_related(
+            'quiz__questions__choices'
+        ).order_by('-created_at')
+        if user.is_staff or user.groups.filter(name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']).exists():
+            return base_qs
+        return base_qs.filter(student=user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        attempt = self.object
+        quiz = attempt.quiz
+        user = self.request.user
+
+        # Retrieve student's selected choice IDs for this attempt
+        attempt_selections = self.request.session.get('quiz_attempt_selections', {})
+        selected_choice_ids = set(attempt_selections.get(str(attempt.pk), []))
+
+        # Check if student can still retake
+        attempt_count = QuizAttempt.objects.filter(student=attempt.student, quiz=quiz).count()
+        can_retake = (not attempt.passed) and (quiz.max_attempts == 0 or attempt_count < quiz.max_attempts)
+
+        # Reveal full answer key ONLY if passed, faculty/staff, or no retakes remain
+        # Reveal full answer key ONLY if the student passed or is faculty/staff
+        is_faculty = user.is_staff or user.groups.filter(
+            name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']
+        ).exists()
+        show_correct_answers = bool(attempt.passed or is_faculty)
+
+        context.update({
+            'quiz': quiz,
+            'selected_choice_ids': selected_choice_ids,
+            'can_retake': can_retake,
+            'show_correct_answers': show_correct_answers,
+        })
+        return context
 
 
 class LatestQuizResultRedirectView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        latest_attempt = QuizAttempt.objects.filter(student=request.user, quiz_id=pk).order_by('-created_at').first()
+        latest_attempt = QuizAttempt.objects.filter(
+            student=request.user, quiz_id=pk
+        ).order_by('-created_at').first()
         if latest_attempt:
             return redirect('quiz_result_detail', pk=latest_attempt.pk)
         return redirect('quiz_take', pk=pk)
-
 
 # ==========================================
 # 3. AI TEACHING ASSISTANT

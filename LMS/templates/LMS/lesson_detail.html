@@ -29,7 +29,18 @@
                 </a>
               </li>
             {% endfor %}
-            
+            <div class="course-reviews mt-4">
+              <h5>Course Reviews</h5>
+              {% for review in published_reviews %}
+                  <div class="border p-2 mb-2 rounded">
+                      <strong>{{ review.student.get_full_name|default:review.student.username }}</strong>
+                      <span>({{ review.rating }}/5)</span>
+                      <p class="mb-0">{{ review.comment }}</p>
+                  </div>
+              {% empty %}
+                  <p class="text-muted">No published reviews for this course yet.</p>
+              {% endfor %}
+          </div>
             <!-- 📝 MODULE QUIZZES LOOP -->
             {% for q in module.quizzes.all %}
               <li>

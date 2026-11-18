@@ -11,7 +11,7 @@
       <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">👨‍🏫 Instructor Command Center</h1>
       <p class="text-xs text-gray-500 mt-1">Manage active courses, section schedules, live classes, student engagement, and adaptive learning paths.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex items-center space-x-3">
+    <div class="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
       <a href="{% url 'discussion_board' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow transition">
         💬 Class Discussion Board
       </a>
@@ -66,22 +66,33 @@
           <table class="w-full text-left text-xs text-gray-600">
             <thead class="bg-gray-50 uppercase text-gray-500 border-b">
               <tr>
-                <th class="py-3 px-3">Course Title</th>
-                <th class="py-3 px-3">Price</th>
+                <th class="py-3 px-3">Course Title & Enrolled Students</th>
                 <th class="py-3 px-3">Status</th>
                 <th class="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for course in courses %}
-                <tr class="border-b hover:bg-gray-50">
-                  <td class="py-3 px-3 font-bold text-gray-900">
-                    <div>{{ course.title }}</div>
+                <tr class="border-b hover:bg-gray-50 align-top">
+                  <td class="py-3 px-3">
+                    <div class="font-bold text-gray-900">{{ course.title }}</div>
                     <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5">
                       <span>🎯</span> {{ course.enrollments.count }} Enrolled Student(s) · Adaptive Track Active
                     </div>
+
+                    <!-- Clickable Enrolled Students List -->
+                    {% if course.enrollments.all %}
+                      <div class="mt-2 flex flex-wrap gap-1.5">
+                        {% for enr in course.enrollments.all %}
+                          <a href="{% url 'instructor_student_detail' course.id enr.student.id %}"
+                             class="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 hover:bg-indigo-100 text-gray-800 hover:text-indigo-800 text-[10px] font-semibold border border-gray-200 transition"
+                             title="View student details">
+                            👤 {{ enr.student.get_full_name|default:enr.student.username }}
+                          </a>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </td>
-                  <td class="py-3 px-3 font-semibold text-gray-800">PKR {{ course.price }}</td>
                   <td class="py-3 px-3">
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
                       {% if course.status == 'PUBLISHED' %}bg-emerald-100 text-emerald-800
@@ -91,11 +102,16 @@
                     </span>
                   </td>
                   <td class="py-3 px-3 text-right">
-                    <div class="inline-flex items-center gap-2">
+                    <div class="inline-flex flex-wrap justify-end items-center gap-2">
+                      <a href="{% url 'download_attendance' course.id %}"
+                         class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200 transition"
+                         title="Download Course Attendance CSV">
+                        📥 Attendance
+                      </a>
                       <a href="{% url 'at_risk_dashboard' course.id %}" 
                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] rounded-lg border border-indigo-200 transition"
                          title="View student risk scores and adaptive remedial paths">
-                        📊 Risk & Adaptive Engine
+                        📊 Risk & Adaptive
                       </a>
                       <a href="{% url 'course_detail' course.slug %}" class="text-indigo-600 hover:underline font-bold px-2 py-1">
                         View Course
@@ -213,66 +229,207 @@
 
     </div>
 
-    <!-- Right Column (1 Col): AI Co-Pilot, Course Creation, Live Session Scheduler -->
+    <!-- Right Column (1 Col): Quiz Builder, Course Creation, Live Session Scheduler -->
     <div class="space-y-6">
       
-      <!-- Faculty AI Co-Pilot Widget -->
-      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <h2 class="text-md font-bold text-gray-900 mb-2 flex items-center gap-2">
-          <span>🤖</span> Faculty AI Assessment Co-Pilot
-        </h2>
-        <p class="text-xs text-gray-500 mb-3">Select a lesson from your assigned courses to auto-generate multiple-choice quiz questions.</p>
-        
-        <div class="space-y-3">
+      <!-- Faculty Quiz Builder (AI + Manual) -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+  <h2 class="text-md font-bold text-gray-900 mb-2 flex items-center gap-2">
+    <span>📝</span> Quiz & Assessment Builder
+  </h2>
+  <p class="text-xs text-gray-500 mb-3">Select a lesson to auto-generate quiz questions with AI or build a manual test.</p>
+
+  <div class="space-y-3">
+    <div>
+      <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Select Lesson</label>
+      <select id="ai-lesson-select" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        <option value="" disabled selected>-- Choose a Lesson --</option>
+        {% for lesson in all_lessons %}
+          <option value="{{ lesson.id }}" data-title="{{ lesson.title }}">
+            {{ lesson.module.course.title }} → {{ lesson.title }} (ID: {{ lesson.id }})
+          </option>
+        {% empty %}
+          <option value="" disabled>No lessons found under your active courses</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <button type="button"
+              id="ai-quiz-btn"
+              onclick="triggerQuizGen(event)"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+        <span>🤖</span> AI Quiz
+      </button>
+
+      <button type="button"
+              onclick="triggerManualQuizFromSelect()"
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+        <span>✍️</span> Manual Quiz
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Created Quizzes List (Manual & AI) -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
+      <span>✍️</span> My Created Quizzes
+    </h2>
+    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full">
+      {{ instructor_quizzes|length }} Total
+    </span>
+  </div>
+
+  <div class="space-y-3">
+    {% for quiz in instructor_quizzes %}
+      <div class="p-4 rounded-xl border border-gray-200 hover:border-indigo-300 bg-gray-50/50 transition">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Select Lesson</label>
-            <select id="ai-lesson-select" class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-              <option value="" disabled selected>-- Choose a Lesson --</option>
-              {% for lesson in all_lessons %}
-                <option value="{{ lesson.id }}">
-                  {{ lesson.module.course.title }} → {{ lesson.title }} (ID: {{ lesson.id }})
-                </option>
-              {% empty %}
-                <option value="" disabled>No lessons found under your active courses</option>
-              {% endfor %}
-            </select>
+            <h3 class="text-sm font-bold text-gray-900">{{ quiz.title }}</h3>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ quiz.module.course.title }} — <span class="font-semibold text-gray-700">{{ quiz.module.title }}</span>
+            </p>
+            <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] font-semibold">
+              <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                {{ quiz.questions.all|length }} Question{{ quiz.questions.all|length|pluralize }}
+              </span>
+              <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                Pass: {{ quiz.pass_mark_percentage }}%
+              </span>
+              <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                Max Attempts: {{ quiz.max_attempts|default:"Unlimited" }}
+              </span>
+            </div>
           </div>
 
-          <button type="button"
-                  id="ai-quiz-btn"
-                  onclick="triggerQuizGen(event)"
-                  class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
-            <span>🤖</span> Auto-Generate Quiz
-          </button>
+          <div class="flex items-center gap-2">
+            <a href="{% url 'quiz_take' pk=quiz.pk %}"
+               class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition">
+              Preview Quiz
+            </a>
+            <a href="{% url 'course_detail' slug=quiz.module.course.slug %}"
+               class="px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 text-xs font-bold rounded-lg transition">
+              Open Course
+            </a>
+          </div>
         </div>
+
+        <!-- Expandable Questions & Answer Key Preview -->
+        {% if quiz.questions.all %}
+          <details class="mt-3 pt-2.5 border-t border-gray-200/80">
+            <summary class="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer select-none">
+              View Questions & Answer Key ({{ quiz.questions.all|length }})
+            </summary>
+            <div class="mt-2.5 space-y-2">
+              {% for q in quiz.questions.all %}
+                <div class="p-3 bg-white rounded-lg border border-gray-200 text-xs">
+                  <p class="font-bold text-gray-900 mb-1.5">{{ forloop.counter }}. {{ q.text }}</p>
+                  <ul class="space-y-1">
+                    {% for choice in q.choices.all %}
+                      <li class="px-2 py-1 rounded flex justify-between {% if choice.is_correct %}bg-emerald-50 text-emerald-800 font-bold border border-emerald-200{% else %}text-gray-600{% endif %}">
+                        <span>{{ choice.text }}</span>
+                        {% if choice.is_correct %}<span>✓ Correct</span>{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
       </div>
+    {% empty %}
+      <p class="text-xs text-gray-400 text-center py-6">No quizzes created yet. Use the Assessment Builder above to create one.</p>
+    {% endfor %}
+  </div>
+</div>
 
-      <!-- Create Course Widget -->
-      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <span>➕</span> Add New Course
-        </h2>
-        
-        <form action="{% url 'create_course' %}" method="POST" class="space-y-3">
-          {% csrf_token %}
-          <div>
-            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Course Title</label>
-            <input type="text" name="title" placeholder="e.g. Machine Learning Basics" 
-                   class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
-          </div>
-          
-          <div>
-            <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Course Fee (PKR)</label>
-            <input type="number" step="0.01" name="price" placeholder="5000.00" 
-                   class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
-          </div>
+<!-- Initialize Course Card -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
+  <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
+    <span>➕</span> Create New Course
+  </h2>
+  <form action="{% url 'create_course' %}" method="POST" class="space-y-3">
+    {% csrf_token %}
+    <div>
+      <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Course Title</label>
+      <input type="text" name="title" placeholder="e.g. Machine Learning Basics"
+             class="w-full text-xs px-3 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+    </div>
 
-          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow transition">
-            Initialize Course & Add Lessons
-          </button>
-        </form>
-      </div>
+    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow transition">
+      Initialize Course & Add Lessons
+    </button>
+  </form>
+</div>
 
+<!-- Standalone Student Quiz Submissions Widget -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
+      <span>📝</span> Student Quiz Submissions
+    </h2>
+    <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
+      {{ quiz_attempts|length }} Total Attempts
+    </span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse text-xs">
+      <thead>
+        <tr class="border-b border-gray-200 text-gray-500 uppercase text-[11px]">
+          <th class="py-2.5 px-3">Student</th>
+          <th class="py-2.5 px-3">Course</th>
+          <th class="py-2.5 px-3">Quiz / Lesson</th>
+          <th class="py-2.5 px-3">Attempt</th>
+          <th class="py-2.5 px-3">Score</th>
+          <th class="py-2.5 px-3">Status</th>
+          <th class="py-2.5 px-3">Submitted</th>
+          <th class="py-2.5 px-3 text-right">Details</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for attempt in quiz_attempts %}
+        <tr class="hover:bg-gray-50">
+          <td class="py-2.5 px-3 font-medium">
+            <a href="{% url 'instructor_student_detail' attempt.quiz.module.course.id attempt.student.id %}"
+               class="text-indigo-600 hover:underline">
+              {{ attempt.student.get_full_name|default:attempt.student.username }}
+            </a>
+          </td>
+          <td class="py-2.5 px-3 text-gray-700">{{ attempt.quiz.module.course.title }}</td>
+          <td class="py-2.5 px-3">
+            <div class="font-semibold text-gray-900">{{ attempt.quiz.title }}</div>
+            <div class="text-[11px] text-gray-500">{{ attempt.quiz.lesson.title|default:"Module Quiz" }}</div>
+          </td>
+          <td class="py-2.5 px-3 text-gray-600">#{{ attempt.attempt_number }}</td>
+          <td class="py-2.5 px-3 font-bold text-gray-900">{{ attempt.score_percentage }}%</td>
+          <td class="py-2.5 px-3">
+            {% if attempt.passed %}
+              <span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-[11px]">Passed</span>
+            {% else %}
+              <span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full text-[11px]">Failed</span>
+            {% endif %}
+          </td>
+          <td class="py-2.5 px-3 text-gray-500">{{ attempt.created_at|date:"M d, Y H:i" }}</td>
+          <td class="py-2.5 px-3 text-right">
+            <a href="{% url 'quiz_result_detail' pk=attempt.pk %}"
+               class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
+              View
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="py-6 text-center text-gray-400">No quiz submissions yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
       <!-- Live Session Scheduler Form -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <h2 class="text-md font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -357,10 +514,66 @@
   </div>
 </div>
 
+<!-- Manual Quiz Builder Modal (Tailwind CSS) -->
+<div id="manualQuizModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
+    <div class="flex justify-between items-center pb-3 border-b">
+      <h3 class="text-lg font-bold text-gray-900">
+        ✍️ Create Manual Quiz — <span id="mqLessonTitle" class="text-indigo-600"></span>
+      </h3>
+      <button type="button" onclick="closeManualQuizModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+    </div>
+
+    <div class="my-4 overflow-y-auto flex-1 pr-1 space-y-4">
+      <input type="hidden" id="mqLessonId">
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-6">
+          <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Quiz Title</label>
+          <input type="text" id="mqTitle" class="w-full text-xs px-3 py-2 border rounded-xl" placeholder="e.g., Module 1 Assessment">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Pass %</label>
+          <input type="number" id="mqPassMark" class="w-full text-xs px-3 py-2 border rounded-xl" value="70" min="1" max="100">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Time (min)</label>
+          <input type="number" id="mqTimeLimit" class="w-full text-xs px-3 py-2 border rounded-xl" value="0" min="0">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Attempts</label>
+          <input type="number" id="mqMaxAttempts" class="w-full text-xs px-3 py-2 border rounded-xl" value="3" min="0">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Instructions (Optional)</label>
+        <textarea id="mqInstructions" class="w-full text-xs px-3 py-2 border rounded-xl" rows="2"></textarea>
+      </div>
+
+      <hr>
+
+      <div id="mqQuestionsContainer" class="space-y-4"></div>
+
+      <button type="button" data-action="add-question" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 transition">
+        + Add Question
+      </button>
+    </div>
+
+    <div class="pt-3 border-t flex items-center justify-end gap-3">
+      <button type="button" onclick="closeManualQuizModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition">
+        Cancel
+      </button>
+      <button type="button" data-action="save-quiz" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition">
+        Save Manual Quiz
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- AI Quiz Output Modal -->
 <div id="ai-quiz-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
-    <!-- Modal Header -->
     <div class="flex justify-between items-center pb-3 border-b">
       <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
         <span>🤖</span> Generated AI Quiz Questions
@@ -368,12 +581,10 @@
       <button type="button" onclick="closeQuizModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
     </div>
 
-    <!-- Generated Content Display -->
     <div class="my-4 overflow-y-auto flex-1 bg-gray-50 p-4 rounded-xl border border-gray-200">
       <textarea id="quiz-text-content" readonly class="w-full h-64 bg-transparent text-xs font-mono text-gray-800 border-none focus:outline-none resize-none"></textarea>
     </div>
 
-    <!-- Action Buttons: Copy, Download, Close -->
     <div class="pt-3 border-t flex items-center justify-end gap-3">
       <button type="button" onclick="copyQuizToClipboard()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition flex items-center gap-1">
         📋 Copy to Clipboard
@@ -388,115 +599,8 @@
   </div>
 </div>
 
-<!-- JavaScript Handler for Faculty AI Quiz Co-Pilot -->
 <script>
-let lastGeneratedQuiz = "";
-
-async function triggerQuizGen(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    // 1. Get selected lesson from dropdown
-    const selectElem = document.getElementById('ai-lesson-select');
-    let lessonId = selectElem ? selectElem.value : null;
-
-    // 2. Prompt for manual Lesson ID if nothing selected in dropdown
-    if (!lessonId) {
-        lessonId = prompt("Enter the Lesson ID to generate quiz questions from:");
-    }
-
-    if (!lessonId || !lessonId.trim()) {
-        alert("⚠️ Please select a lesson from the dropdown menu.");
-        return;
-    }
-
-    // 3. Prompt for Question Count
-    const countInput = prompt("How many quiz questions would you like to generate?", "5");
-    if (!countInput || !countInput.trim()) return;
-
-    const questionCount = parseInt(countInput.trim(), 10) || 5;
-
-    const btn = document.getElementById('ai-quiz-btn');
-    const originalText = btn ? btn.innerHTML : '';
-    if (btn) {
-        btn.innerHTML = `⏳ Generating ${questionCount} Questions...`;
-        btn.disabled = true;
-    }
-
-    try {
-        const response = await fetch(`/LMS/api/v1/ai/generate-quiz/${lessonId.toString().trim()}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken') || '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ question_count: questionCount })
-        });
-
-        const data = await response.json();
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-
-        if (data.status === 'success' && data.questions && data.questions.length > 0) {
-            let questionsFormatted = "";
-            const questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
-            
-            questions.forEach((q, idx) => {
-                if (q.options && q.options.length > 0) {
-                    questionsFormatted += `Q${idx+1}: ${q.question}\n`;
-                    q.options.forEach((opt, oIdx) => {
-                        questionsFormatted += `   ${String.fromCharCode(65 + oIdx)}) ${opt}\n`;
-                    });
-                    if (q.correct_answer) questionsFormatted += `Answer: ${q.correct_answer}\n`;
-                    if (q.explanation) questionsFormatted += `Explanation: ${q.explanation}\n`;
-                    questionsFormatted += `\n--------------------------------------------------\n\n`;
-                } else {
-                    questionsFormatted += `${q.question || q}\n\n`;
-                }
-            });
-
-            lastGeneratedQuiz = questionsFormatted;
-            document.getElementById('quiz-text-content').value = questionsFormatted;
-            document.getElementById('ai-quiz-modal').classList.remove('hidden');
-        } else {
-            alert("⚠️ " + (data.message || "Failed to generate quiz. Verify lesson content exists."));
-        }
-    } catch (err) {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-        console.error("AI Quiz Error:", err);
-        alert("🚨 Error connecting to vLLM API endpoint.");
-    }
-}
-
-function closeQuizModal() {
-    document.getElementById('ai-quiz-modal').classList.add('hidden');
-}
-
-function copyQuizToClipboard() {
-    const textarea = document.getElementById('quiz-text-content');
-    textarea.select();
-    document.execCommand('copy');
-    alert("✅ Quiz questions copied to clipboard!");
-}
-
-function downloadQuizFile() {
-    if (!lastGeneratedQuiz) return;
-    const blob = new Blob([lastGeneratedQuiz], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `AI_Quiz_Questions.txt`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
-
+// Shared CSRF Helper
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -510,6 +614,336 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+// ==========================================
+// 1. MANUAL QUIZ BUILDER LOGIC
+// ==========================================
+let questionCounter = 0;
+
+function triggerManualQuizFromSelect() {
+    const selectElem = document.getElementById('ai-lesson-select');
+    const lessonId = selectElem ? selectElem.value : null;
+    if (!lessonId) {
+        alert("⚠️ Please select a lesson from the dropdown menu first.");
+        return;
+    }
+    const selectedOption = selectElem.options[selectElem.selectedIndex];
+    const lessonTitle = selectedOption.dataset.title || selectedOption.text;
+    openManualQuizModal(lessonId, lessonTitle);
+}
+
+document.addEventListener("click", function (event) {
+    const trigger = event.target.closest(".open-manual-quiz-btn");
+    if (trigger) {
+        openManualQuizModal(trigger.dataset.lessonId, trigger.dataset.lessonTitle);
+        return;
+    }
+
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+
+    const action = button.dataset.action;
+    if (action === "add-question") addQuestionBlock();
+    if (action === "save-quiz") submitManualQuiz();
+    if (action === "remove-question") button.closest(".mq-question-block")?.remove();
+    if (action === "add-option") appendOption(button.dataset.questionId);
+    if (action === "remove-option") button.closest(".opt-row")?.remove();
+});
+
+document.addEventListener("change", function (event) {
+    if (event.target.matches(".q-type")) {
+        handleTypeChange(event.target.dataset.questionId, event.target.value);
+    }
+});
+
+function openManualQuizModal(lessonId, lessonTitle) {
+    document.getElementById("mqLessonId").value = lessonId;
+    document.getElementById("mqLessonTitle").textContent = lessonTitle;
+    document.getElementById("mqTitle").value = lessonTitle + " - Quiz";
+    document.getElementById("mqQuestionsContainer").innerHTML = "";
+    questionCounter = 0;
+    addQuestionBlock();
+    document.getElementById("manualQuizModal").classList.remove("hidden");
+}
+
+function closeManualQuizModal() {
+    document.getElementById("manualQuizModal").classList.add("hidden");
+}
+
+function addQuestionBlock() {
+    questionCounter++;
+    const qId = questionCounter;
+    const html = `
+        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 mq-question-block" id="q-block-${qId}">
+            <div class="flex justify-between items-center mb-2">
+                <strong class="text-xs text-gray-800">Question #${qId}</strong>
+                <button type="button" class="text-xs text-red-600 hover:underline font-bold" data-action="remove-question">Remove</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3">
+                <div class="md:col-span-7">
+                    <input type="text" class="w-full text-xs px-3 py-2 border rounded-lg bg-white q-text" placeholder="Enter question text..." required>
+                </div>
+                <div class="md:col-span-3">
+                    <select class="w-full text-xs px-2 py-2 border rounded-lg bg-white q-type" data-question-id="${qId}">
+                        <option value="SINGLE">Single Choice</option>
+                        <option value="MULTIPLE">Multiple Choice</option>
+                        <option value="TRUE_FALSE">True / False</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <input type="number" class="w-full text-xs px-2 py-2 border rounded-lg bg-white q-points" value="1" min="1" title="Points">
+                </div>
+            </div>
+            <div class="space-y-1.5 q-options-list" id="q-options-${qId}">
+                ${buildOptionRow(qId, "SINGLE", "", true)}
+                ${buildOptionRow(qId, "SINGLE", "", false)}
+                ${buildOptionRow(qId, "SINGLE", "", false)}
+                ${buildOptionRow(qId, "SINGLE", "", false)}
+            </div>
+            <button type="button" class="mt-2 text-xs text-indigo-600 hover:underline font-bold add-opt-btn" data-action="add-option" data-question-id="${qId}">
+                + Add Option
+            </button>
+        </div>
+    `;
+    document.getElementById("mqQuestionsContainer").insertAdjacentHTML("beforeend", html);
+}
+
+function buildOptionRow(qId, qType, textValue = "", isChecked = false) {
+    const inputType = qType === "MULTIPLE" ? "checkbox" : "radio";
+    return `
+        <div class="flex items-center gap-2 opt-row">
+            <input type="${inputType}" name="correct_${qId}" class="opt-correct rounded text-indigo-600" ${isChecked ? "checked" : ""} title="Mark as correct">
+            <input type="text" class="flex-1 text-xs px-2.5 py-1.5 border rounded-lg bg-white opt-text" value="${textValue}" placeholder="Option text...">
+            <button type="button" class="text-gray-400 hover:text-red-600 font-bold px-2" data-action="remove-option">&times;</button>
+        </div>
+    `;
+}
+
+function appendOption(qId) {
+    const block = document.getElementById(`q-block-${qId}`);
+    const qType = block.querySelector(".q-type").value;
+    document.getElementById(`q-options-${qId}`).insertAdjacentHTML("beforeend", buildOptionRow(qId, qType));
+}
+
+function handleTypeChange(qId, qType) {
+    const container = document.getElementById(`q-options-${qId}`);
+    const addBtn = document.querySelector(`#q-block-${qId} .add-opt-btn`);
+    if (qType === "TRUE_FALSE") {
+        container.innerHTML =
+            buildOptionRow(qId, "TRUE_FALSE", "True", true) +
+            buildOptionRow(qId, "TRUE_FALSE", "False", false);
+        addBtn.style.display = "none";
+    } else {
+        addBtn.style.display = "inline-block";
+        container.querySelectorAll(".opt-correct").forEach(input => {
+            input.type = qType === "MULTIPLE" ? "checkbox" : "radio";
+        });
+    }
+}
+
+async function submitManualQuiz() {
+    const lessonId = document.getElementById("mqLessonId").value;
+    const title = document.getElementById("mqTitle").value.trim();
+    const passMark = parseInt(document.getElementById("mqPassMark").value || "70", 10);
+    const timeLimit = parseInt(document.getElementById("mqTimeLimit").value || "0", 10);
+    const maxAttempts = parseInt(document.getElementById("mqMaxAttempts").value || "3", 10);
+    const instructions = document.getElementById("mqInstructions").value.trim();
+
+    if (!title) {
+        alert("⚠️ Please enter a quiz title.");
+        return;
+    }
+
+    const questions = [];
+    let validationError = null;
+    const optionLetters = ["A", "B", "C", "D"];
+
+    document.querySelectorAll(".mq-question-block").forEach((block, index) => {
+        const qText = block.querySelector(".q-text").value.trim();
+        const qType = block.querySelector(".q-type").value;
+        const points = parseInt(block.querySelector(".q-points").value || "1", 10);
+
+        if (!qText) {
+            validationError = `Question #${index + 1} is missing question text.`;
+            return;
+        }
+
+        const options = [];
+        let correctLetter = "A";
+
+        block.querySelectorAll(".opt-row").forEach((row, optIdx) => {
+            const optText = row.querySelector(".opt-text").value.trim();
+            const isCorrect = row.querySelector(".opt-correct").checked;
+            if (optText) {
+                options.push({ text: optText, is_correct: isCorrect });
+                if (isCorrect && optionLetters[optIdx]) {
+                    correctLetter = optionLetters[optIdx];
+                }
+            }
+        });
+
+        if (options.length < 2) {
+            validationError = `Question #${index + 1} must have at least 2 filled options.`;
+            return;
+        }
+
+        if (!options.some(o => o.is_correct)) {
+            validationError = `Question #${index + 1} must have at least one correct option selected.`;
+            return;
+        }
+
+        questions.push({
+            question_text: qText,
+            question_type: qType,
+            points: points,
+            options: options,
+            // Backwards-compatible flat fields for 4-option QuizQuestion model
+            option_a: options[0]?.text || "",
+            option_b: options[1]?.text || "",
+            option_c: options[2]?.text || "",
+            option_d: options[3]?.text || "",
+            correct_option: correctLetter
+        });
+    });
+
+    if (validationError) {
+        alert("⚠️ " + validationError);
+        return;
+    }
+
+    if (questions.length === 0) {
+        alert("⚠️ Please add at least one question before saving.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/LMS/api/v1/lessons/${lessonId}/manual-quiz/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                title: title,
+                pass_mark: passMark,
+                time_limit: timeLimit,
+                max_attempts: maxAttempts,
+                instructions: instructions,
+                questions: questions
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.status === "success") {
+            alert("✅ Manual quiz saved successfully!");
+            closeManualQuizModal();
+        } else {
+            alert("❌ Failed to save quiz: " + (data.message || "Server error"));
+        }
+    } catch (error) {
+        console.error("Manual Quiz Error:", error);
+        alert("🚨 Network error while saving the manual quiz.");
+    }
+}
+
+// ==========================================
+// 2. AI QUIZ GENERATOR LOGIC
+// ==========================================
+async function triggerQuizGen(event) {
+    if (event) event.preventDefault();
+
+    const selectElem = document.getElementById('ai-lesson-select');
+    const lessonId = selectElem ? selectElem.value : null;
+
+    if (!lessonId) {
+        alert("⚠️ Please select a lesson from the dropdown menu first.");
+        return;
+    }
+
+    // Prompt instructor for question count (1 to 20)
+    const countInput = prompt("How many quiz questions would you like to generate? (1 - 20):", "5");
+    if (countInput === null) return; // Instructor clicked Cancel
+
+    const questionCount = parseInt(countInput, 10);
+    if (isNaN(questionCount) || questionCount < 1 || questionCount > 20) {
+        alert("⚠️ Please enter a valid number between 1 and 20.");
+        return;
+    }
+
+    const btn = event ? event.currentTarget : document.getElementById('ai-quiz-btn');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block">⏳</span> Generating (${questionCount})...`;
+
+    try {
+        const response = await fetch(`/LMS/api/v1/ai/generate-quiz/${lessonId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ question_count: questionCount })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            let formattedText = "";
+            if (Array.isArray(data.questions)) {
+                data.questions.forEach((q, idx) => {
+                    formattedText += `Q${idx + 1}: ${q.question || q.question_text || ""}\n`;
+                    if (Array.isArray(q.options)) {
+                        q.options.forEach((opt, oIdx) => {
+                            const optionLabel = typeof opt === 'object' ? (opt.text || opt.label || JSON.stringify(opt)) : opt;
+                            formattedText += `   ${String.fromCharCode(65 + oIdx)}) ${optionLabel}\n`;
+                        });
+                    }
+                    formattedText += `Answer: ${q.answer || q.correct_answer || q.correct_option || ""}\n\n`;
+                });
+            } else {
+                formattedText = typeof data.questions === 'string'
+                    ? data.questions
+                    : JSON.stringify(data.questions, null, 2);
+            }
+
+            document.getElementById('quiz-text-content').value = formattedText.trim();
+            document.getElementById('ai-quiz-modal').classList.remove('hidden');
+        } else {
+            alert("🚨 " + (data.message || "Error generating AI quiz."));
+        }
+    } catch (err) {
+        console.error("AI Quiz Error:", err);
+        alert("🚨 Error connecting to vLLM API endpoint.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+}
+
+function closeQuizModal() {
+    document.getElementById('ai-quiz-modal').classList.add('hidden');
+}
+
+function copyQuizToClipboard() {
+    const textarea = document.getElementById('quiz-text-content');
+    textarea.select();
+    navigator.clipboard.writeText(textarea.value).then(() => {
+        alert("📋 Quiz questions copied to clipboard!");
+    });
+}
+
+function downloadQuizFile() {
+    const content = document.getElementById('quiz-text-content').value;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ai_generated_quiz.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 </script>
 {% endblock %}

@@ -199,11 +199,6 @@ class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
     )
     success_url = reverse_lazy('iccbs:password_reset_done')
 
-def get_email_context_data(self):
-        context = super().get_email_context_data()
-        # Dynamically grabs host (e.g., techexe.net or 172.16.2.35)
-        context['domain'] = self.request.get_host()
-        return context
 
 def public_profile(request, username):
     """Render a public profile page."""

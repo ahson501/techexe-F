@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ course.title }} - Lecture Recordings | TechExe LMS</title>
+    <!-- Bootstrap 5 & FontAwesome (matches standard LMS UI) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #ffffff;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 4px solid #3b82f6;
+        }
+        .recording-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            background: #ffffff;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .recording-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        .video-container {
+            background-color: #000;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-container video,
+        .video-container iframe {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .card-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.25rem;
+        }
+        .badge-date {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.35em 0.65em;
+            border-radius: 6px;
+        }
+        .empty-state {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+        <a class="navbar-brand fw-bold" href="{% url 'student_dashboard' %}">
+            <i class="fas fa-graduation-cap text-primary me-2"></i>TechExe LMS
+        </a>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <a href="{% url 'download_activity_report' %}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-file-csv me-1"></i> Activity Report
+            </a>
+            <a href="{% url 'user_profile' %}" class="text-white text-decoration-none">
+                <i class="fas fa-user-circle fa-lg me-1"></i> {{ request.user.username }}
+            </a>
+        </div>
+    </nav>
+
+    <!-- Course Banner -->
+    <div class="header-banner">
+        <div class="container">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <a href="{% url 'student_dashboard' %}" class="text-info text-decoration-none small mb-2 d-inline-block">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Student Dashboard
+                    </a>
+                    <h2 class="mb-1 fw-bold">{{ course.title }}</h2>
+                    <p class="mb-0 text-light opacity-75">
+                        <i class="fas fa-video me-1"></i> Recorded Lectures &amp; Session Archive
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        Total Recordings: {{ recordings|length }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container pb-5">
+
+        <!-- Search & Filter Bar -->
+        {% if recordings %}
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" id="recordingSearch" class="form-control border-start-0"
+                           placeholder="Search lecture title or date..." onkeyup="filterRecordings()">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recordings Grid -->
+        <div class="row g-4" id="recordingsGrid">
+            {% for rec in recordings %}
+            <div class="col-md-6 col-lg-4 recording-item">
+                <div class="recording-card">
+                    <!-- Video Player / External Link Preview -->
+                    <div class="video-container">
+                        {% if rec.video_file %}
+                            <video controls preload="metadata" controlsList="nodownload">
+                                <source src="{{ rec.video_file.url }}" type="video/mp4">
+                                Your browser does not support HTML5 video playback.
+                            </video>
+                        {% elif rec.video_url %}
+                            <div class="text-center text-white p-3">
+                                <i class="fas fa-play-circle fa-3x text-primary mb-2"></i>
+                                <p class="small mb-0">External Cloud Recording</p>
+                            </div>
+                        {% else %}
+                            <div class="text-center text-secondary p-3">
+                                <i class="fas fa-video-slash fa-2x mb-2"></i>
+                                <p class="small mb-0">Video file unavailable</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Recording Info & Action Buttons -->
+                    <div class="card-body">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge-date">
+                                    <i class="far fa-calendar-alt me-1"></i> {{ rec.recorded_at|date:"M d, Y" }}
+                                </span>
+                                <small class="text-muted">Lecture #{{ forloop.revcounter }}</small>
+                            </div>
+                            <h5 class="card-title fw-bold text-dark mb-3 rec-title">{{ rec.title }}</h5>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            {% if rec.video_file %}
+                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                        onclick="openTheaterModal('{{ rec.title|escapejs }}', '{{ rec.video_file.url }}', true)">
+                                    <i class="fas fa-expand me-1"></i> Watch in Theater Mode
+                                </button>
+                                <a href="{{ rec.video_file.url }}" download="{{ rec.title }}.mp4" class="btn btn-success btn-sm">
+                                    <i class="fas fa-download me-1"></i> Download Lecture
+                                </a>
+                            {% elif rec.video_url %}
+                                <a href="{{ rec.video_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-external-link-alt me-1"></i> Watch / Download Recording
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-film fa-4x text-muted mb-3"></i>
+                    <h4 class="fw-bold text-secondary">No Lecture Recordings Available Yet</h4>
+                    <p class="text-muted mb-4">
+                        Your instructor has not uploaded any recorded sessions for <strong>{{ course.title }}</strong> yet.
+                    </p>
+                    <a href="{% url 'student_dashboard' %}" class="btn btn-primary">
+                        Return to Dashboard
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Theater Mode Modal for Fullscreen Viewing -->
+    <div class="modal fade" id="theaterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="theaterModalTitle">Lecture Video</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopModalVideo()"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <video id="theaterVideoPlayer" controls></video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Live Search Filter
+        function filterRecordings() {
+            const query = document.getElementById('recordingSearch').value.toLowerCase();
+            const cards = document.querySelectorAll('.recording-item');
+
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // Theater Mode Modal Player
+        function openTheaterModal(title, videoUrl) {
+            document.getElementById('theaterModalTitle').innerText = title;
+            const player = document.getElementById('theaterVideoPlayer');
+            player.src = videoUrl;
+            const modal = new bootstrap.Modal(document.getElementById('theaterModal'));
+            modal.show();
+            player.play();
+        }
+
+        function stopModalVideo() {
+            const player = document.getElementById('theaterVideoPlayer');
+            player.pause();
+            player.src = "";
+        }
+
+        document.getElementById('theaterModal').addEventListener('hidden.bs.modal', stopModalVideo);
+    </script>
+</body>
+</html>

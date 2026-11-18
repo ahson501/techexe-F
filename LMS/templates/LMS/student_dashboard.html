@@ -45,6 +45,11 @@
     {% empty %}
       <p class="text-sm text-gray-500 italic col-span-3">You are not currently enrolled in any courses.</p>
     {% endfor %}
+    {% if enrollment.course.id in paid_course_ids %}
+    <a href="{% url 'course_recordings' enrollment.course.id %}" class="btn btn-primary btn-sm">
+        Lecture Recordings
+    </a>
+    {% endif %}
   </div>
 
   <!-- Live & Upcoming Sessions Section -->

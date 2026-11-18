@@ -13,6 +13,12 @@
     </div>
   </div>
 
+  {% if is_preview_mode %}
+    <div class="mb-6 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center justify-between">
+      <span>👁️ Faculty Preview Mode — You can inspect questions below, but quiz submission is disabled.</span>
+    </div>
+  {% endif %}
+
   <form method="POST" class="space-y-6">
     {% csrf_token %}
     
@@ -33,9 +39,17 @@
     {% endfor %}
 
     <div class="flex justify-end pt-4">
-      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-lg shadow">
-        Submit Quiz
-      </button>
+      {% if is_preview_mode %}
+        <button type="button" disabled
+                class="bg-gray-300 text-gray-600 font-medium px-6 py-2.5 rounded-lg cursor-not-allowed">
+          🚫 Submission Disabled (Preview Only)
+        </button>
+      {% else %}
+        <button type="submit"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-lg shadow">
+          Submit Quiz
+        </button>
+      {% endif %}
     </div>
   </form>
 </div>

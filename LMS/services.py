@@ -3,6 +3,7 @@ from django.db.models import Q
 from .models import LiveSession, Lesson, Course, SessionAttendance
 import requests
 import json
+import re
 import logging
 from django.conf import settings
 

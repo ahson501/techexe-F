@@ -1,5 +1,8 @@
 import os
 import uuid
+import qrcode
+from io import BytesIO
+from django.core.files import File
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -190,9 +193,30 @@ class Lesson(TimeStampedModel):
 # ==========================================
 # 3. QUIZ & ASSESSMENT MODELS
 # ==========================================
+class ActivityLog(TimeStampedModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lms_activities'
+    )
+    role = models.CharField(max_length=50, blank=True)
+    action = models.CharField(max_length=255)
+    details = models.TextField(blank=True)
 
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        username = self.user.username if self.user else "System"
+        return f"{username} - {self.action}"
+    
 class Quiz(TimeStampedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='quizzes')
+    lesson = models.ForeignKey(
+        'Lesson', on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True
+    )
     title = models.CharField(max_length=200)
     instructions = models.TextField(blank=True)
     pass_mark_percentage = models.PositiveIntegerField(
@@ -201,6 +225,7 @@ class Quiz(TimeStampedModel):
     )
     time_limit_minutes = models.PositiveIntegerField(default=0, help_text="0 means no time limit.")
     max_attempts = models.PositiveIntegerField(default=3)
+    is_manual = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Quiz: {self.title} ({self.module.title})"
@@ -462,15 +487,11 @@ class QuizAttempt(TimeStampedModel):
 # ==========================================
 # 5. CERTIFICATE
 # ==========================================
-import qrcode
-from io import BytesIO
-from django.core.files import File
-
 class Certificate(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certificates')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
-    certificate_code = models.CharField(max_length=50, unique=True, blank=True)
+    certificate_code = models.CharField(max_length=100, blank=True)  # Removed unique=True so same student can earn certs in multiple courses/year
     issued_at = models.DateTimeField(default=timezone.now)
     is_revoked = models.BooleanField(default=False)
     revocation_reason = models.TextField(blank=True, null=True)
@@ -480,10 +501,18 @@ class Certificate(TimeStampedModel):
         unique_together = ('student', 'course')
 
     def save(self, *args, **kwargs):
-        # 1. Generate unique human-readable certificate code
+        # 1. Generate VLC-CERT-[Year]-[Student Registration Number]
         if not self.certificate_code:
             year_str = self.issued_at.year if self.issued_at else timezone.now().year
-            self.certificate_code = f"CERT-{year_str}-{str(self.id)[:8].upper()}"
+            
+            # Fetch registration number from StudentProfile (adjust field name if yours is e.g. reg_no or roll_number)
+            profile = getattr(self.student, 'student_profile', None)
+            reg_no = (
+                getattr(profile, 'registration_number', None)
+                or getattr(profile, 'reg_number', None)
+                or self.student.username
+            )
+            self.certificate_code = f"VLC-CERT-{year_str}-{reg_no}"
 
         # 2. Generate dynamic QR code pointing to public verification endpoint
         if not self.qr_code:
@@ -617,6 +646,53 @@ class DiscussionTopic(TimeStampedModel):
     def __str__(self):
         return f"[{self.course.title}] {self.title} by {self.author.username}"
 
+class CourseReview(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='reviews')
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.PositiveSmallIntegerField(default=5)
+    comment = models.TextField()
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+# --- 3. Lecture Recordings ---
+class LectureRecording(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='recordings')
+    title = models.CharField(max_length=255)
+    video_file = models.FileField(upload_to='lecture_recordings/', blank=True, null=True)
+    video_url = models.URLField(blank=True, null=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+# --- 5. Accounts Department: Payroll & Perks ---
+class BenefitCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # e.g., Medical, Transport, Housing
+    default_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_percentage = models.BooleanField(default=False)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+    
+class FacultyPayroll(models.Model):
+    faculty = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payrolls')
+    month = models.DateField(help_text="First day of the payroll month")
+    credit_hours_taught = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    rate_per_credit_hour = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    base_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_perks = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    net_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    is_paid = models.BooleanField(default=False)
+
+    def calculate_totals(self):
+        self.base_salary = self.credit_hours_taught * self.rate_per_credit_hour
+        self.total_perks = sum(item.calculated_amount for item in self.perk_items.all())
+        self.net_salary = self.base_salary + self.total_perks
+        self.save()
+
+class FacultyPayrollPerk(models.Model):
+    payroll = models.ForeignKey(FacultyPayroll, on_delete=models.CASCADE, related_name='perk_items')
+    category = models.ForeignKey(BenefitCategory, on_delete=models.PROTECT)
+    calculated_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
 
 class DiscussionPost(TimeStampedModel):
     """Replies and nested comments within a discussion topic."""
@@ -665,3 +741,4 @@ class VisitingFacultyClaim(TimeStampedModel):
 
     def __str__(self):
         return f"Claim #{self.id} - {self.faculty.username} ({self.status})"
+    

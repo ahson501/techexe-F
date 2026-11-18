@@ -60,6 +60,11 @@ urlpatterns = [
     path('quizzes/<int:pk>/take/', views.QuizTakeView.as_view(), name='quiz_take'),
     path('quizzes/<int:pk>/latest-result/', views.LatestQuizResultRedirectView.as_view(), name='quiz_result_latest'),
     path('quiz-attempts/<int:pk>/', views.QuizResultDetailView.as_view(), name='quiz_result_detail'),
+    path('api/v1/lessons/<int:lesson_id>/manual-quiz/', views.ManualQuizCreateView.as_view(), name='create_manual_quiz'),
+    path('lessons/<int:lesson_id>/', views.LessonDetailView.as_view(), name='lesson_detail'),
+    path('courses/<uuid:course_id>/attendance/download/', views.DownloadCourseAttendanceView.as_view(), name='download_attendance'),
+    path('courses/<uuid:course_id>/recordings/', views.CourseRecordingsView.as_view(), name='course_recordings'),
+    path('courses/<uuid:course_id>/students/<int:student_id>/', views.InstructorStudentDetailView.as_view(), name='instructor_student_detail'),
 
     # Phase 3 Analytics & Sync APIs
     path('course/<uuid:course_id>/at-risk-dashboard/', views.InstructorAtRiskDashboardView.as_view(), name='at_risk_dashboard'),
@@ -74,4 +79,8 @@ urlpatterns = [
     # Certificates & Public QR Verification
     path('certificates/<uuid:certificate_id>/download/', views.DownloadCertificatePillowView.as_view(), name='download_certificate'),
     path('verify/certificate/<uuid:certificate_id>/', views.PublicCertificateVerifyView.as_view(), name='public_certificate_verify'),
+    
+    #Profile & Accounts
+    path('profile/', views.UserProfileView.as_view(), name='user_profile'),
+    path('reports/activities/download/', views.DownloadActivityReportView.as_view(), name='download_activity_report'),
 ]
