@@ -3,123 +3,361 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}TechExe LMS Portal{% endblock %}</title>
+  <title>{% block title %}SySCon EduCore | LMS Portal{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/LMS/Appmanifest.json">
+  <meta name="theme-color" content="#0f766e">
+
+  <!-- Service Worker Registration with Root Scope -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/LMS/Appserviceworker.js', { scope: '/' })
+          .then(reg => console.log('✅ PWA Service Worker Active Scope:', reg.scope))
+          .catch(err => console.error('❌ Service Worker Registration Failed:', err));
+      });
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar for Moodle-style left drawer */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+  {% block extra_head %}{% endblock %}
 </head>
 
-<!-- PWA Manifest -->
+<body class="bg-[#f4f6f9] text-slate-800 min-h-screen flex flex-col antialiased">
 
-<link rel="manifest" href="/LMS/Appmanifest.json">
-<meta name="theme-color" content="#4f46e5">
+  {% with groups_str=user.groups.values_list|stringformat:"s"|lower %}
 
-<!-- Service Worker Registration with Root Scope -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/LMS/Appserviceworker.js', { scope: '/' })
-        .then(reg => console.log('✅ PWA Service Worker Active Scope:', reg.scope))
-        .catch(err => console.error('❌ Service Worker Registration Failed:', err));
-    });
-  }
-</script>
+  <!-- MOODLE-STYLE TOP BAR (Fixed 64px) -->
+  <header class="sticky top-0 z-40 h-16 bg-white border-b border-slate-200 shadow-xs">
+    <div class="h-full px-4 lg:px-6 flex items-center justify-between gap-4">
 
-
-<body class="bg-gray-50 min-h-screen flex flex-col">
-
- <!-- LMS Top Navigation -->
-<nav class="bg-gray-900 text-white border-b border-gray-800 shadow-lg">
-  <div class="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
-    
-    <!-- Brand -->
-    <a href="{% url 'course_list' %}" class="text-xl font-bold tracking-wide text-emerald-400 flex items-center gap-2">
-      <span>🎓</span> SySCon Educore
-    </a>
-
-    <!-- Navigation Links -->
-    <div class="flex items-center space-x-4 text-sm font-medium">
-      <a href="{% url 'course_list' %}" class="text-gray-300 hover:text-emerald-400 transition">Courses</a>
-
-      {% if user.is_authenticated %}
-        <!-- Student Links -->
-        {% if "lms_student" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'STUDENT' %}
-          <a href="{% url 'student_dashboard' %}" class="text-gray-300 hover:text-emerald-400 transition">My Dashboard</a>
-        {% endif %}
-
-        <!-- Instructor & Visiting Faculty Links -->
-        {% if "lms_instructor" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'INSTRUCTOR' or user.lms_profile.role == 'VISITING' %}
-          <a href="{% url 'discussion_board' %}" class="text-gray-300 hover:text-emerald-400 transition">Class Discussions</a>
-          {% if user.lms_profile.role == 'VISITING' %}
-            <a href="{% url 'faculty_claims' %}" class="text-gray-300 hover:text-emerald-400 transition">Payout Claims</a>
-          {% endif %}
-        {% endif %}
-
-        <!-- HOD & Admin Links -->
-        {% if "hod" in user.groups.values_list|stringformat:"s" or user.lms_profile.role == 'HOD' or user.is_staff %}
-          <a href="{% url 'hod_section_assignment' %}" class="text-indigo-400 hover:text-indigo-300 transition">HOD Management</a>
-        {% endif %}
-
-        <!-- Styled Download Activity Report Button -->
-        <a href="{% url 'download_activity_report' %}"
-           title="Download CSV Activity Report"
-           class="group inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-2 rounded-full shadow-md shadow-emerald-950/50 border border-emerald-400/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          <svg class="w-3.5 h-3.5 text-emerald-100 transition-transform duration-200 group-hover:translate-y-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
-          </svg>
-          <span>Activity Report</span>
-        </a>
-
-        <!-- Clickable User Profile Pill -->
-        <a href="{% url 'user_profile' %}"
-           title="View My Profile, Attendance & Certificates"
-           class="inline-flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-100 hover:text-emerald-300 px-3 py-1.5 rounded-full border border-gray-700 hover:border-emerald-500/50 transition">
-          <span>👤</span>
-          <span>{{ user.get_full_name|default:user.username }}</span>
-        </a>
-
-        <!-- Change Password Link -->
-        <a href="{% url 'iccbs:password_change' %}" class="text-gray-400 hover:text-white text-xs font-semibold transition">
-          🔒 Password
-        </a>
-
-        <!-- Single Post-Based Logout Form -->
-        <form method="POST" action="{% url 'logout' %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" class="text-red-400 hover:text-red-300 text-xs font-semibold bg-transparent border-0 cursor-pointer p-0 transition">
-            Logout
+      <!-- Left: Sidebar Toggle + Brand -->
+      <div class="flex items-center gap-3">
+        {% if user.is_authenticated %}
+          <button id="sidebarToggleBtn" type="button" aria-label="Toggle Navigation Drawer"
+                  class="p-2 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
           </button>
-        </form>
+        {% endif %}
 
-      {% else %}
-        <!-- Unauthenticated Public Visitor -->
-        <a href="{% url 'login' %}" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-white font-semibold transition">
-          Login
+        <a href="{% url 'course_list' %}" class="flex items-center gap-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-600 to-emerald-600 text-white flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition">
+            🎓
+          </div>
+          <div class="leading-tight">
+            <span class="block text-base font-extrabold tracking-tight text-slate-900">SySCon <span class="text-teal-600">EduCore</span></span>
+            <span class="hidden sm:block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Academic Learning Portal</span>
+          </div>
         </a>
+
+        <!-- Top Primary Quick-Links (Moodle Boost Header Style) -->
+        <nav class="hidden md:flex items-center ml-6 space-x-1 text-sm font-semibold">
+          <a href="{% url 'course_list' %}"
+             class="px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'course_list' %}bg-teal-50 text-teal-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+            Course Catalog
+          </a>
+
+          {% if user.is_authenticated %}
+            {% if "lms_student" in groups_str or user.lms_profile.role == 'STUDENT' %}
+              <a href="{% url 'student_dashboard' %}"
+                 class="px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'student_dashboard' %}bg-teal-50 text-teal-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                My Learning
+              </a>
+            {% endif %}
+
+            {% if "lms_instructor" in groups_str or "lms_visitingfaculty" in groups_str or user.lms_profile.role == 'INSTRUCTOR' or user.lms_profile.role == 'VISITING' %}
+              <a href="{% url 'instructor_dashboard' %}"
+                 class="px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'instructor_dashboard' %}bg-teal-50 text-teal-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                Teaching Hub
+              </a>
+            {% endif %}
+
+            {% if "lms_hod" in groups_str or user.lms_profile.role == 'HOD' or user.is_staff %}
+              <a href="{% url 'hod_section_assignment' %}"
+                 class="px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'hod_section_assignment' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:text-indigo-700 hover:bg-slate-100{% endif %}">
+                HOD Console
+              </a>
+            {% endif %}
+          {% endif %}
+        </nav>
+      </div>
+
+      <!-- Right: Action Buttons & User Menu -->
+      <div class="flex items-center gap-2.5">
+        {% if user.is_authenticated %}
+
+          <!-- Activity Report Pill -->
+          <a href="{% url 'download_activity_report' %}"
+             title="Download CSV Activity Report"
+             class="hidden sm:inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-xs transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
+            </svg>
+            <span>Activity Report</span>
+          </a>
+
+          <!-- User Profile Pill -->
+          <a href="{% url 'user_profile' %}"
+             title="View My Profile, Attendance & Certificates"
+             class="inline-flex items-center gap-2 bg-slate-100 hover:bg-teal-50 text-slate-800 hover:text-teal-800 px-3 py-1.5 rounded-full border border-slate-200 hover:border-teal-300 text-xs font-bold transition">
+            <span class="w-6 h-6 rounded-full bg-teal-700 text-white flex items-center justify-center text-[11px] font-extrabold uppercase">
+              {{ user.username|slice:":1" }}
+            </span>
+            <span class="max-w-[120px] truncate">{{ user.get_full_name|default:user.username }}</span>
+          </a>
+
+          <!-- Change Password Icon Button -->
+          <a href="{% url 'iccbs:password_change' %}"
+             title="Change Password"
+             class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition text-xs font-semibold">
+            🔒
+          </a>
+
+          <!-- POST Logout Button -->
+          <form method="POST" action="{% url 'logout' %}" class="inline">
+            {% csrf_token %}
+            <button type="submit"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 transition cursor-pointer">
+              Logout
+            </button>
+          </form>
+
+        {% else %}
+          <a href="{% url 'login' %}"
+             class="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg text-white text-sm font-bold shadow-xs transition">
+            Log in
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- SHELL CONTAINER: Collapsible Left Drawer + Main Workspace -->
+  <div class="flex-grow flex relative">
+
+    {% if user.is_authenticated %}
+      <!-- Mobile Backdrop -->
+      <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/40 z-20 hidden lg:hidden"></div>
+
+      <!-- MOODLE LEFT NAVIGATION DRAWER (260px) -->
+      <aside id="lmsSidebar"
+             class="fixed lg:sticky top-16 left-0 z-30 h-[calc(100vh-4rem)] w-64 bg-white border-r border-slate-200 flex flex-col justify-between overflow-y-auto transition-all duration-200 -translate-x-full lg:translate-x-0 shrink-0">
+
+        <div class="p-4 space-y-6">
+
+          <!-- Section: Navigation -->
+          <div>
+            <p class="px-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              Navigation
+            </p>
+            <ul class="space-y-1 text-sm font-medium">
+              <li>
+                <a href="{% url 'course_list' %}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'course_list' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                  <span>📚</span>
+                  <span>All Courses</span>
+                </a>
+              </li>
+
+              {% if "lms_student" in groups_str or user.lms_profile.role == 'STUDENT' %}
+                <li>
+                  <a href="{% url 'student_dashboard' %}"
+                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'student_dashboard' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                    <span>🧭</span>
+                    <span>Student Dashboard</span>
+                  </a>
+                </li>
+              {% endif %}
+
+              <li>
+                <a href="{% url 'discussion_board' %}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if 'discussion' in request.resolver_match.url_name %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                  <span>💬</span>
+                  <span>Discussion Forum</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{% url 'user_profile' %}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'user_profile' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                  <span>🏅</span>
+                  <span>Profile &amp; Certificates</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section: Faculty & Teaching Tools -->
+          {% if "lms_instructor" in groups_str or "lms_visitingfaculty" in groups_str or user.lms_profile.role == 'INSTRUCTOR' or user.lms_profile.role == 'VISITING' %}
+            <div>
+              <p class="px-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                Faculty Workspace
+              </p>
+              <ul class="space-y-1 text-sm font-medium">
+                <li>
+                  <a href="{% url 'instructor_dashboard' %}"
+                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'instructor_dashboard' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                    <span>🧑‍🏫</span>
+                    <span>Instructor Dashboard</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="{% url 'create_discussion_topic' %}"
+                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'create_discussion_topic' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                    <span>📢</span>
+                    <span>Post Announcement</span>
+                  </a>
+                </li>
+                {% if "lms_visitingfaculty" in groups_str or user.lms_profile.role == 'VISITING' %}
+                  <li>
+                    <a href="{% url 'faculty_claims' %}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'faculty_claims' %}bg-teal-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                      <span>💳</span>
+                      <span>Payout Claims</span>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <!-- Section: Administration (HOD / Accountant / Admissions) -->
+          {% if "lms_hod" in groups_str or "lms_accountant" in groups_str or "lms_admissions_officer" in groups_str or user.lms_profile.role == 'HOD' or user.is_staff %}
+            <div>
+              <p class="px-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                Site Administration
+              </p>
+              <ul class="space-y-1 text-sm font-medium">
+                {% if "lms_hod" in groups_str or user.lms_profile.role == 'HOD' or user.is_staff %}
+                  <li>
+                    <a href="{% url 'hod_section_assignment' %}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if request.resolver_match.url_name == 'hod_section_assignment' %}bg-indigo-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-indigo-50 hover:text-indigo-700{% endif %}">
+                      <span>🏛️</span>
+                      <span>HOD Management</span>
+                    </a>
+                  </li>
+                {% endif %}
+
+                {% if "lms_accountant" in groups_str or user.is_staff %}
+                  <li>
+                    <a href="/LMS/dashboard/accountant/"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {% if '/dashboard/accountant/' in request.path %}bg-indigo-600 text-white font-bold shadow-xs{% else %}text-slate-700 hover:bg-indigo-50 hover:text-indigo-700{% endif %}">
+                      <span>🧾</span>
+                      <span>Fee Vouchers</span>
+                    </a>
+                  </li>
+                {% endif %}
+
+                <li>
+                  <a href="{% url 'download_activity_report' %}"
+                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition">
+                    <span>📊</span>
+                    <span>Export CSV Report</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Drawer Bottom Quick Card -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/70">
+          <div class="text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Signed in as</span>
+            <span class="font-bold text-teal-700 truncate max-w-[120px]">{{ user.username }}</span>
+          </div>
+          <a href="{% url 'iccbs:password_change' %}"
+             class="mt-2 block text-center text-xs font-semibold text-slate-600 hover:text-teal-700 bg-white border border-slate-200 rounded-lg py-1.5 transition">
+            🔒 Security &amp; Password
+          </a>
+        </div>
+      </aside>
+    {% endif %}
+
+    <!-- MAIN CONTENT WORKSPACE -->
+    <div class="flex-grow flex flex-col min-w-0">
+
+      <!-- Flash Messages -->
+      {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 mt-5 w-full space-y-2">
+          {% for message in messages %}
+            <div class="p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-xs {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+              <span>{{ message }}</span>
+              <button type="button" onclick="this.parentElement.remove()" class="text-xs font-bold opacity-60 hover:opacity-100 ml-4">✕</button>
+            </div>
+          {% endfor %}
+        </div>
       {% endif %}
+
+      <!-- Page Content -->
+      <main class="flex-grow">
+        {% block content %}
+        {% endblock %}
+      </main>
+
+      <!-- Moodle-Style Clean Academic Footer -->
+      <footer class="bg-white border-t border-slate-200 text-slate-500 text-xs py-5 px-4 lg:px-8 mt-10">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p class="font-semibold text-slate-600">© SySCon EduCore — Academic Learning Management System</p>
+          <div class="flex items-center gap-4">
+            <a href="{% url 'course_list' %}" class="hover:text-teal-700 transition">Course Catalog</a>
+            {% if user.is_authenticated %}
+              <a href="{% url 'user_profile' %}" class="hover:text-teal-700 transition">My Certificates</a>
+            {% endif %}
+          </div>
+        </div>
+      </footer>
+
     </div>
   </div>
-</nav>
-      
-  <!-- Flash Messages -->
-  {% if messages %}
-    <div class="max-w-7xl mx-auto px-4 mt-4 w-full">
-      {% for message in messages %}
-        <div class="p-4 rounded-lg text-sm font-medium mb-2 {% if message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
 
-  <!-- Main Content Block -->
-  <main class="flex-grow">
-    {% block content %}
-    {% endblock %}
-  </main>
+  {% endwith %}
 
-  <!-- Footer -->
-  <footer class="bg-gray-900 text-gray-400 text-xs py-6 border-t border-gray-800 text-center">
-    <p>© ICCBS. All rights reserved.</p>
-  </footer>
+  <!-- Sidebar Drawer Toggle Script (Remembers Collapse State on Desktop) -->
+  <script>
+    (function () {
+      const toggleBtn = document.getElementById('sidebarToggleBtn');
+      const sidebar = document.getElementById('lmsSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (!toggleBtn || !sidebar) return;
 
+      const isDesktop = () => window.innerWidth >= 1024;
+
+      // Restore desktop collapsed preference
+      if (isDesktop() && localStorage.getItem('lms_sidebar_collapsed') === 'true') {
+        sidebar.classList.add('lg:hidden');
+      }
+
+      toggleBtn.addEventListener('click', () => {
+        if (isDesktop()) {
+          sidebar.classList.toggle('lg:hidden');
+          localStorage.setItem('lms_sidebar_collapsed', sidebar.classList.contains('lg:hidden'));
+        } else {
+          sidebar.classList.toggle('-translate-x-full');
+          if (backdrop) backdrop.classList.toggle('hidden');
+        }
+      });
+
+      if (backdrop) {
+        backdrop.addEventListener('click', () => {
+          sidebar.classList.add('-translate-x-full');
+          backdrop.classList.add('hidden');
+        });
+      }
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

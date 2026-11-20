@@ -5,7 +5,7 @@ from io import BytesIO
 from django.core.files import File
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.utils.text import slugify
 from django.utils import timezone
 from ckeditor_uploader.fields import RichTextUploadingField
@@ -15,6 +15,73 @@ from django.dispatch import receiver
 from datetime import timedelta
 
 User = get_user_model()
+
+class LectureMaterial(models.Model):
+    class MaterialType(models.TextChoices):
+        VIDEO = 'VIDEO', 'Video Recording'
+        PPT = 'PPT', 'PowerPoint (PPT/PPTX)'
+        PDF = 'PDF', 'PDF Document'
+        WORD = 'WORD', 'Word Document (DOC/DOCX)'
+        TXT = 'TXT', 'Text File (TXT)'
+        GRAPHIC = 'GRAPHIC', 'Graphic / Diagram (PNG/JPG/SVG)'
+
+    course = models.ForeignKey(
+        'Course',
+        on_delete=models.CASCADE,
+        related_name='lecture_materials'
+    )
+    module = models.ForeignKey(
+        'Module',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lecture_materials'
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    title = models.CharField(max_length=255)
+    material_type = models.CharField(
+        max_length=20,
+        choices=MaterialType.choices,
+        default=MaterialType.VIDEO
+    )
+    file = models.FileField(
+        upload_to='lecture_materials/%Y/%m/',
+        null=True,
+        blank=True,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=[
+                    'mp4', 'webm', 'mkv', 'mov',
+                    'ppt', 'pptx',
+                    'pdf',
+                    'doc', 'docx',
+                    'txt',
+                    'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'
+                ]
+            )
+        ]
+    )
+    video_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional external video/Zoom recording URL if not uploading a video file."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title} ({self.get_material_type_display()})"
+
+    @property
+    def filename(self):
+        return os.path.basename(self.file.name) if self.file else ''
 
 class TimeStampedModel(models.Model):
     """Abstract base model adding created_at and updated_at timestamps."""
@@ -483,15 +550,15 @@ class QuizAttempt(TimeStampedModel):
     def __str__(self):
         return f"{self.student.username} - {self.quiz.title} (Attempt #{self.attempt_number}: {self.score_percentage}%)"
 
+# ==============================================================================
+# CERTIFICATE
+# =============================================================================
 
-# ==========================================
-# 5. CERTIFICATE
-# ==========================================
 class Certificate(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certificates')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
-    certificate_code = models.CharField(max_length=100, blank=True)  # Removed unique=True so same student can earn certs in multiple courses/year
+    certificate_code = models.CharField(max_length=100, blank=True)
     issued_at = models.DateTimeField(default=timezone.now)
     is_revoked = models.BooleanField(default=False)
     revocation_reason = models.TextField(blank=True, null=True)
@@ -500,19 +567,32 @@ class Certificate(TimeStampedModel):
     class Meta:
         unique_together = ('student', 'course')
 
+    def build_certificate_code(self):
+        year_str = self.issued_at.year if self.issued_at else timezone.now().year
+        profile = getattr(self.student, 'student_profile', None) or getattr(self.student, 'lms_profile', None)
+        student_identifier = (
+            getattr(profile, 'student_id', None)
+            or getattr(profile, 'registration_number', None)
+            or getattr(profile, 'reg_number', None)
+            or getattr(profile, 'reg_no', None)
+            or getattr(profile, 'roll_number', None)
+            or str(self.student.id)
+        )
+        id_clean = str(student_identifier).strip().upper()
+        return f"VLC-CERT-{year_str}-{id_clean}"
+
+    @property
+    def display_code(self):
+        expected_code = self.build_certificate_code()
+        if self.certificate_code == expected_code:
+            return self.certificate_code
+        return expected_code
+
     def save(self, *args, **kwargs):
-        # 1. Generate VLC-CERT-[Year]-[Student Registration Number]
-        if not self.certificate_code:
-            year_str = self.issued_at.year if self.issued_at else timezone.now().year
-            
-            # Fetch registration number from StudentProfile (adjust field name if yours is e.g. reg_no or roll_number)
-            profile = getattr(self.student, 'student_profile', None)
-            reg_no = (
-                getattr(profile, 'registration_number', None)
-                or getattr(profile, 'reg_number', None)
-                or self.student.username
-            )
-            self.certificate_code = f"VLC-CERT-{year_str}-{reg_no}"
+        # 1. Enforce VLC-CERT-[Year]-[Student ID]
+        expected_code = self.build_certificate_code()
+        if not self.certificate_code or self.certificate_code != expected_code:
+            self.certificate_code = expected_code
 
         # 2. Generate dynamic QR code pointing to public verification endpoint
         if not self.qr_code:
@@ -523,10 +603,9 @@ class Certificate(TimeStampedModel):
             self.qr_code.save(f"qr_{self.id}.png", File(buffer), save=False)
 
         super().save(*args, **kwargs)
-
+        
     def __str__(self):
-        return f"Certificate {self.certificate_code} - {self.student.username} ({self.course.title})"
-
+        return f"Certificate {self.display_code} - {self.student.username} ({self.course.title})"
 
 # ==========================================
 # 6. LIVE SESSIONS & FACULTY CLAIMS WORKFLOW

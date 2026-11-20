@@ -5,13 +5,13 @@ import logging
 import uuid
 import qrcode
 import csv
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation 
 from io import BytesIO
 
 # Third-Party Imports
 import requests
 from PIL import Image, ImageDraw, ImageFont
-
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 # Django Core & Auth Imports
 from django.conf import settings
@@ -22,16 +22,25 @@ from django.contrib.auth.models import Group
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
+from django.core.files.storage import default_storage
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
+from django.db import models
 from django.db.models import Count, Prefetch, Q, Sum, Max, OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from datetime import datetime
 from django.utils.text import slugify
 from django.views.generic import DetailView, ListView, View
+from django.utils.html import escape, strip_tags
+from django.dispatch import receiver
+from django.contrib.auth.signals import user_logged_in, user_logged_out
+
+
+
 # services
 from .services import AIAssistanceService
 
@@ -46,10 +55,10 @@ from .models import (
     DiscussionComment,
     DiscussionPost,
     DiscussionTopic,
-    Enrollment,
     FacultyInvitation,
     Lesson,
     LessonProgress,
+    LectureMaterial,
     LiveSession,
     SessionAttendance,
     Question,
@@ -371,9 +380,12 @@ class AdmissionsDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             groups__name__in=['LMS_Instructor', 'LMS_Student']
         ).select_related('student_profile').prefetch_related('groups').order_by('-date_joined').distinct()
 
+        all_courses = Course.objects.select_related('instructor').order_by('title')
+
         context = {
             'students': students,
             'total_students': students.count(),
+            'all_courses': all_courses,
         }
         return render(request, 'LMS/admissions_dashboard.html', context)
 
@@ -657,25 +669,29 @@ class CreateCourseView(LoginRequiredMixin, UserPassesTestMixin, View):
     
 
 
-
 class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Curriculum builder for adding modules, lessons, and managing publication state."""
     
     def test_func(self):
         user = self.request.user
-        return user.is_staff or user.groups.filter(name__in=['LMS_Instructor', 'LMS_HOD']).exists()
+        return user.is_staff or user.groups.filter(
+            name__iregex=r'^(LMS_Instructor|LMS_VisitingFaculty|LMS_HOD|LMS_admissions_officer)$'
+        ).exists()
 
     def handle_no_permission(self):
-        messages.error(self.request, "You do not have permission to build this course.")
+        messages.error(self.request, "You do not have permission to build or publish this course.")
         return redirect('instructor_dashboard')
 
-    def get(self, request, course_id):
-        # Fetch course owned by instructor or accessible by staff
-        if request.user.is_staff:
-            course = get_object_or_404(Course, id=course_id)
-        else:
-            course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    def _get_course(self, request, course_id):
+        is_admin_or_hod = request.user.is_staff or request.user.groups.filter(
+            name__iregex=r'^(LMS_HOD|LMS_admissions_officer)$'
+        ).exists()
+        if is_admin_or_hod:
+            return get_object_or_404(Course, id=course_id)
+        return get_object_or_404(Course, id=course_id, instructor=request.user)
 
+    def get(self, request, course_id):
+        course = self._get_course(request, course_id)
         modules = course.modules.prefetch_related('lessons').all().order_by('order', 'id')
         
         return render(request, 'LMS/course_builder.html', {
@@ -684,12 +700,9 @@ class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
         })
 
     def post(self, request, course_id):
-        if request.user.is_staff:
-            course = get_object_or_404(Course, id=course_id)
-        else:
-            course = get_object_or_404(Course, id=course_id, instructor=request.user)
-
+        course = self._get_course(request, course_id)
         action = request.POST.get('action')
+        redirect_to = request.POST.get('next')
 
         if action == 'add_module':
             module_title = request.POST.get('module_title', '').strip()
@@ -724,10 +737,252 @@ class CourseBuilderView(LoginRequiredMixin, UserPassesTestMixin, View):
                 messages.error(request, "Cannot publish course without at least one lesson!")
             else:
                 course.status = 'PUBLISHED'
-                course.save()
+                course.save(update_fields=['status'])
+                ActivityLog.objects.create(
+                    user=request.user,
+                    role=DownloadActivityReportView._detect_role(request.user),
+                    action=f"Published Course: '{course.title}'",
+                    details=f"Course ID: {course.id}",
+                )
                 messages.success(request, f"Course '{course.title}' is now live and published!")
 
+        elif action == 'unpublish_course':
+            course.status = 'DRAFT'
+            course.save(update_fields=['status'])
+            ActivityLog.objects.create(
+                user=request.user,
+                role=DownloadActivityReportView._detect_role(request.user),
+                action=f"Reverted Course to Draft: '{course.title}'",
+                details=f"Course ID: {course.id}",
+            )
+            messages.success(request, f"Course '{course.title}' reverted to Draft.")
+
+        elif action == 'edit_course':
+            new_title = request.POST.get('title', '').strip()
+            new_description = request.POST.get('description', '').strip()
+
+            if not new_title:
+                messages.error(request, "Course title cannot be empty.")
+            else:
+                course.title = new_title
+                update_fields = ['title']
+                course_fields = {f.name for f in Course._meta.get_fields()}
+                if 'description' in course_fields:
+                    course.description = new_description
+                    update_fields.append('description')
+
+                course.save(update_fields=update_fields)
+                ActivityLog.objects.create(
+                    user=request.user,
+                    role=DownloadActivityReportView._detect_role(request.user),
+                    action=f"Edited Course Details: '{course.title}'",
+                    details=f"Course ID: {course.id}",
+                )
+                messages.success(request, f"Course '{course.title}' updated successfully!")
+
+        elif action == 'edit_lesson':
+            lesson_id = request.POST.get('lesson_id')
+            lesson = get_object_or_404(Lesson, id=lesson_id, module__course=course)
+            new_lesson_title = request.POST.get('lesson_title', '').strip()
+            new_body_text = request.POST.get('body_text', '').strip()
+
+            if new_lesson_title:
+                lesson.title = new_lesson_title
+                lesson.body_text = new_body_text
+                lesson.save(update_fields=['title', 'body_text'])
+                ActivityLog.objects.create(
+                    user=request.user,
+                    role=DownloadActivityReportView._detect_role(request.user),
+                    action=f"Edited Lesson: '{lesson.title}'",
+                    details=f"Course: {course.title} | Lesson ID: {lesson.id}",
+                )
+                messages.success(request, f"Lesson '{lesson.title}' updated!")
+
+        elif action == 'delete_lesson':
+            lesson_id = request.POST.get('lesson_id')
+            lesson = get_object_or_404(Lesson, id=lesson_id, module__course=course)
+            deleted_title = lesson.title
+            lesson.delete()
+            ActivityLog.objects.create(
+                user=request.user,
+                role=DownloadActivityReportView._detect_role(request.user),
+                action=f"Deleted Lesson: '{deleted_title}'",
+                details=f"Course: {course.title}",
+            )
+            messages.success(request, f"Lesson '{deleted_title}' removed.")
+
+        if redirect_to:
+            return redirect(redirect_to)
         return redirect('course_builder', course_id=course.id)
+    
+
+class AddLessonView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows assigned instructors, visiting faculty, HODs, or staff to add a rich-text lesson + figure."""
+
+    def test_func(self):
+        user = self.request.user
+        return (
+            user.is_staff
+            or user.groups.filter(name__in=['LMS_Instructor', 'LMS_VisitingFaculty', 'LMS_HOD']).exists()
+        )
+
+    def post(self, request):
+        course_id = request.POST.get('course_id')
+        module_id = request.POST.get('module_id')
+        new_module_title = request.POST.get('new_module_title', '').strip()
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+        figure_file = request.FILES.get('figure')
+        figure_caption = request.POST.get('figure_caption', '').strip()
+        video_url = request.POST.get('video_url', '').strip() or None
+        is_preview = bool(request.POST.get('is_preview'))
+
+        course = get_object_or_404(Course, id=course_id)
+
+        is_hod_or_staff = request.user.is_staff or request.user.groups.filter(name='LMS_HOD').exists()
+        is_assigned = (
+            course.instructor_id == request.user.id
+            or CourseSection.objects.filter(course=course, instructor=request.user).exists()
+        )
+        if not (is_hod_or_staff or is_assigned):
+            messages.error(request, "You are not assigned to add lessons to this course.")
+            return redirect(request.META.get('HTTP_REFERER', 'instructor_dashboard'))
+
+        if not title:
+            messages.error(request, "Lesson title is required.")
+            return redirect(request.META.get('HTTP_REFERER', 'instructor_dashboard'))
+
+        # Select existing module OR create a new one
+        if new_module_title:
+            next_mod_order = Module.objects.filter(course=course).count() + 1
+            module = Module.objects.create(
+                course=course,
+                title=new_module_title,
+                order=next_mod_order,
+            )
+        elif module_id:
+            module = get_object_or_404(Module, id=module_id, course=course)
+        else:
+            module, _ = Module.objects.get_or_create(
+                course=course,
+                order=1,
+                defaults={'title': 'General Modules'},
+            )
+
+        # Handle Figure / Diagram Upload
+        if figure_file:
+            save_path = default_storage.save(f"lesson_figures/{figure_file.name}", figure_file)
+            saved_figure_url = default_storage.url(save_path)
+
+            caption_html = (
+                f'<figcaption style="font-size:0.85rem;color:#475569;margin-top:0.5rem;">{escape(figure_caption)}</figcaption>'
+                if figure_caption else ''
+            )
+            figure_html = (
+                f'<figure style="margin:1.25rem 0;text-align:center;">'
+                f'<img src="{saved_figure_url}" alt="{escape(figure_caption or title)}" '
+                f'style="max-width:100%;border-radius:0.75rem;border:1px solid #e2e8f0;" />'
+                f'{caption_html}</figure>'
+            )
+            content = f"{content}\n{figure_html}" if content else figure_html
+
+        next_lesson_order = Lesson.objects.filter(module=module).count() + 1
+
+        # Map fields dynamically to match your exact Lesson model schema
+        lesson_fields = {f.name: f for f in Lesson._meta.get_fields() if hasattr(f, 'attname')}
+        lesson_kwargs = {
+            'module': module,
+            'title': title,
+        }
+
+        if 'order' in lesson_fields:
+            lesson_kwargs['order'] = next_lesson_order
+
+        # Find the rich-text / body field on Lesson (e.g., content, body, text, description, notes)
+        body_candidates = ['content', 'body', 'text', 'description', 'notes', 'rich_content', 'material']
+        body_field = next((name for name in body_candidates if name in lesson_fields), None)
+        if not body_field:
+            # Fallback to any TextField on Lesson
+            body_field = next(
+                (name for name, f in lesson_fields.items() if isinstance(f, models.TextField)),
+                None,
+            )
+        if body_field:
+            lesson_kwargs[body_field] = content
+
+        if 'video_url' in lesson_fields and video_url:
+            lesson_kwargs['video_url'] = video_url
+        if 'is_preview' in lesson_fields:
+            lesson_kwargs['is_preview'] = is_preview
+        if figure_file:
+            for img_field in ('image', 'figure', 'attachment', 'file'):
+                if img_field in lesson_fields:
+                    lesson_kwargs[img_field] = figure_file
+                    break
+
+        Lesson.objects.create(**lesson_kwargs)
+
+        messages.success(request, f"Lesson '{title}' published to '{course.title}' and enrolled students notified!")
+        return redirect(request.META.get('HTTP_REFERER', 'instructor_dashboard'))
+    
+
+
+class UpdateCourseFeeView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Allows only Admin / Admissions Officer and HOD to set or update course fee details."""
+
+    def test_func(self):
+        user = self.request.user
+        return (
+            user.is_staff
+            or user.groups.filter(
+                name__iregex=r'^(LMS_HOD|LMS_admissions_officer)$'
+            ).exists()
+        )
+
+    def handle_no_permission(self):
+        messages.error(self.request, "Only Admin or HOD can configure course fee details.")
+        return redirect(self.request.META.get('HTTP_REFERER', 'student_dashboard'))
+
+    def post(self, request):
+        course_id = request.POST.get('course_id')
+        raw_price = request.POST.get('price', '').strip()
+        fee_note = request.POST.get('fee_note', '').strip()
+
+        course = get_object_or_404(Course, id=course_id)
+
+        try:
+            new_price = Decimal(raw_price)
+            if new_price < 0:
+                raise InvalidOperation
+        except (InvalidOperation, TypeError):
+            messages.error(request, "Please enter a valid non-negative fee amount in PKR.")
+            return redirect(request.META.get('HTTP_REFERER', 'hod_dashboard'))
+
+        old_price = getattr(course, 'price', Decimal('0.00'))
+        course.price = new_price
+
+        # Optional: if your Course model has a fee description/installment note field
+        course_fields = {f.name for f in Course._meta.get_fields()}
+        update_fields = ['price']
+        for note_field in ('fee_details', 'fee_note', 'pricing_note'):
+            if note_field in course_fields:
+                setattr(course, note_field, fee_note)
+                update_fields.append(note_field)
+                break
+
+        course.save(update_fields=update_fields)
+
+        # Record in ActivityLog for Admin/HOD audit trail
+        role_label = DownloadActivityReportView._detect_role(request.user)
+        ActivityLog.objects.create(
+            user=request.user,
+            role=role_label,
+            action=f"Updated Course Fee: '{course.title}'",
+            details=f"PKR {old_price} -> PKR {new_price}" + (f" | Note: {fee_note}" if fee_note else ""),
+        )
+
+        messages.success(request, f"Course fee for '{course.title}' updated to PKR {new_price:,.2f}.")
+        return redirect(request.META.get('HTTP_REFERER', 'hod_dashboard'))
 # ==========================================
 # Predictive Analytics At-Risk Dashboard
 # ==========================================
@@ -1037,12 +1292,13 @@ class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         # 1. Fetch all course sections
         course_sections = CourseSection.objects.select_related('course', 'instructor').all()
 
-        # 2. Query ALL courses explicitly for the modal selection dropdown
-        courses = Course.objects.all().order_by('-id')
+        # 2. Query ALL courses explicitly for the modal selection dropdown & fee table
+        courses = Course.objects.select_related('instructor').order_by('-id')
+        all_courses = Course.objects.select_related('instructor').order_by('title')
 
-        # 3. Query all active instructors (Faculty & Visiting Faculty)
+        # 3. Query all active instructors (Faculty & Visiting Faculty — matching exact group names)
         instructors = User.objects.filter(
-            groups__name__in=['LMS_Instructor', 'LMS_VisitingFaculty']
+            groups__name__iregex=r'^(LMS_Instructor|LMS_VisitingFaculty)$'
         ).distinct()
 
         # 4. Pending faculty payout claims
@@ -1058,6 +1314,7 @@ class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         context = {
             'course_sections': course_sections,
             'courses': courses,
+            'all_courses': all_courses,
             'instructors': instructors,
             'pending_claims': pending_claims,
             'total_sections': course_sections.count(),
@@ -1065,6 +1322,7 @@ class HodDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             'total_payout_pending': total_payout_pending,
         }
         return render(request, 'LMS/hod_dashboard.html', context)
+    
 class CreateSectionView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Allows HOD or staff to create course sections and assign instructors."""
 
@@ -1187,7 +1445,7 @@ class AccountantDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
             )
             .distinct()
         )
-        
+
         # 5. Benefit Categories & Calculated Payroll Records
         benefit_categories = BenefitCategory.objects.all().order_by('name')
         payrolls = (
@@ -1571,16 +1829,93 @@ class ToggleLessonCompleteView(LoginRequiredMixin, View):
 
         return redirect('lesson_detail', pk=lesson.pk)
 
+class CourseLectureRecordingsView(LoginRequiredMixin, View):
+    """Displays watchable & downloadable lecture recordings/materials; allows assigned faculty to upload."""
+    template_name = 'LMS/course_recordings.html'
+
+    def get_course_and_access(self, request, slug):
+        course = get_object_or_404(Course, slug=slug)
+        user = request.user
+        is_verified_student = Enrollment.objects.filter(
+            student=user,
+            course=course,
+            status__in=[Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED]
+        ).exists()
+
+        is_assigned_faculty = (
+            course.instructor_id == user.id
+            or CourseSection.objects.filter(course=course, instructor=user).exists()
+        )
+        is_hod_or_staff = user.is_staff or user.groups.filter(name='LMS_HOD').exists()
+        can_upload = is_assigned_faculty or is_hod_or_staff
+
+        return course, is_verified_student, can_upload
+
+    def get(self, request, slug):
+        course, is_verified_student, can_upload = self.get_course_and_access(request, slug)
+
+        if not (is_verified_student or can_upload):
+            messages.warning(request, "You must have an active verified enrollment to access lecture recordings.")
+            return redirect('course_detail', slug=course.slug)
+
+        materials = LectureMaterial.objects.filter(course=course).select_related('module', 'uploaded_by')
+        live_recordings = LiveSession.objects.filter(
+            course=course
+        ).exclude(recording_url__isnull=True).exclude(recording_url='').order_by('-start_time')
+
+        return render(request, self.template_name, {
+            'course': course,
+            'materials': materials,
+            'live_recordings': live_recordings,
+            'can_upload': can_upload,
+        })
+
+    def post(self, request, slug):
+        course, _, can_upload = self.get_course_and_access(request, slug)
+        if not can_upload:
+            messages.error(request, "Only assigned instructors, visiting faculty, or HODs can upload materials.")
+            return redirect('course_recordings', slug=course.slug)
+
+        action = request.POST.get('action', 'upload')
+
+        if action == 'delete':
+            mat = get_object_or_404(LectureMaterial, id=request.POST.get('material_id'), course=course)
+            mat.delete()
+            messages.info(request, f"Removed '{mat.title}'.")
+            return redirect('course_recordings', slug=course.slug)
+
+        title = request.POST.get('title', '').strip()
+        material_type = request.POST.get('material_type', LectureMaterial.MaterialType.VIDEO)
+        uploaded_file = request.FILES.get('file')
+        video_url = request.POST.get('video_url', '').strip() or None
+
+        if title and (uploaded_file or video_url):
+            LectureMaterial.objects.create(
+                course=course,
+                uploaded_by=request.user,
+                title=title,
+                material_type=material_type,
+                file=uploaded_file,
+                video_url=video_url,
+            )
+            messages.success(request, f"Lecture material '{title}' uploaded successfully.")
+        else:
+            messages.error(request, "Please enter a title and attach a file or paste a video link.")
+
+        return redirect('course_recordings', slug=course.slug)
+
 
 class CreateDiscussionTopicView(LoginRequiredMixin, View):
     """Allows instructors and students to create new discussion topics."""
 
     def get(self, request):
-        if request.user.groups.filter(name='LMS_Instructor').exists():
-            courses = Course.objects.filter(instructor=request.user)
+        if request.user.groups.filter(name__in=['LMS_Instructor', 'LMS_VisitingFaculty']).exists():
+            courses = Course.objects.filter(
+                Q(instructor=request.user) | Q(sections__instructor=request.user)
+            ).distinct()
         else:
             courses = Course.objects.all()
-            
+
         return render(request, 'LMS/create_discussion_topic.html', {'courses': courses})
 
     def post(self, request):
@@ -1601,8 +1936,7 @@ class CreateDiscussionTopicView(LoginRequiredMixin, View):
 
         messages.error(request, "Please fill in all required fields.")
         return redirect('create_discussion_topic')
-
-
+    
 class DiscussionTopicDetailView(LoginRequiredMixin, View):
     """View details of a discussion topic and its replies."""
 
@@ -1632,7 +1966,6 @@ class AddDiscussionCommentView(LoginRequiredMixin, View):
 # ==========================================
 # 2. QUIZ VIEWS
 # ==========================================
-
 
 
 class ManualQuizCreateView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -1692,40 +2025,420 @@ class ManualQuizCreateView(LoginRequiredMixin, UserPassesTestMixin, View):
                         is_correct=bool(opt.get('is_correct', False))
                     )
 
-        ActivityLog.objects.create(
-            user=request.user,
-            role="Instructor",
-            action=f"Created manual quiz '{quiz.title}'",
-            details=f"Lesson ID: {lesson.id}, Questions: {len(questions_data)}"
-        )
-
         return JsonResponse({
             "status": "success",
+            "message": "Manual quiz created successfully.",
             "quiz_id": quiz.id,
-            "take_url": reverse('quiz_take', kwargs={'pk': quiz.pk})
-        })
+        }, status=201)
+
+
+ROLE_BY_GROUP = {
+    'lms_admissions_officer': 'Admin / Staff',
+    'lms_hod': 'HOD',
+    'lms_accountant': 'Accountant',
+    'lms_vf': 'Visiting Faculty',
+    'lms_visitingfaculty': 'Visiting Faculty',
+    'lms_instructor': 'Instructor',
+    'lms_student': 'Student',
+}
+
+ROLE_PRIORITY = [
+    'Admin / Staff',
+    'HOD',
+    'Accountant',
+    'Visiting Faculty',
+    'Instructor',
+    'Student',
+]
+
+
 class DownloadActivityReportView(LoginRequiredMixin, View):
-    def get(self, request):
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="activity_report.csv"'
-        writer = csv.writer(response)
-        writer.writerow(['Timestamp', 'User', 'Role', 'Action', 'Details'])
+    """
+    Exports uncached CSV activity reports:
+    - Default (?scope=self or no params): Personal activity for the logged-in user (all roles).
+    - System-wide (?scope=all): Full audit report (Admin / Staff, HOD, Accountant only).
+    - Per-user (?user_id=<id>): Specific user's activity (Admin / Staff, HOD, Accountant only).
+    """
 
-        logs = (
-            ActivityLog.objects.all().order_by('-created_at')
-            if request.user.is_staff
-            else ActivityLog.objects.filter(user=request.user).order_by('-created_at')
+    @staticmethod
+    def _detect_role(u):
+        if not u:
+            return 'System'
+        if u.is_superuser or u.is_staff:
+            return 'Admin / Staff'
+
+        g_names = {g.strip().lower() for g in u.groups.values_list('name', flat=True)}
+        matched_roles = {ROLE_BY_GROUP[g] for g in g_names if g in ROLE_BY_GROUP}
+
+        # Fallback substring check for any legacy group names
+        if not matched_roles:
+            if any('admissions' in g or 'admin' in g for g in g_names):
+                matched_roles.add('Admin / Staff')
+            if any('hod' in g for g in g_names):
+                matched_roles.add('HOD')
+            if any('account' in g for g in g_names):
+                matched_roles.add('Accountant')
+            if any(g == 'lms_vf' or 'visiting' in g for g in g_names):
+                matched_roles.add('Visiting Faculty')
+            if any('instructor' in g or 'faculty' in g for g in g_names):
+                matched_roles.add('Instructor')
+
+        for role in ROLE_PRIORITY:
+            if role in matched_roles:
+                return role
+        return 'Student'
+
+    @staticmethod
+    def _extract_timestamp(obj, extra_fields=()):
+        candidates = (
+            *extra_fields,
+            'updated_at',
+            'created_at',
+            'timestamp',
+            'issued_at',
+            'completed_at',
+            'submitted_at',
+            'attempted_at',
+            'enrolled_at',
+            'paid_at',
+            'verified_at',
+            'start_time',
+            'date_joined',
         )
+        for field in candidates:
+            val = getattr(obj, field, None)
+            if isinstance(val, datetime):
+                if timezone.is_naive(val):
+                    return timezone.make_aware(val, timezone.get_current_timezone())
+                return val
+        return None
 
-        for log in logs:
-            writer.writerow([
-                log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '',
-                log.user.username if log.user else 'System',
-                log.role,
+    def get(self, request):
+        requester_role = self._detect_role(request.user)
+        can_inspect_others = requester_role in ('Admin / Staff', 'HOD', 'Accountant')
+
+        scope = request.GET.get('scope', 'self').lower()
+        target_user_id = request.GET.get('user_id')
+
+        if can_inspect_others and scope == 'all':
+            target_user = None
+        elif can_inspect_others and target_user_id:
+            target_user = get_object_or_404(User, id=target_user_id)
+        else:
+            # Default for ALL dashboards (Student, Instructor, VF, Accountant, HOD, Admin): OWN activities
+            target_user = request.user
+
+        target_role = self._detect_role(target_user) if target_user else 'All Users'
+        rows = []  # (timestamp, user_obj, role_str, category, action, details)
+
+        # =========================================================
+        # 1. EXPLICIT ACTIVITY LOGS (All Minor & Major Logged Events)
+        # =========================================================
+        logs_qs = ActivityLog.objects.select_related('user').all()
+        if target_user:
+            logs_qs = logs_qs.filter(user=target_user)
+        for log in logs_qs:
+            rows.append((
+                self._extract_timestamp(log),
+                log.user,
+                log.role or self._detect_role(log.user),
+                'Activity Log',
                 log.action,
-                log.details
+                log.details,
+            ))
+
+        # =========================================================
+        # 2. ACCOUNT JOIN / PROFILE MILESTONE
+        # =========================================================
+        users_qs = User.objects.filter(id=target_user.id) if target_user else User.objects.all()
+        for u in users_qs:
+            rows.append((
+                self._extract_timestamp(u, extra_fields=('date_joined',)),
+                u,
+                self._detect_role(u),
+                'Account',
+                'Account Registered / Activated',
+                f"Email: {u.email or 'N/A'}",
+            ))
+
+        # =========================================================
+        # 3. INSTRUCTOR / VISITING FACULTY / HOD / ADMIN TEACHING
+        # =========================================================
+        if target_user is None or target_role in ('Instructor', 'Visiting Faculty', 'HOD', 'Admin / Staff'):
+            courses_qs = Course.objects.select_related('instructor').all()
+            if target_user:
+                courses_qs = courses_qs.filter(
+                    Q(instructor=target_user) | Q(sections__instructor=target_user)
+                ).distinct()
+
+            # Courses Created/Owned
+            for c in courses_qs:
+                if target_user and c.instructor_id != target_user.id:
+                    continue
+                rows.append((
+                    self._extract_timestamp(c),
+                    c.instructor,
+                    self._detect_role(c.instructor),
+                    'Course Management',
+                    f"Created/Updated Course: '{c.title}'",
+                    f"Course ID: {c.id} | Slug: {c.slug}",
+                ))
+
+            # Modules Added/Updated
+            for m in Module.objects.filter(course__in=courses_qs).select_related('course', 'course__instructor'):
+                actor = target_user or m.course.instructor
+                rows.append((
+                    self._extract_timestamp(m),
+                    actor,
+                    self._detect_role(actor),
+                    'Curriculum',
+                    f"Added/Updated Module: '{m.title}'",
+                    f"Course: {m.course.title} | Order: {m.order}",
+                ))
+
+            # Lessons Added/Updated
+            for l in Lesson.objects.filter(module__course__in=courses_qs).select_related(
+                'module', 'module__course', 'module__course__instructor'
+            ):
+                actor = target_user or l.module.course.instructor
+                rows.append((
+                    self._extract_timestamp(l),
+                    actor,
+                    self._detect_role(actor),
+                    'Curriculum',
+                    f"Added/Updated Lesson: '{l.title}'",
+                    f"Course: {l.module.course.title} | Module: {l.module.title} | Lesson ID: {l.id}",
+                ))
+
+            # Lecture Recordings & Materials Uploaded
+            mats_qs = LectureMaterial.objects.select_related('course', 'uploaded_by').all()
+            if target_user:
+                mats_qs = mats_qs.filter(uploaded_by=target_user)
+            for mat in mats_qs:
+                actor = mat.uploaded_by or mat.course.instructor
+                rows.append((
+                    self._extract_timestamp(mat),
+                    actor,
+                    self._detect_role(actor),
+                    'Lecture Material',
+                    f"Uploaded {mat.get_material_type_display()}: '{mat.title}'",
+                    f"Course: {mat.course.title} | File/Link: {mat.filename or mat.video_url or 'N/A'}",
+                ))
+
+            # Live Sessions Scheduled / Conducted
+            sessions_qs = LiveSession.objects.select_related('course', 'course__instructor', 'section__instructor').all()
+            if target_user:
+                sessions_qs = sessions_qs.filter(
+                    Q(course__instructor=target_user) | Q(section__instructor=target_user)
+                ).distinct()
+            for s in sessions_qs:
+                actor = getattr(getattr(s, 'section', None), 'instructor', None) or s.course.instructor
+                rows.append((
+                    self._extract_timestamp(s, extra_fields=('start_time',)),
+                    actor,
+                    self._detect_role(actor),
+                    'Live Session',
+                    f"Live Session: '{s.title}'",
+                    f"Course: {s.course.title} | Status: {s.status} | Duration: {s.duration_minutes} mins",
+                ))
+
+            # Faculty Payroll Records (Earned by Faculty)
+            payroll_qs = FacultyPayroll.objects.select_related('faculty').all()
+            if target_user:
+                payroll_qs = payroll_qs.filter(faculty=target_user)
+            for p in payroll_qs:
+                rows.append((
+                    self._extract_timestamp(p),
+                    p.faculty,
+                    self._detect_role(p.faculty),
+                    'Payroll',
+                    "Faculty Payroll Recorded",
+                    f"Payroll ID: {p.id} | Net Pay: {getattr(p, 'net_payable', getattr(p, 'total_amount', 'N/A'))} | Status: {getattr(p, 'status', 'N/A')}",
+                ))
+
+        # =========================================================
+        # 4. ACCOUNTANT & ADMIN / ADMISSIONS OFFICER ACTIONS
+        # =========================================================
+        if target_user is None or target_role in ('Accountant', 'Admin / Staff', 'HOD'):
+            # Voucher Approvals / Verifications performed by Accountant or Admissions Officer
+            enroll_admin_qs = Enrollment.objects.select_related('student', 'course').all()
+            verifier_filter = Q()
+            enroll_field_names = {f.name for f in Enrollment._meta.get_fields()}
+            for f_name in ('verified_by', 'approved_by', 'accountant', 'admissions_officer'):
+                if f_name in enroll_field_names:
+                    verifier_filter |= Q(**{f_name: target_user}) if target_user else Q(**{f"{f_name}__isnull": False})
+
+            if verifier_filter:
+                for e in enroll_admin_qs.filter(verifier_filter).distinct():
+                    actor = (
+                        target_user
+                        or getattr(e, 'verified_by', None)
+                        or getattr(e, 'approved_by', None)
+                        or getattr(e, 'accountant', None)
+                        or getattr(e, 'admissions_officer', None)
+                    )
+                    rows.append((
+                        self._extract_timestamp(e),
+                        actor,
+                        self._detect_role(actor),
+                        'Accounts / Admissions',
+                        f"Verified Enrollment/Payment for {e.student.username}",
+                        f"Course: {e.course.title} | Status: {e.status} | Enrollment ID: {e.id}",
+                    ))
+
+            # Payroll Runs Processed by Accountant / Admin
+            payroll_field_names = {f.name for f in FacultyPayroll._meta.get_fields()}
+            proc_filter = Q()
+            for f_name in ('processed_by', 'created_by', 'approved_by'):
+                if f_name in payroll_field_names:
+                    proc_filter |= Q(**{f_name: target_user}) if target_user else Q(**{f"{f_name}__isnull": False})
+
+            if proc_filter:
+                for p in FacultyPayroll.objects.filter(proc_filter).select_related('faculty').distinct():
+                    actor = (
+                        target_user
+                        or getattr(p, 'processed_by', None)
+                        or getattr(p, 'created_by', None)
+                        or getattr(p, 'approved_by', None)
+                    )
+                    rows.append((
+                        self._extract_timestamp(p),
+                        actor,
+                        self._detect_role(actor),
+                        'Accounts / Payroll',
+                        f"Processed Payroll for {p.faculty.get_full_name() or p.faculty.username}",
+                        f"Payroll ID: {p.id} | Status: {getattr(p, 'status', 'N/A')}",
+                    ))
+
+        # =========================================================
+        # 5. DISCUSSION POSTS (Any Role: Student, Faculty, Admin)
+        # =========================================================
+        posts_qs = DiscussionPost.objects.select_related('author').all()
+        if target_user:
+            posts_qs = posts_qs.filter(author=target_user)
+        for post in posts_qs:
+            course_obj = getattr(post, 'course', None) or getattr(getattr(post, 'topic', None), 'course', None)
+            course_title = course_obj.title if course_obj else 'General'
+            rows.append((
+                self._extract_timestamp(post),
+                post.author,
+                self._detect_role(post.author),
+                'Discussion / Announcement',
+                f"Posted in Discussion ({course_title})",
+                (getattr(post, 'content', '') or '')[:120],
+            ))
+
+        # =========================================================
+        # 6. STUDENT LEARNING ACTIVITIES (Own History)
+        # =========================================================
+        if target_user is None or target_role == 'Student':
+            # Enrollments & Payment Status
+            enroll_qs = Enrollment.objects.select_related('student', 'course').all()
+            if target_user:
+                enroll_qs = enroll_qs.filter(student=target_user)
+            for e in enroll_qs:
+                rows.append((
+                    self._extract_timestamp(e),
+                    e.student,
+                    'Student',
+                    'Enrollment',
+                    f"Enrolled in '{e.course.title}'",
+                    f"Status: {e.status} | Enrollment ID: {e.id}",
+                ))
+
+            # Completed Lessons
+            lp_qs = LessonProgress.objects.filter(is_completed=True).select_related(
+                'student', 'lesson', 'lesson__module__course'
+            )
+            if target_user:
+                lp_qs = lp_qs.filter(student=target_user)
+            for lp in lp_qs:
+                rows.append((
+                    self._extract_timestamp(lp),
+                    lp.student,
+                    'Student',
+                    'Lesson Progress',
+                    f"Completed Lesson: '{lp.lesson.title}'",
+                    f"Course: {lp.lesson.module.course.title}",
+                ))
+
+            # Quiz Attempts
+            qa_qs = QuizAttempt.objects.select_related('student', 'quiz').all()
+            if target_user:
+                qa_qs = qa_qs.filter(student=target_user)
+            for qa in qa_qs:
+                rows.append((
+                    self._extract_timestamp(qa),
+                    qa.student,
+                    'Student',
+                    'Assessment',
+                    f"Attempted Quiz: '{qa.quiz.title}'",
+                    f"Score: {getattr(qa, 'score', 'N/A')}",
+                ))
+
+            # Live Session Attendance
+            att_qs = SessionAttendance.objects.select_related('student', 'session', 'session__course').all()
+            if target_user:
+                att_qs = att_qs.filter(student=target_user)
+            for att in att_qs:
+                ts = self._extract_timestamp(att) or self._extract_timestamp(att.session)
+                rows.append((
+                    ts,
+                    att.student,
+                    'Student',
+                    'Attendance',
+                    f"Attended Live Session: '{att.session.title}'",
+                    f"Course: {att.session.course.title}",
+                ))
+
+            # Issued Certificates
+            cert_qs = Certificate.objects.select_related('student', 'course').all()
+            if target_user:
+                cert_qs = cert_qs.filter(student=target_user)
+            for cert in cert_qs:
+                rows.append((
+                    self._extract_timestamp(cert),
+                    cert.student,
+                    'Student',
+                    'Certificate',
+                    f"Earned Certificate: {cert.display_code}",
+                    f"Course: {cert.course.title}",
+                ))
+
+        # Sort newest first
+        fallback_dt = timezone.make_aware(datetime(1970, 1, 1))
+        rows.sort(key=lambda r: r[0] or fallback_dt, reverse=True)
+
+        now_local = timezone.localtime(timezone.now())
+        prefix = target_user.username if target_user else "LMS_System_Wide"
+        filename = f"{prefix}_activity_report_{now_local.strftime('%Y-%m-%d_%H%M')}.csv"
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        response.write('\ufeff')
+
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'User', 'Full Name', 'Role', 'Category', 'Action', 'Details'])
+
+        for ts, actor, role, category, action, details in rows:
+            local_ts = timezone.localtime(ts).strftime('%Y-%m-%d %H:%M:%S') if ts else ''
+            username = actor.username if actor else 'System'
+            full_name = (actor.get_full_name() or actor.username) if actor else 'System'
+            writer.writerow([
+                local_ts,
+                username,
+                full_name,
+                role,
+                category,
+                action,
+                details,
             ])
+
         return response
+
     
 class QuizTakeView(LoginRequiredMixin, View):
     template_name = 'LMS/quiz_take.html'
@@ -2572,40 +3285,40 @@ class StudentPersonalizedPathView(LoginRequiredMixin, View):
 # 6. CERTIFICATE GENERATION
 # ==========================================
 
-
 class DownloadCertificatePillowView(View):
     """Generates a high-resolution PDF certificate with an embedded verification QR code."""
     
     def get(self, request, certificate_id):
-        # 1. Fetch certificate ensuring student ownership (or allow staff)
-        cert = get_object_or_404(Certificate, id=certificate_id)
+        cert = get_object_or_404(Certificate.objects.select_related('student', 'course'), id=certificate_id)
         if not (request.user == cert.student or request.user.is_staff):
             messages.error(request, "You do not have permission to download this certificate.")
             return redirect('student_dashboard')
 
-        # 2. Block download if certificate is revoked
         if getattr(cert, 'is_revoked', False):
             messages.error(request, "This certificate has been revoked and cannot be downloaded.")
             return redirect('student_dashboard')
 
-        # 3. Canvas Dimensions (300 DPI A4 Landscape)
+        # Ensure code matches VLC-CERT-[Year]-[RegNo]
+        cert_code = cert.display_code
+        if cert.certificate_code != cert_code:
+            cert.certificate_code = cert_code
+            cert.save(update_fields=['certificate_code'])
+
+        # Canvas Dimensions (300 DPI A4 Landscape)
         width, height = 3508, 2480
         img = Image.new('RGB', (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
-        # Color Palette
         NAVY = (30, 58, 138)
         GOLD = (202, 138, 4)
         CHARCOAL = (31, 41, 55)
         MUTED_GRAY = (100, 116, 139)
         BG_INNER = (250, 250, 249)
 
-        # Borders & Background
         draw.rectangle([80, 80, width - 80, height - 80], fill=BG_INNER)
         draw.rectangle([100, 100, width - 100, height - 100], outline=GOLD, width=12)
         draw.rectangle([130, 130, width - 130, height - 130], outline=NAVY, width=6)
 
-        # Fonts
         try:
             font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 90)
             font_subHeader = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
@@ -2646,26 +3359,23 @@ class DownloadCertificatePillowView(View):
         draw.text((seal_cx, seal_cy), "OFFICIAL\nSEAL", fill=GOLD, anchor="mm", font=font_meta, align="center")
 
         # Code & Dates
-        cert_code = getattr(cert, 'certificate_code', str(cert.id))
         issue_date_obj = getattr(cert, 'issued_at', getattr(cert, 'created_at', timezone.now()))
         issue_date = issue_date_obj.strftime("%B %d, %Y")
 
         draw.text((350, 2220), f"Issue Date: {issue_date}", fill=MUTED_GRAY, font=font_meta)
         draw.text((cx, 2220), f"Certificate Code: {cert_code}", fill=MUTED_GRAY, anchor="mm", font=font_meta)
 
-        # 4. Generate & Embed Dynamic Verification QR Code
+        # Dynamic Verification QR Code
         verify_url = request.build_absolute_uri(f"/LMS/verify/certificate/{cert.id}/")
         qr = qrcode.QRCode(box_size=8, border=2)
         qr.add_data(verify_url)
         qr.make(fit=True)
         qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
-        
-        # Resize QR code and paste into bottom right margin
         qr_img = qr_img.resize((240, 240))
         img.paste(qr_img, (width - 600, 2080))
         draw.text((width - 480, 2330), "Scan to Verify", fill=MUTED_GRAY, anchor="mm", font=font_meta)
 
-        # 5. Export to PDF Buffer
+        # Export to PDF Buffer
         pdf_buffer = BytesIO()
         img.save(pdf_buffer, format='PDF', resolution=300.0)
         pdf_buffer.seek(0)
@@ -2684,6 +3394,7 @@ class PublicCertificateVerifyView(View):
             context = {
                 'is_valid': not getattr(cert, 'is_revoked', False),
                 'certificate': cert,
+                'certificate_code': cert.display_code,
                 'student_name': cert.student.get_full_name() or cert.student.username,
                 'course_title': cert.course.title,
                 'issued_at': getattr(cert, 'issued_at', getattr(cert, 'created_at', None)),

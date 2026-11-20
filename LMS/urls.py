@@ -11,6 +11,7 @@ urlpatterns = [
     path('lessons/', views.CourseListView.as_view(), name='lessons_index'),
 
     # Course Catalog & Enrollment
+    path('courses/update-fee/', views.UpdateCourseFeeView.as_view(), name='update_course_fee'),
     path('courses/', views.CourseListView.as_view(), name='course_list'),
     path('courses/<slug:slug>/', views.CourseDetailView.as_view(), name='course_detail'),
     path('courses/<slug:slug>/enroll/', views.EnrollCourseView.as_view(), name='enroll_course'),
@@ -62,9 +63,12 @@ urlpatterns = [
     path('quiz-attempts/<int:pk>/', views.QuizResultDetailView.as_view(), name='quiz_result_detail'),
     path('api/v1/lessons/<int:lesson_id>/manual-quiz/', views.ManualQuizCreateView.as_view(), name='create_manual_quiz'),
     path('lessons/<int:lesson_id>/', views.LessonDetailView.as_view(), name='lesson_detail'),
+    path('lessons/add/', views.AddLessonView.as_view(), name='add_lesson'),
     path('courses/<uuid:course_id>/attendance/download/', views.DownloadCourseAttendanceView.as_view(), name='download_attendance'),
     path('courses/<uuid:course_id>/recordings/', views.CourseRecordingsView.as_view(), name='course_recordings'),
     path('courses/<uuid:course_id>/students/<int:student_id>/', views.InstructorStudentDetailView.as_view(), name='instructor_student_detail'),
+    path('courses/<slug:slug>/recordings/', views.CourseLectureRecordingsView.as_view(), name='course_recordings'),
+    
 
     # Phase 3 Analytics & Sync APIs
     path('course/<uuid:course_id>/at-risk-dashboard/', views.InstructorAtRiskDashboardView.as_view(), name='at_risk_dashboard'),

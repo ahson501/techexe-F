@@ -21,7 +21,7 @@
     font-size: 0.8125rem;
   }
   .ql-editor {
-    min-height: 180px;
+    min-height: 160px;
   }
 </style>
 
@@ -74,6 +74,42 @@
     </div>
   </div>
 
+  <!-- Edit Course Title & Overview (Fee excluded — controlled by Admin/HOD) -->
+  <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+        <span>✏️</span> Edit Course Information
+      </h2>
+      <span class="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+        Fee: PKR {{ course.price|default:"0.00" }} (Admin / HOD Managed)
+      </span>
+    </div>
+
+    <form method="POST" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_course">
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Course Title</label>
+        <input type="text" name="title" value="{{ course.title }}" required
+               class="w-full text-xs px-3.5 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Course Overview / Syllabus Description</label>
+        <textarea name="description" rows="3" placeholder="Enter course overview, learning objectives, and syllabus summary..."
+                  class="w-full text-xs px-3.5 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">{{ course.description|default:'' }}</textarea>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit"
+                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5">
+          <span>💾</span> Save Course Changes
+        </button>
+      </div>
+    </form>
+  </div>
+
   <!-- Modules List -->
   <div class="space-y-6">
     {% for module in modules %}
@@ -88,27 +124,80 @@
         </div>
 
         <!-- Existing Lessons inside Module -->
-        <div class="space-y-2.5 mb-6">
+        <div class="space-y-3 mb-6">
           {% for lesson in module.lessons.all %}
-            <div class="p-3.5 bg-gray-50 border border-gray-200/80 rounded-xl flex justify-between items-start gap-4 hover:border-indigo-200 transition">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-indigo-600 text-xs">[Lesson ID: {{ lesson.id }}]</span>
-                  <span class="font-semibold text-gray-900 text-xs truncate">{{ lesson.title }}</span>
-                  {% if lesson.is_published|default:True %}
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                      <span>✅</span> Published
-                    </span>
-                  {% else %}
-                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                      <span>📝</span> Draft
-                    </span>
-                  {% endif %}
-                </div>
-                <div class="text-[11px] text-gray-500 mt-1 line-clamp-2">
-                  {{ lesson.body_text|striptags|truncatewords:25 }}
+            <div class="p-4 bg-gray-50 border border-gray-200/80 rounded-xl hover:border-indigo-200 transition">
+              <div class="flex justify-between items-start gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-indigo-600 text-xs">[Lesson ID: {{ lesson.id }}]</span>
+                    <span class="font-semibold text-gray-900 text-xs">{{ lesson.title }}</span>
+                    {% if lesson.is_published|default:True %}
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        <span>✅</span> Published
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        <span>📝</span> Draft
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="text-[11px] text-gray-500 mt-1 line-clamp-2">
+                    {{ lesson.body_text|striptags|truncatewords:25 }}
+                  </div>
                 </div>
               </div>
+
+              <!-- Expandable Rich-Text Edit & Delete Drawer -->
+              <details class="mt-3 pt-2.5 border-t border-gray-200/80">
+                <summary class="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer select-none">
+                  ✏️ Edit / Manage Lesson Content
+                </summary>
+
+                <form method="POST"
+                      id="edit-lesson-form-{{ lesson.id }}"
+                      onsubmit="return syncEditQuillContent('{{ lesson.id }}')"
+                      class="mt-3 space-y-3 bg-white p-4 rounded-xl border border-gray-200">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="edit_lesson">
+                  <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                  <input type="hidden" name="body_text" id="hidden-edit-body-{{ lesson.id }}">
+
+                  <div>
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Lesson Title</label>
+                    <input type="text" name="lesson_title" value="{{ lesson.title }}" required
+                           class="w-full text-xs px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  </div>
+
+                  <div>
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Lesson Content (Rich Text)</label>
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div id="quill-edit-editor-{{ lesson.id }}">{{ lesson.body_text|safe }}</div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap justify-between items-center gap-2 pt-1">
+                    <button type="submit"
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+                      💾 Save Lesson Changes
+                    </button>
+
+                    <button type="submit"
+                            form="delete-lesson-form-{{ lesson.id }}"
+                            onclick="return confirm('Are you sure you want to delete lesson \'{{ lesson.title|escapejs }}\'?');"
+                            class="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold rounded-xl transition">
+                      🗑️ Delete Lesson
+                    </button>
+                  </div>
+                </form>
+
+                <!-- Separate Delete Form (avoids nested forms) -->
+                <form method="POST" id="delete-lesson-form-{{ lesson.id }}" class="hidden">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_lesson">
+                  <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                </form>
+              </details>
             </div>
           {% empty %}
             <p class="text-xs text-gray-400 italic py-2">No lessons created in this module yet.</p>
@@ -169,6 +258,7 @@
 
 <script>
   const quillInstances = {};
+  const editQuillInstances = {};
 
   const fullToolbarOptions = [
     [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
@@ -176,7 +266,7 @@
     ['bold', 'italic', 'underline', 'strike'],
     [{ 'color': [] }, { 'background': [] }],
     [{ 'script': 'sub' }, { 'script': 'super' }],
-    [{ 'align': [] }],                                   // Left, Center, Right, Justify
+    [{ 'align': [] }],
     [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
     ['blockquote', 'code-block'],
     ['link', 'image', 'video'],
@@ -184,6 +274,7 @@
   ];
 
   document.addEventListener('DOMContentLoaded', function() {
+    // 1. Initialize "Add New Lesson" Quill editors per module
     document.querySelectorAll('[id^="quill-editor-"]').forEach(function(editorEl) {
       const moduleId = editorEl.id.replace('quill-editor-', '');
       quillInstances[moduleId] = new Quill('#' + editorEl.id, {
@@ -194,11 +285,32 @@
         }
       });
     });
+
+    // 2. Initialize "Edit Existing Lesson" Quill editors per lesson
+    document.querySelectorAll('[id^="quill-edit-editor-"]').forEach(function(editorEl) {
+      const lessonId = editorEl.id.replace('quill-edit-editor-', '');
+      editQuillInstances[lessonId] = new Quill('#' + editorEl.id, {
+        theme: 'snow',
+        modules: {
+          toolbar: fullToolbarOptions
+        }
+      });
+    });
   });
 
   function syncQuillContent(moduleId) {
     const quill = quillInstances[moduleId];
     const hiddenInput = document.getElementById('hidden-body-' + moduleId);
+    if (quill && hiddenInput) {
+      const html = quill.root.innerHTML.trim();
+      hiddenInput.value = (html === '<p><br></p>') ? '' : html;
+    }
+    return true;
+  }
+
+  function syncEditQuillContent(lessonId) {
+    const quill = editQuillInstances[lessonId];
+    const hiddenInput = document.getElementById('hidden-edit-body-' + lessonId);
     if (quill && hiddenInput) {
       const html = quill.root.innerHTML.trim();
       hiddenInput.value = (html === '<p><br></p>') ? '' : html;

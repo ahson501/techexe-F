@@ -20,9 +20,69 @@
     </div>
   </div>
 
-  <!-- Primary Management Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    
+    <!-- Primary Management Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Course Fee Configuration Card (Admin & HOD Only) -->
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-md font-bold text-gray-900 flex items-center gap-2">
+            <span>💰</span> Course Fee Management (Admin / HOD)
+          </h2>
+          <p class="text-xs text-gray-500 mt-0.5">Set or update enrollment fees (PKR) for initialized courses.</p>
+        </div>
+        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full border border-indigo-100">
+          {{ all_courses|length }} Course{{ all_courses|length|pluralize }}
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-xs">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2.5 text-left font-bold text-gray-600 uppercase">Course Title</th>
+              <th class="px-4 py-2.5 text-left font-bold text-gray-600 uppercase">Instructor</th>
+              <th class="px-4 py-2.5 text-left font-bold text-gray-600 uppercase">Current Fee</th>
+              <th class="px-4 py-2.5 text-left font-bold text-gray-600 uppercase">Update Fee (PKR)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for course in all_courses %}
+              <tr class="hover:bg-gray-50/70">
+                <td class="px-4 py-3 font-bold text-gray-900">{{ course.title }}</td>
+                <td class="px-4 py-3 text-gray-600">
+                  {{ course.instructor.get_full_name|default:course.instructor.username }}
+                </td>
+                <td class="px-4 py-3 font-mono font-bold text-emerald-700">
+                  PKR {{ course.price|default:"0.00" }}
+                </td>
+                <td class="px-4 py-3">
+                  <form action="{% url 'update_course_fee' %}" method="POST" class="flex flex-wrap items-center gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="course_id" value="{{ course.id }}">
+                    <input type="number" name="price" step="0.01" min="0"
+                          value="{{ course.price|default:'3500.00' }}" required
+                          class="w-32 px-2.5 py-1.5 border border-gray-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <input type="text" name="fee_note"
+                          value="{{ course.fee_details|default:'' }}"
+                          placeholder="Optional fee / installment note"
+                          class="w-44 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <button type="submit"
+                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition">
+                      Save Fee
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="px-4 py-6 text-center text-gray-400">No courses initialized yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
     <!-- Faculty Invitations Card -->
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
       <div class="flex items-center justify-between mb-4">

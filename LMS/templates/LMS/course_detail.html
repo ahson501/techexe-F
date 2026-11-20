@@ -10,39 +10,47 @@
       {{ course.description|safe }}
     </div>
     
-    <!-- ENROLLMENT HEADER & PAYMENT STATUS -->
-    {% if is_faculty_or_hod %}
-      <button type="button"
-              disabled
-              title="Enrollment is disabled for Instructors, Visiting Faculty, and HODs"
-              class="bg-gray-200 text-gray-500 font-semibold px-6 py-3 rounded-lg border border-gray-300 cursor-not-allowed opacity-75 inline-flex items-center gap-2">
-        <span>🚫</span>
-        <span>Enrollment Disabled (Faculty / HOD)</span>
-      </button>
-    {% elif not enrollment %}
-      {% if is_student %}
-        <form action="{% url 'enroll_course' slug=course.slug %}" method="POST" class="inline-block">
-          {% csrf_token %}
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition">
-            Enroll Now (PKR {{ course.price|default:"3,500.00" }})
-          </button>
-        </form>
-      {% endif %}
-    {% elif is_access_granted %}
-      <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between">
-        <span class="flex items-center gap-1.5">
-          <svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+    <!-- ENROLLMENT HEADER, PAYMENT STATUS & LECTURE RECORDINGS ACTION -->
+    <div class="flex flex-wrap items-center gap-3">
+      {% if is_faculty_or_hod %}
+        <button type="button"
+                disabled
+                title="Enrollment is disabled for Instructors, Visiting Faculty, and HODs"
+                class="bg-gray-200 text-gray-500 font-semibold px-6 py-3 rounded-lg border border-gray-300 cursor-not-allowed opacity-75 inline-flex items-center gap-2">
+          <span>🚫</span>
+          <span>Enrollment Disabled (Faculty / HOD)</span>
+        </button>
+      {% elif not enrollment %}
+        {% if is_student %}
+          <form action="{% url 'enroll_course' slug=course.slug %}" method="POST" class="inline-block">
+            {% csrf_token %}
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition">
+              Enroll Now (PKR {{ course.price|default:"3,500.00" }})
+            </button>
+          </form>
+        {% endif %}
+      {% elif is_access_granted %}
+        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
           </svg>
-          You are fully enrolled and verified for this course.
-        </span>
-      </div>
-    {% else %}
-      <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center justify-between">
-        <span>⚠️ Payment Pending Verification. Download your bank voucher from the student dashboard to complete payment.</span>
-        <a href="{% url 'student_dashboard' %}" class="underline hover:text-amber-900 transition">Go to Dashboard →</a>
-      </div>
-    {% endif %}
+          <span>You are fully enrolled and verified for this course.</span>
+        </div>
+      {% else %}
+        <div class="w-full p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center justify-between">
+          <span>⚠️ Payment Pending Verification. Download your bank voucher from the student dashboard to complete payment.</span>
+          <a href="{% url 'student_dashboard' %}" class="underline hover:text-amber-900 transition">Go to Dashboard →</a>
+        </div>
+      {% endif %}
+
+      {% if is_access_granted %}
+        <a href="{% url 'course_recordings' slug=course.slug %}"
+           class="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition inline-flex items-center gap-1.5">
+          <span>🎬</span>
+          <span>{% if is_faculty_or_hod %}Upload / Manage Recordings{% else %}Lecture Recordings{% endif %}</span>
+        </a>
+      {% endif %}
+    </div>
   </div>
 
   <!-- 🎓 CERTIFICATE BANNER (Renders when enrolled, verified, & certificate issued) -->

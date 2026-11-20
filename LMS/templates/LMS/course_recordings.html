@@ -1,0 +1,175 @@
+{% extends "LMS/base.html" %}
+{% block title %}Lecture Recordings — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      {% if can_upload %}
+        <a href="{% url 'course_detail' slug=course.slug %}" class="text-xs font-bold text-indigo-600 hover:underline">
+          ← Back to Course
+        </a>
+      {% else %}
+        <a href="{% url 'student_dashboard' %}" class="text-xs font-bold text-indigo-600 hover:underline">
+          ← Back to Dashboard
+        </a>
+      {% endif %}
+      <h1 class="text-2xl font-extrabold text-gray-900 mt-1">🎬 Lecture Recordings & Materials</h1>
+      <p class="text-xs text-gray-500 mt-0.5">{{ course.title }}</p>
+    </div>
+    <a href="{% url 'course_detail' slug=course.slug %}"
+       class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition">
+      Open Course Curriculum →
+    </a>
+  </div>
+
+  <!-- Faculty / Staff Upload Form -->
+  {% if can_upload %}
+    <div class="bg-white border border-indigo-200 rounded-2xl shadow-sm p-6 mb-6">
+      <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">⬆️ Upload Lecture Recording / File</h2>
+      <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="upload">
+
+        <input type="text" name="title" placeholder="Lecture Title (e.g. Week 3: Genomics)" required
+               class="px-3 py-2 border border-gray-300 rounded-xl">
+
+        <select name="material_type" class="px-3 py-2 border border-gray-300 rounded-xl">
+          <option value="VIDEO">🎬 Video Recording</option>
+          <option value="PPT">📊 PowerPoint (PPT/PPTX)</option>
+          <option value="PDF">📄 PDF Document</option>
+          <option value="WORD">📝 Word Document (DOC/DOCX)</option>
+          <option value="TXT">📃 Text File (TXT)</option>
+          <option value="GRAPHIC">🖼️ Graphic / Diagram</option>
+        </select>
+
+        <input type="file" name="file"
+               accept=".mp4,.webm,.mkv,.mov,.ppt,.pptx,.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.svg,.webp"
+               class="px-2.5 py-1.5 border border-gray-300 rounded-xl bg-gray-50">
+
+        <button type="submit"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl transition">
+          Upload Material
+        </button>
+
+        <div class="sm:col-span-2 lg:col-span-4">
+          <input type="url" name="video_url" placeholder="Or paste external recording link (Zoom / YouTube / Drive URL)..."
+                 class="w-full px-3 py-2 border border-gray-300 rounded-xl">
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  <!-- Live Session Video Recordings (if any) -->
+  {% if live_recordings %}
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6">
+      <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">🎥 Recorded Live Sessions</h2>
+      <div class="space-y-3">
+        {% for session in live_recordings %}
+          <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-gray-900">{{ session.title }}</h3>
+              <p class="text-xs text-gray-500">Recorded on {{ session.start_time|date:"M d, Y @ h:i A" }}</p>
+            </div>
+            <a href="{{ session.recording_url }}" target="_blank" rel="noopener noreferrer"
+               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+              ▶ Watch Recording
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Uploaded Lecture Recordings & Files (Video, PPT, PDF, Word, TXT, Graphics) -->
+  <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider">📚 Course Lecture Recordings & Downloads</h2>
+      <span class="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-full border border-purple-100">
+        {{ materials|length }} Item{{ materials|length|pluralize }}
+      </span>
+    </div>
+
+    <div class="space-y-4">
+      {% for item in materials %}
+        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase
+                  {% if item.material_type == 'VIDEO' %}bg-purple-100 text-purple-800
+                  {% elif item.material_type == 'PPT' %}bg-amber-100 text-amber-800
+                  {% elif item.material_type == 'PDF' %}bg-red-100 text-red-800
+                  {% elif item.material_type == 'WORD' %}bg-blue-100 text-blue-800
+                  {% elif item.material_type == 'GRAPHIC' %}bg-emerald-100 text-emerald-800
+                  {% else %}bg-gray-200 text-gray-800{% endif %}">
+                  {{ item.get_material_type_display }}
+                </span>
+                <h3 class="text-sm font-bold text-gray-900">{{ item.title }}</h3>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-1">
+                Added {{ item.created_at|date:"M d, Y" }}
+                {% if item.filename %} • <span class="font-mono">{{ item.filename }}</span>{% endif %}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              {% if item.video_url %}
+                <a href="{{ item.video_url }}" target="_blank" rel="noopener noreferrer"
+                   class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+                  ▶ Watch Stream
+                </a>
+              {% endif %}
+
+              {% if item.file %}
+                <a href="{{ item.file.url }}" target="_blank"
+                   class="px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 text-xs font-bold rounded-xl transition">
+                  👁️ View
+                </a>
+                <a href="{{ item.file.url }}" download
+                   class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition">
+                  ⬇ Download
+                </a>
+              {% endif %}
+
+              {% if can_upload %}
+                <form method="POST" class="inline" onsubmit="return confirm('Delete this lecture material?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="material_id" value="{{ item.id }}">
+                  <button type="submit"
+                          title="Delete Material"
+                          class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition">
+                    🗑
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Inline Player for Uploaded Videos -->
+          {% if item.material_type == 'VIDEO' and item.file %}
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <video controls preload="metadata" class="w-full max-h-96 rounded-xl bg-black">
+                <source src="{{ item.file.url }}">
+                Your browser does not support embedded video playback.
+              </video>
+            </div>
+          {% endif %}
+
+          <!-- Inline Preview for Graphics -->
+          {% if item.material_type == 'GRAPHIC' and item.file %}
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <img src="{{ item.file.url }}" alt="{{ item.title }}"
+                   class="max-h-72 rounded-xl border border-gray-200 object-contain bg-white p-2">
+            </div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="text-xs text-gray-400 text-center py-8">No lecture recordings or files uploaded for this course yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

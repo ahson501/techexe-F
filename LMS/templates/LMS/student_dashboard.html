@@ -36,21 +36,34 @@
               My Path
             </a>
           </div>
-
-          {% if enrollment.completed %}
-            <span class="text-xs font-bold text-emerald-700">✓ Completed</span>
+            {% if enrollment.status == 'ACTIVE' or enrollment.status == 'COMPLETED' %}
+            <a href="{% url 'course_recordings' slug=enrollment.course.slug %}"
+              class="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+              <span>🎬</span>
+              <span>Lecture Recordings</span>
+            </a>
+          {% else %}
+            <button type="button" disabled
+                    title="Available after payment verification"
+                    class="px-3.5 py-2 bg-gray-200 text-gray-500 text-xs font-bold rounded-xl cursor-not-allowed inline-flex items-center gap-1.5">
+              <span>🔒</span>
+              <span>Lecture Recordings</span>
+            </button>
           {% endif %}
+            {% if enrollment.completed %}
+              <span class="text-xs font-bold text-emerald-700">✓ Completed</span>
+            {% endif %}
+          </div>
         </div>
-      </div>
-    {% empty %}
-      <p class="text-sm text-gray-500 italic col-span-3">You are not currently enrolled in any courses.</p>
-    {% endfor %}
-    {% if enrollment.course.id in paid_course_ids %}
-    <a href="{% url 'course_recordings' enrollment.course.id %}" class="btn btn-primary btn-sm">
-        Lecture Recordings
-    </a>
-    {% endif %}
-  </div>
+      {% empty %}
+        <p class="text-sm text-gray-500 italic col-span-3">You are not currently enrolled in any courses.</p>
+      {% endfor %}
+      {% if enrollment.course.id in paid_course_ids %}
+      <a href="{% url 'course_recordings' enrollment.course.id %}" class="btn btn-primary btn-sm">
+          Lecture Recordings
+      </a>
+      {% endif %}
+    </div>
 
   <!-- Live & Upcoming Sessions Section -->
   <div class="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm mb-10 overflow-visible">

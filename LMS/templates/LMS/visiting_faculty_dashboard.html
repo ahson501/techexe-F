@@ -30,6 +30,10 @@
                   {% if section.confirmed_by_faculty %}✓ Section Active{% else %}Pending Confirmation{% endif %}
                 </span>
                 <a href="{% url 'discussion_board' %}" class="text-indigo-600 hover:underline font-bold">Class Forum →</a>
+                <a href="{% url 'course_recordings' slug=section.course.slug %}"
+                   class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition inline-flex items-center gap-1">
+                   <span>🎬</span> Upload / Manage Recordings
+                </a>
               </div>
             </div>
           {% empty %}

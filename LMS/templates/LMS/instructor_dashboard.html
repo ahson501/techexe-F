@@ -76,10 +76,13 @@
                 <tr class="border-b hover:bg-gray-50 align-top">
                   <td class="py-3 px-3">
                     <div class="font-bold text-gray-900">{{ course.title }}</div>
-                    <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5">
+                    <div class="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5 mb-2">
                       <span>🎯</span> {{ course.enrollments.count }} Enrolled Student(s) · Adaptive Track Active
                     </div>
-
+                    <a href="{% url 'course_recordings' slug=course.slug %}"
+                       class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition inline-flex items-center gap-1">
+                      <span>🎬</span> Upload / Manage Recordings
+                    </a>
                     <!-- Clickable Enrolled Students List -->
                     {% if course.enrollments.all %}
                       <div class="mt-2 flex flex-wrap gap-1.5">
@@ -94,12 +97,35 @@
                     {% endif %}
                   </td>
                   <td class="py-3 px-3">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
-                      {% if course.status == 'PUBLISHED' %}bg-emerald-100 text-emerald-800
-                      {% elif course.status == 'DRAFT' %}bg-amber-100 text-amber-800
-                      {% else %}bg-gray-100 text-gray-800{% endif %}">
-                      {{ course.get_status_display }}
-                    </span>
+                    <div class="flex flex-wrap items-center gap-2">
+                      {% if course.status == 'PUBLISHED' %}
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          {{ course.get_status_display }}
+                        </span>
+                        <form action="{% url 'course_builder' course.id %}" method="POST" class="inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="unpublish_course">
+                          <input type="hidden" name="next" value="{{ request.path }}">
+                          <button type="submit"
+                                  class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-lg transition">
+                            Unpublish
+                          </button>
+                        </form>
+                      {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                          {{ course.get_status_display }}
+                        </span>
+                        <form action="{% url 'course_builder' course.id %}" method="POST" class="inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="publish_course">
+                          <input type="hidden" name="next" value="{{ request.path }}">
+                          <button type="submit"
+                                  class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-sm transition">
+                            🚀 Publish
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
                   </td>
                   <td class="py-3 px-3 text-right">
                     <div class="inline-flex flex-wrap justify-end items-center gap-2">
@@ -113,6 +139,11 @@
                          title="View student risk scores and adaptive remedial paths">
                         📊 Risk & Adaptive
                       </a>
+                      <a href="{% url 'course_builder' course.id %}"
+                         class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] rounded-lg border border-amber-200 transition"
+                         title="Edit course title, description, modules, and lessons">
+                        ✏️ Edit Course
+                      </a>
                       <a href="{% url 'course_detail' course.slug %}" class="text-indigo-600 hover:underline font-bold px-2 py-1">
                         View Course
                       </a>
@@ -121,14 +152,13 @@
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="4" class="py-6 text-center text-gray-400 italic">No courses found under your account.</td>
+                  <td colspan="3" class="py-6 text-center text-gray-400 italic">No courses found under your account.</td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
-
       <!-- Scheduled Live Classes & Attendance Logs -->
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <div class="flex justify-between items-center mb-4">
@@ -364,7 +394,130 @@
     </button>
   </form>
 </div>
+<!-- Quill Rich-Text Editor Styles -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 
+<!-- Add Lesson to Existing Course Card -->
+<div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
+  <h2 class="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
+    <span>📝</span> Add New Lesson to Existing Course
+  </h2>
+
+  <form id="add-lesson-form" action="{% url 'add_lesson' %}" method="POST" enctype="multipart/form-data" class="space-y-3">
+    {% csrf_token %}
+
+    <!-- 1. Select Existing Course -->
+    <div>
+      <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Select Course</label>
+      <select name="course_id" id="lesson-course-select" required
+              class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        <option value="" disabled selected>-- Choose an Existing Course --</option>
+        {% for c in all_instructor_courses %}
+          <option value="{{ c.id }}">{{ c.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- 2. Select Existing Module OR Create New Module -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Existing Module</label>
+        <select name="module_id" id="lesson-module-select"
+                class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="">-- Auto / Default Module --</option>
+          {% for c in all_instructor_courses %}
+            {% for m in c.modules.all %}
+              <option value="{{ m.id }}" data-course="{{ c.id }}">
+                Mod {{ m.order }}: {{ m.title }}
+              </option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Or New Module Title</label>
+        <input type="text" name="new_module_title" placeholder="e.g. Week 7"
+               class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+      </div>
+    </div>
+
+    <!-- 3. Lesson Title -->
+    <div>
+      <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Lesson Title</label>
+      <input type="text" name="title" placeholder="e.g. Biological Databases & File Formats" required
+             class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+    </div>
+
+    <!-- 4. Rich-Text Lesson Content / Notes -->
+    <div>
+      <label class="block text-[11px] font-bold uppercase text-gray-600 mb-1">Lesson Content / Notes (Rich Text)</label>
+      <div id="lesson-quill-editor" class="bg-white rounded-b-xl text-xs" style="min-height: 140px;"></div>
+      <input type="hidden" name="content" id="lesson-content-hidden">
+    </div>
+
+    <!-- 5. Attach Figure / Diagram + Caption -->
+    <div class="p-3 rounded-xl bg-indigo-50/50 border border-indigo-100 space-y-2">
+      <label class="block text-[11px] font-bold uppercase text-indigo-900">🖼️ Attach Figure / Diagram (Optional)</label>
+      <input type="file" name="figure" accept="image/*"
+             class="w-full text-xs text-gray-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700">
+      <input type="text" name="figure_caption" placeholder="Figure caption (e.g. Figure 1: Relationship between genome and proteome)"
+             class="w-full text-xs px-3 py-2 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+    </div>
+
+    <!-- 6. Optional Video URL & Free Preview Toggle -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+      <div class="sm:col-span-2">
+        <input type="url" name="video_url" placeholder="Optional Video URL (YouTube / Vimeo / Drive)"
+               class="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+      </div>
+      <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer px-2">
+        <input type="checkbox" name="is_preview" value="1" class="rounded text-indigo-600">
+        <span>Free Preview</span>
+      </label>
+    </div>
+
+    <button type="submit"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition">
+      ➕ Publish Lesson & Notify Students
+    </button>
+  </form>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+  // Initialize Quill Rich-Text Editor
+  const lessonQuill = new Quill('#lesson-quill-editor', {
+    theme: 'snow',
+    placeholder: 'Write or paste formatted lesson notes, bullet lists, links, or inline images...',
+    modules: {
+      toolbar: [
+        [{ header: [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image', 'clean']
+      ]
+    }
+  });
+
+  // Sync Quill HTML to hidden input before submitting
+  document.getElementById('add-lesson-form')?.addEventListener('submit', function () {
+    const html = lessonQuill.root.innerHTML;
+    document.getElementById('lesson-content-hidden').value = (html === '<p><br></p>') ? '' : html;
+  });
+
+  // Filter module dropdown options when a course is selected
+  document.getElementById('lesson-course-select')?.addEventListener('change', function () {
+    const selectedCourse = this.value;
+    const moduleSelect = document.getElementById('lesson-module-select');
+    moduleSelect.value = '';
+    Array.from(moduleSelect.options).forEach(opt => {
+      if (!opt.dataset.course) return;
+      opt.hidden = opt.dataset.course !== selectedCourse;
+    });
+  });
+</script>
+<div class="flex items-center gap-2">
 <!-- Standalone Student Quiz Submissions Widget -->
 <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-6">
   <div class="flex items-center justify-between mb-4">
